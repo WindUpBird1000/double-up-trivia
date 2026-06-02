@@ -153,6 +153,9 @@ const QuizApp = () => {
   const [combOrAnswerInput, setCombOrAnswerInput] = useState('');
   const [showQuestionSummary, setShowQuestionSummary] = useState(false);
   const [combDraft, setCombDraft] = useState(null);
+  const [userAttempts, setUserAttempts] = useState({});
+  const [displayName, setDisplayName] = useState('');
+  const [currentAttemptId, setCurrentAttemptId] = useState(null);
 
   const activeQuizKeys = knownQuizzes.quizzes.filter(key => (allQuizData[key]?.status || 'Active') === 'Active');
   const allCategories = Array.from(new Set(activeQuizKeys.map(key => allQuizData[key]?.category).filter(Boolean))).sort((a,b) => a.localeCompare(b));
@@ -178,12 +181,27 @@ const QuizApp = () => {
     return shuffleArray(quiz.sentences);
   };
 
-  const loadQuiz = () => {
+  const loadQuiz = async () => {
     if (!selectedQuizKey) return;
     const quiz = allQuizData[selectedQuizKey];
     if (!quiz) return;
-    setActiveQuiz(quiz); setCurrentQuestionIndex(0); setStudentAnswers({});
-    setActiveQuestions(prepareActiveQuestions(quiz));
+    const existing = userAttempts[selectedQuizKey];
+    if (existing?.status === 'submitted') return;
+    setActiveQuiz(quiz);
+    setCurrentQuestionIndex(0);
+    const preparedQs = prepareActiveQuestions(quiz);
+    setActiveQuestions(preparedQs);
+    if (existing) {
+      setStudentAnswers(existing.answers || {});
+      setCurrentAttemptId(existing.id);
+    } else {
+      setStudentAnswers({});
+      const { data } = await supabase.from('quiz_attempts').insert({ user_id: currentUser.id, quiz_key: selectedQuizKey, status: 'in_progress', answers: {} }).select().single();
+      if (data) {
+        setCurrentAttemptId(data.id);
+        setUserAttempts(p => ({ ...p, [selectedQuizKey]: data }));
+      }
+    }
     setMode('assessment');
   };
 
@@ -198,7 +216,14 @@ const QuizApp = () => {
     setStudentAnswers(p => ({ ...p, [qi]: cur.includes(optText) ? cur.filter(a => a !== optText) : [...cur, optText] }));
   };
   const goToQuestion = (delta) => { const t = activeQuestions.length; setCurrentQuestionIndex((currentQuestionIndex + t + delta) % t); };
-  const submitQuiz = () => setMode('results');
+  const submitQuiz = async () => {
+    if (currentAttemptId) {
+      const now = new Date().toISOString();
+      await supabase.from('quiz_attempts').update({ status: 'submitted', answers: studentAnswers, submitted_at: now }).eq('id', currentAttemptId);
+      setUserAttempts(p => ({ ...p, [activeQuiz.key || selectedQuizKey]: { ...p[activeQuiz.key || selectedQuizKey], status: 'submitted' } }));
+    }
+    setMode('results');
+  };
 
   const getScore = () => {
     if (!activeQuiz) return { correct: 0, total: 0 };
@@ -219,17 +244,38 @@ const QuizApp = () => {
     return { correct, total: activeQuestions.length };
   };
 
+  const fetchUserData = async (user) => {
+    const { data: profile } = await supabase.from('profiles').select('display_name').eq('user_id', user.id).single();
+    if (profile) setDisplayName(profile.display_name || '');
+    const { data: attempts } = await supabase.from('quiz_attempts').select('*').eq('user_id', user.id);
+    if (attempts) {
+      const map = {};
+      attempts.forEach(a => { map[a.quiz_key] = a; });
+      setUserAttempts(map);
+    }
+  };
+
   const handleLogin = async () => {
     setLoginError('');
     const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
     if (error) { setLoginError('Invalid email or password.'); return; }
     setCurrentUser(data.user);
+    await fetchUserData(data.user);
     setMode('setup');
   };
 
+  const saveProgress = async () => {
+    if (!currentAttemptId || !currentUser) return;
+    await supabase.from('quiz_attempts').update({ answers: studentAnswers }).eq('id', currentAttemptId);
+  };
+
   const handleLogout = async () => {
+    await saveProgress();
     await supabase.auth.signOut();
     setCurrentUser(null);
+    setDisplayName('');
+    setUserAttempts({});
+    setCurrentAttemptId(null);
     setLoginEmail('');
     setLoginPassword('');
     setMode('login');
@@ -241,6 +287,7 @@ const QuizApp = () => {
     try {
       await window.emailjs.send('service_u91y3sw', 'template_mrur50g', {
         user_email: forgotEmail.trim(),
+        to_email: 'doubleuptrivia@gmail.com',
       }, '0k_9ewelPuyyBY1HX');
       setForgotSent(true);
     } catch(e) {
@@ -434,7 +481,7 @@ const QuizApp = () => {
         <h2 className="text-xl font-semibold mb-3">Exit Quiz?</h2>
         <p className="text-gray-600 mb-6">Your progress will be lost. Are you sure?</p>
         <div className="flex gap-3">
-          <button onClick={()=>{setShowResetModal(false);setMode('setup');}} className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium">Yes, Exit</button>
+          <button onClick={async()=>{await saveProgress();setShowResetModal(false);setMode('setup');}} className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium">Yes, Exit</button>
           <button onClick={()=>setShowResetModal(false)} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
         </div>
       </div>
@@ -533,30 +580,32 @@ const QuizApp = () => {
     );
   };
 
+  const ForgotModal = () => showForgotModal ? (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+        <h2 className="text-lg font-bold text-gray-800 mb-2">Request Login Info</h2>
+        {forgotSent ? (
+          <>
+            <p className="text-green-700 text-sm mb-4">Your request has been sent! You'll receive your login info by email shortly.</p>
+            <button onClick={()=>{setShowForgotModal(false);setForgotSent(false);setForgotEmail('');}} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Close</button>
+          </>
+        ) : (
+          <>
+            <p className="text-gray-600 text-sm mb-4">Enter your email address and the admin will send you your login info.</p>
+            <input type="email" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="Your email address" className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 text-sm"/>
+            <div className="flex gap-3">
+              <button onClick={handleForgotSubmit} disabled={!forgotEmail.trim()||forgotSending} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40">{forgotSending?'Sending...':'Submit'}</button>
+              <button onClick={()=>{setShowForgotModal(false);setForgotEmail('');}} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  ) : null;
+
   if (mode==='login') return (
     <div className="max-w-md mx-auto p-6 bg-gray-50 min-h-screen flex flex-col justify-center">
-      {showForgotModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-2">Request Login Info</h2>
-            {forgotSent ? (
-              <>
-                <p className="text-green-700 text-sm mb-4">Your request has been sent! You'll receive your login info by email shortly.</p>
-                <button onClick={()=>{setShowForgotModal(false);setForgotSent(false);setForgotEmail('');}} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Close</button>
-              </>
-            ) : (
-              <>
-                <p className="text-gray-600 text-sm mb-4">Enter your email address and the admin will send you your login info.</p>
-                <input autoFocus type="email" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleForgotSubmit()} placeholder="Your email address" className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 text-sm"/>
-                <div className="flex gap-3">
-                  <button onClick={handleForgotSubmit} disabled={!forgotEmail.trim()||forgotSending} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40">{forgotSending?'Sending...':'Submit'}</button>
-                  <button onClick={()=>{setShowForgotModal(false);setForgotEmail('');}} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <ForgotModal/>
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-gray-800 tracking-tight mb-2">Double Up Trivia</h1>
         <p className="text-gray-500">Sign in to play</p>
@@ -588,7 +637,7 @@ const QuizApp = () => {
     <div className="max-w-2xl mx-auto bg-gray-50 min-h-screen" style={{padding:"1.5rem"}}>
       <div style={{position:"relative"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
-          <span className="text-sm text-gray-500">{currentUser?.email}</span>
+          <span className="text-sm text-gray-500">{displayName || currentUser?.email}</span>
           <div className="flex gap-2">
             <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
           </div>
@@ -618,9 +667,20 @@ const QuizApp = () => {
             <h2 className="text-lg font-semibold text-gray-700 mb-4">Step 2: Choose a Quiz</h2>
             <select value={selectedQuizKey} onChange={e=>setSelectedQuizKey(e.target.value)} disabled={!selectedCategory} className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-800 bg-white focus:ring-2 focus:ring-blue-500 text-base mb-6">
               <option value="">— Select a quiz —</option>
-              {quizzesInCategory.map(key=><option key={key} value={key}>{allQuizData[key]?.title||key}</option>)}
+              {quizzesInCategory.map(key => {
+                const completed = userAttempts[key]?.status === 'submitted';
+                return <option key={key} value={key}>{allQuizData[key]?.title||key}{completed ? ' ★ Completed' : ''}</option>;
+              })}
             </select>
-            <button onClick={loadQuiz} disabled={!selectedQuizKey} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Load Quiz</button>
+            {selectedQuizKey && userAttempts[selectedQuizKey]?.status === 'submitted' ? (
+              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 text-center">
+                <p className="text-yellow-800 font-medium">You have already completed this quiz. Results and scores have not yet been posted — stay tuned!</p>
+              </div>
+            ) : (
+              <button onClick={loadQuiz} disabled={!selectedQuizKey} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                {selectedQuizKey && userAttempts[selectedQuizKey]?.status === 'in_progress' ? 'Resume Quiz' : 'Load Quiz'}
+              </button>
+            )}
           </div>
         </>
       )}
