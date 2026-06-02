@@ -1,0 +1,17 @@
+{
+  "title": "Warm-up #1",
+  "category": "General Knowledge",
+  "status": "Active",
+  "type": "openresponse",
+  "randomizeQuestions": false,
+  "questions": [
+    {
+      "prompt": "Zoox, a subsidiary of Amazon, has as its main competitor {{b:what other company}} (itself a subsidiary of Alphabet), with its longest-running market being Phoenix, suitable for its relative lack of rain, snow, and ice?",
+      "acceptedAnswers": [
+        "Waymo"
+      ],
+      "primaryAnswerIndex": 0,
+      "showOthersCount": false
+    }
+  ]
+}
