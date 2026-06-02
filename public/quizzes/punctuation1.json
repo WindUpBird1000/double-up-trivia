@@ -1,0 +1,246 @@
+{
+  "title": "Punctuation Quiz 1",
+  "category": "Grammar",
+  "status": "Inactive",
+  "type": "MC",
+  "randomizeQuestions": true,
+  "questions": [
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "Charles knew all the answers, but he forgot his pencil to fill in the answer sheet.",
+        "Charles knew all the answers but he forgot his pencil to fill in the answer sheet."
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "I need to buy an onion, a tomato, and a head of lettuce.",
+        "I need to buy: an onion, a tomato, and a head of lettuce."
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "There are only three directions to go: left, right, and straight ahead.",
+        "There are only three directions to go, left, right, and straight ahead."
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "\"That house is painted pink,\" Emily said.",
+        "\"That house is painted pink\" Emily said.",
+        "\"That house is painted pink.\" Emily said."
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "The king was displeased; someone had sat on his crown.",
+        "The king was displeased, someone had sat on his crown.",
+        "The king was displeased: someone had sat on his crown."
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "He ate all the pizza and the breadsticks.",
+        "He ate all the pizza, and the breadsticks."
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "Did he really say, \"I will be the President of the United States.\"?",
+        "Did he really say, \"I will be the President of the United States?\"",
+        "Did he really say, \"I will be the President of the United States\"?"
+      ],
+      "correctIndices": [
+        2
+      ],
+      "randomizeOptions": false
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "He asked Anna, \"Where are you going?\"",
+        "He asked Anna, \"Where are you going\"?"
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "He shouted, \"I can't believe I won!\"",
+        "He shouted, \"I can't believe I won\"!"
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "I wonder why he yelled, \"Look out below\"?",
+        "I wonder why he yelled, \"Look out below!\"",
+        "I wonder why he yelled, \"Look out below!\"?"
+      ],
+      "correctIndices": [
+        2
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "Mr. Andrews and Dr. Jackson are cousins.",
+        "Mr Andrews and Dr Jackson are cousins.",
+        "Mr. Andrews and Dr Jackson are cousins.",
+        "Mr Andrews and Dr. Jackson are cousins."
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "The photography team traveled to several locations: Nashville, Tennessee; Austin, Texas; and Seattle, Washington.",
+        "The photography team traveled to several locations; Nashville, Tennessee; Austin, Texas; and Seattle, Washington.",
+        "The photography team traveled to several locations: Nashville, Tennessee, Austin, Texas, and Seattle, Washington."
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "The committee included Sarah, the lead engineer; Marcus, the head of marketing; and Elena, the primary developer.",
+        "The committee included Sarah, the lead engineer, Marcus, the head of marketing, and Elena, the primary developer.",
+        "The committee included: Sarah, the lead engineer; Marcus, the head of marketing; and Elena, the primary developer.",
+        "The committee included: Sarah, the lead engineer, Marcus, the head of marketing, and Elena, the primary developer."
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "\"I can't believe I ate all that chocolate!\" Dennis screamed.",
+        "\"I can't believe I ate all that chocolate,\" Dennis screamed!",
+        "\"I can't believe I ate all that chocolate!\" Dennis screamed!"
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "I am going to take the train, which passes through San Francisco, all the way to Seattle.",
+        "I am going to take the train which passes through San Francisco all the way to Seattle."
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "Gary, a high school senior, will interview for the job tomorrow.",
+        "Gary, a high school senior will interview for the job tomorrow.",
+        "Gary a high school senior will interview for the job tomorrow."
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "The swimmer had one goal for practice: to perfect the flip-turn.",
+        "The swimmer had one goal for practice to perfect the flip-turn.",
+        "The swimmer had one goal for practice, to perfect the flip-turn.",
+        "The swimmer had one goal for practice; to perfect the flip-turn."
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "After hours of troubleshooting, he found the culprit: a typo on line 7.",
+        "After hours of troubleshooting, he found the culprit, a typo on line 7.",
+        "After hours of troubleshooting, he found the culprit; a typo on line 7."
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "\"This is the best way to get home,\" Andrew said.",
+        "\"This is the best way to get home.\" Andrew said.",
+        "\"This is the best way to get home\" Andrew said."
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    },
+    {
+      "prompt": "Which sentence is grammatically correct?",
+      "options": [
+        "\"I'm not sure,\" the teacher said, \"if we have enough markers for everyone.\"",
+        "\"I'm not sure\" the teacher said, \"if we have enough markers for everyone.\"",
+        "\"I'm not sure,\" the teacher said, \"If we have enough markers for everyone.\"",
+        "\"I'm not sure?\" the teacher said, \"If we have enough markers for everyone.\""
+      ],
+      "correctIndices": [
+        0
+      ],
+      "randomizeOptions": true
+    }
+  ]
+}

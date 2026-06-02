@@ -1,0 +1,110 @@
+{
+  "title": "Vocabulary Workshop Grade 5 Unit 12 Quiz 2",
+  "category": "Vocabulary",
+  "status": "Inactive",
+"type": "fillintheblank",
+  "wordBank": [
+    "abduct",
+    "ambiguous",
+    "balk",
+    "compact",
+    "confer",
+    "earmark",
+    "frigid",
+    "implement",
+    "incalculable",
+    "indisputable",
+    "intensive",
+    "maneuver",
+    "sabotage",
+    "scant",
+    "stealthy",
+    "strapping",
+    "strident",
+    "thrive",
+    "titanic",
+    "valiant"
+  ],
+  "sentences": [
+    {
+      "text": "The movie plot was about a group of scientists who feared protestors might [abduct] their test gorilla..",
+      "answer": "abduct"
+    },
+    {
+      "text": "The teacher’s directions were a little [ambiguous], so half the class started drawing while the other half started writing.",
+      "answer": "ambiguous"
+    },
+    {
+      "text": "The pitcher started his motion but stopped suddenly, causing the umpire to call a [balk] and let the runner move to second base.",
+      "answer": "balk"
+    },
+    {
+      "text": "The two kingdoms finally signed a [compact] promising that they would help each other during times of trouble.",
+      "answer": "compact"
+    },
+    {
+      "text": "Before we decided on a theme for the school dance, the student council had to [confer] with the principal.",
+      "answer": "confer"
+    },
+    {
+      "text": "A white tip on the end of its tail is a distinct [earmark] that helps us tell our dog apart from the others in the park.",
+      "answer": "earmark"
+    },
+    {
+      "text": "After swimming in the [frigid] lake water, we all scrambled out to wrap ourselves in warm, fuzzy towels.",
+      "answer": "frigid"
+    },
+    {
+      "text": "A simple shovel is a very useful [implement] when you are trying to dig a hole for a new tree.",
+      "answer": "implement"
+    },
+    {
+      "text": "The damage caused by the giant storm was [incalculable] because so many homes and trees were affected.",
+      "answer": "incalculable"
+    },
+    {
+      "text": "It is [indisputable] that Sarah is the fastest runner in our grade since she has won every race this year.",
+      "answer": "indisputable"
+    },
+    {
+      "text": "During the summer, the athletes went through [intensive] training to prepare for the championship game.",
+      "answer": "intensive"
+    },
+    {
+      "text": "You have to [maneuver] the remote-control car carefully to get it through the obstacle course without crashing.",
+      "answer": "maneuver"
+    },
+    {
+      "text": "The detective realized the broken engine wasn't an accident, but an act of [sabotage] meant to stop the train.",
+      "answer": "sabotage"
+    },
+    {
+      "text": "We had to turn back from our hike because we only had a [scant] amount of water left in our bottles.",
+      "answer": "scant"
+    },
+    {
+      "text": "The [stealthy] ninja moved across the wooden floor so quietly that not even the sleeping dog woke up.",
+      "answer": "stealthy"
+    },
+    {
+      "text": "The [strapping] lifeguards worked together to pull the heavy rescue boat onto the sandy shore.",
+      "answer": "strapping"
+    },
+    {
+      "text": "The [strident] sound of the alarm clock echoed through the room, making it impossible to stay asleep.",
+      "answer": "strident"
+    },
+    {
+      "text": "If you give a small business enough support, it will [thrive] and provide many jobs for the community.",
+      "answer": "thrive"
+    },
+    {
+      "text": "The explorers were amazed by the [titanic] size of the canyon, which stretched for hundreds of miles.",
+      "answer": "titanic"
+    },
+    {
+      "text": "The knight made a [valiant] effort to protect the castle from the fire-breathing dragon.",
+      "answer": "valiant"
+    }
+  ]
+}

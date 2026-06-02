@@ -1,0 +1,100 @@
+{
+  "title": "Europe in the Middle Ages",
+  "category": "History",
+"type": "fillintheblank",
+  "wordBank": [
+    "Charles Martel",
+    "Franks",
+    "Muslim",
+    "Tours",
+    "Pope Leo III",
+    "Christianity",
+    "peninsula",
+    "medieval",
+    "The Hammer",
+    "records",
+    "monastery",
+    "convent",
+    "Benedict",
+    "convert",
+    "polytheistic",
+    "Aethelberht",
+    "vassals",
+    "fief"
+  ],
+  "sentences": [
+    {
+      "text": "Charlemagne's grandfather was [Charles Martel].",
+      "answer": "Charles Martel"
+    },
+    {
+      "text": "Charles Martel was the leader of the [Franks].",
+      "answer": "Franks"
+    },
+    {
+      "text": "Charles Martel defeated Spanish [Muslim] invaders.",
+      "answer": "Muslim"
+    },
+    {
+      "text": "Charles Martel defeated the Muslims at the Battle of [Tours].",
+      "answer": "Tours"
+    },
+    {
+      "text": "Charlemagne was crowned emperor by [Pope Leo III].",
+      "answer": "Pope Leo III"
+    },
+    {
+      "text": "Charlemagne's religion was [Christianity].",
+      "answer": "Christianity"
+    },
+    {
+      "text": "Geographer's describe Europe as a [peninsula] of peninsulas.",
+      "answer": "peninsula"
+    },
+    {
+      "text": "The word [medieval] means \"middle age.\"",
+      "answer": "medieval"
+    },
+    {
+      "text": "Charles Martel's nickname was [The Hammer].",
+      "answer": "The Hammer"
+    },
+    {
+      "text": "Charlemagne wanted educators to write accurate [records].",
+      "answer": "records"
+    },
+    {
+      "text": "Monks live in a [monastery].",
+      "answer": "monastery"
+    },
+    {
+      "text": "Nuns live in a [convent].",
+      "answer": "convent"
+    },
+    {
+      "text": "Monks lived by the rules of Saint [Benedict].",
+      "answer": "Benedict"
+    },
+    {
+      "text": "A missionary's job was to [convert].",
+      "answer": "convert"
+    },
+    {
+      "text": "A pagan is a person who follows a religion with more than one god, known as a [polytheistic] religion.",
+      "answer": "polytheistic"
+    },
+    {
+      "text": "The Christian King of Wessex was [Aethelberht].",
+      "answer": "Aethelberht"
+    },
+    {
+      "text": "In feudal society, the top level of society was the king, followed by lords, followed by [vassals].",
+      "answer": "vassals"
+    },
+    {
+      "text": "A lord granted a [fief], or estate, to a vassal in exchange for loyalty.",
+      "answer": "fief"
+    }
+  ],
+  "status": "Inactive"
+}

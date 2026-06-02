@@ -1,0 +1,110 @@
+{
+  "title": "Vocabulary Workshop Grade 5 Unit 12 Quiz 1",
+  "category": "Vocabulary",
+  "status": "Inactive",
+"type": "fillintheblank",
+  "wordBank": [
+    "abduct",
+    "ambiguous",
+    "balk",
+    "compact",
+    "confer",
+    "earmark",
+    "frigid",
+    "implement",
+    "incalculable",
+    "indisputable",
+    "intensive",
+    "maneuver",
+    "sabotage",
+    "scant",
+    "stealthy",
+    "strapping",
+    "strident",
+    "thrive",
+    "titanic",
+    "valiant"
+  ],
+  "sentences": [
+    {
+      "text": "The aliens in the movie tried to [abduct] the cow from the farm and take it to their spaceship.",
+      "answer": "abduct"
+    },
+    {
+      "text": "The ending of the book was a bit [ambiguous], so I wasn't sure if the hero actually made it home or not.",
+      "answer": "ambiguous"
+    },
+    {
+      "text": "My dog will usually walk nicely, but he will [balk] and refuse to move if he sees a puddle in his path.",
+      "answer": "balk"
+    },
+    {
+      "text": "We used a [compact] camera because it was small enough to fit right in my pocket during our hike.",
+      "answer": "compact"
+    },
+    {
+      "text": "The soccer coaches had to [confer] at the sideline to decide which player should take the penalty kick.",
+      "answer": "confer"
+    },
+    {
+      "text": "I decided to [earmark] ten dollars of my birthday money specifically to buy a new video game.",
+      "answer": "earmark"
+    },
+    {
+      "text": "We had to wear heavy coats, scarves, and gloves to stay warm in the [frigid] winter air.",
+      "answer": "frigid"
+    },
+    {
+      "text": "The school is going to [implement] a new rule that gives us five extra minutes of recess on Fridays.",
+      "answer": "implement"
+    },
+    {
+      "text": "The amount of stars in the giant galaxy is [incalculable] because there are simply too many to count.",
+      "answer": "incalculable"
+    },
+    {
+      "text": "With the score being 10 to 0, it was [indisputable] that the Blue Team was the winner of the game.",
+      "answer": "indisputable"
+    },
+    {
+      "text": "The doctors gave the patient [intensive] care to make sure they recovered as quickly as possible.",
+      "answer": "intensive"
+    },
+    {
+      "text": "It was difficult to [maneuver] my bike through the crowded sidewalk without bumping into anyone.",
+      "answer": "maneuver"
+    },
+    {
+      "text": "The villain tried to [sabotage] the hero’s plan by hiding the secret map before the mission started.",
+      "answer": "sabotage"
+    },
+    {
+      "text": "Because there was [scant] evidence that it would rain, we decided to have our picnic outside anyway.",
+      "answer": "scant"
+    },
+    {
+      "text": "The [stealthy] cat crept through the tall grass without making a single sound.",
+      "answer": "stealthy"
+    },
+    {
+      "text": "The [strapping] young man easily lifted the heavy boxes and carried them into the house.",
+      "answer": "strapping"
+    },
+    {
+      "text": "The referee’s [strident] whistle was so loud and sharp that everyone on the field stopped immediately.",
+      "answer": "strident"
+    },
+    {
+      "text": "Most plants will [thrive] and grow very tall if they get plenty of sunlight and just enough water.",
+      "answer": "thrive"
+    },
+    {
+      "text": "The construction crew used a [titanic] crane to lift the heavy steel beams to the top of the skyscraper.",
+      "answer": "titanic"
+    },
+    {
+      "text": "The [valiant] firefighter rushed into the smoky building to save the family’s tiny kitten.",
+      "answer": "valiant"
+    }
+  ]
+}
