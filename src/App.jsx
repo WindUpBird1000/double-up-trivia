@@ -216,13 +216,52 @@ const QuizApp = () => {
     setStudentAnswers(p => ({ ...p, [qi]: cur.includes(optText) ? cur.filter(a => a !== optText) : [...cur, optText] }));
   };
   const goToQuestion = (delta) => { const t = activeQuestions.length; setCurrentQuestionIndex((currentQuestionIndex + t + delta) % t); };
-  const submitQuiz = async () => {
+  const [doubleSelections, setDoubleSelections] = useState([]);
+  const DOUBLES_ALLOWED = 3;
+
+  const toggleDouble = (i) => {
+    setDoubleSelections(prev =>
+      prev.includes(i) ? prev.filter(x => x !== i) : prev.length < DOUBLES_ALLOWED ? [...prev, i] : prev
+    );
+  };
+
+  const getAnswerDisplay = (q, i) => {
+    const qtype = activeQuiz?.type === 'combination' ? q.questionType : activeQuiz?.type;
+    const ans = studentAnswers[i];
+    if (qtype === 'MC') {
+      const sel = ans || [];
+      if (!sel.length) return '—';
+      const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      return sel.map(optText => {
+        const idx = (q.displayOptions || []).findIndex(o => o.opt === optText);
+        return `${idx >= 0 ? labels[idx]+'. ' : ''}${optText}`;
+      }).join(', ');
+    }
+    return ans || '—';
+  };
+
+  const getPromptPreview = (q) => {
+    const raw = q.prompt || q.text || '';
+    const cleaned = raw.replace(/\{\{[^}]+\}\}/g, '').replace(/\[[^\]]+\]/g, '____').trim();
+    return cleaned.length > 60 ? cleaned.slice(0, 60) + '…' : cleaned;
+  };
+
+  const submitQuiz = () => { setDoubleSelections([]); setMode('summary'); };
+
+  const saveProgress = async () => {
+    if (!currentAttemptId || !currentUser) return;
+    await supabase.from('quiz_attempts').update({ answers: studentAnswers }).eq('id', currentAttemptId);
+  };
+
+  const handleFinalSubmission = async () => {
     if (currentAttemptId) {
       const now = new Date().toISOString();
-      await supabase.from('quiz_attempts').update({ status: 'submitted', answers: studentAnswers, submitted_at: now }).eq('id', currentAttemptId);
-      setUserAttempts(p => ({ ...p, [activeQuiz.key || selectedQuizKey]: { ...p[activeQuiz.key || selectedQuizKey], status: 'submitted' } }));
+      await supabase.from('quiz_attempts').update({
+        status: 'submitted', answers: studentAnswers, submitted_at: now
+      }).eq('id', currentAttemptId);
+      setUserAttempts(p => ({ ...p, [selectedQuizKey]: { ...p[selectedQuizKey], status: 'submitted' } }));
     }
-    setMode('results');
+    setMode('submitted');
   };
 
   const getScore = () => {
@@ -262,11 +301,6 @@ const QuizApp = () => {
     setCurrentUser(data.user);
     await fetchUserData(data.user);
     setMode('setup');
-  };
-
-  const saveProgress = async () => {
-    if (!currentAttemptId || !currentUser) return;
-    await supabase.from('quiz_attempts').update({ answers: studentAnswers }).eq('id', currentAttemptId);
   };
 
   const handleLogout = async () => {
@@ -638,9 +672,7 @@ const QuizApp = () => {
       <div style={{position:"relative"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
           <span className="text-sm text-gray-500">{displayName || currentUser?.email}</span>
-          <div className="flex gap-2">
-            <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
-          </div>
+          <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
         </div>
         <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
           <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Select From Active, Unfinished Quizzes</h1>
@@ -708,7 +740,7 @@ const QuizApp = () => {
           <p className="text-2xl text-gray-800 leading-relaxed font-medium">{parts[0]}{currentAnswer?<span className="text-blue-600 font-bold">{currentAnswer}</span>:<span className="inline-block border-b-2 border-gray-400 w-28 mx-1 align-bottom"/>}{parts[1]}</p>
         </div>
         <NavBar current={currentQuestionIndex} total={total} label="Sentence"/>
-        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Submit Quiz ({answeredCount}/{total} answered)</button>
+        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
         <ContactLine/><ExitModal/>
       </div>
     );
@@ -730,7 +762,7 @@ const QuizApp = () => {
           <div className="space-y-3 mt-4">{q.displayOptions.map((optObj,i)=><button key={i} onClick={()=>toggleMCAnswer(currentQuestionIndex,optObj.opt)} className={`w-full text-left px-5 py-3 rounded-lg border-2 font-medium transition-all ${sels.includes(optObj.opt)?'bg-green-600 text-white border-green-600':'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}>{optObj.opt}</button>)}</div>
         </div>
         <NavBar current={currentQuestionIndex} total={total} label="Question"/>
-        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Submit Quiz ({answeredCount}/{total} answered)</button>
+        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
         <ContactLine/><ExitModal/>
       </div>
     );
@@ -750,7 +782,7 @@ const QuizApp = () => {
           <input type="text" value={studentAnswers[currentQuestionIndex]||''} onChange={e=>setStudentAnswers(p=>({...p,[currentQuestionIndex]:e.target.value}))} placeholder="Type your answer here..." className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-800 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
         </div>
         <NavBar current={currentQuestionIndex} total={total} label="Question"/>
-        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Submit Quiz ({answeredCount}/{total} answered)</button>
+        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
         <ContactLine/><ExitModal/>
       </div>
     );
@@ -782,11 +814,64 @@ const QuizApp = () => {
         {q.questionType==='MC' && (()=>{const sels=studentAnswers[currentQuestionIndex]||[];const multi=qWithDisplay.displayOptions.filter(o=>o.correct).length>1;return(<div className="bg-white rounded-xl shadow-md p-8 mb-6"><div className="text-xl text-gray-800 font-semibold mb-2">{renderPrompt(q.prompt)}</div>{multi&&<p className="text-sm text-blue-600 mb-4 font-medium">Select all that apply.</p>}<div className="space-y-3 mt-4">{qWithDisplay.displayOptions.map((optObj,i)=><button key={i} onClick={()=>toggleMCAnswer(currentQuestionIndex,optObj.opt)} className={`w-full text-left px-5 py-3 rounded-lg border-2 font-medium transition-all ${sels.includes(optObj.opt)?'bg-green-600 text-white border-green-600':'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}>{optObj.opt}</button>)}</div></div>);})()}
         {q.questionType==='OR' && (<div className="bg-white rounded-xl shadow-md p-8 mb-6"><div className="text-xl text-gray-800 font-semibold mb-6">{renderPrompt(q.prompt)}</div><input type="text" value={studentAnswers[currentQuestionIndex]||''} onChange={e=>setStudentAnswers(p=>({...p,[currentQuestionIndex]:e.target.value}))} placeholder="Type your answer here..." className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-800 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/></div>)}
         <NavBar current={currentQuestionIndex} total={total} label="Question"/>
-        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Submit Quiz ({answeredCount}/{total} answered)</button>
+        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
         <ContactLine/><ExitModal/>
       </div>
     );
   }
+
+  if (mode==='summary') {
+    const doublesOk = doubleSelections.length === DOUBLES_ALLOWED;
+    return (
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">{activeQuiz?.title}</h1>
+          <button onClick={()=>{setCurrentQuestionIndex(0);setMode('assessment');}} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">← Back to Questions</button>
+        </div>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
+          <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <div className="col-span-1 text-center">#</div>
+            <div className="col-span-6">Question</div>
+            <div className="col-span-3">Your Answer</div>
+            <div className="col-span-2 text-center">Double?</div>
+          </div>
+          {activeQuestions.map((q, i) => (
+            <div key={i} className={`grid grid-cols-12 gap-2 px-4 py-3 border-b last:border-b-0 items-center ${doubleSelections.includes(i) ? 'bg-yellow-50' : 'bg-white'}`}>
+              <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}</div>
+              <div className="col-span-6 text-sm text-gray-700">{getPromptPreview(q)}</div>
+              <div className="col-span-3 text-sm text-blue-700 font-medium">{getAnswerDisplay(q, i)}</div>
+              <div className="col-span-2 flex justify-center">
+                <input type="checkbox" checked={doubleSelections.includes(i)} onChange={()=>toggleDouble(i)}
+                  disabled={!doubleSelections.includes(i) && doubleSelections.length >= DOUBLES_ALLOWED}
+                  className="w-5 h-5 accent-yellow-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"/>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="bg-white rounded-xl shadow-md p-5 mb-4">
+          <p className={`text-center font-medium ${doublesOk ? 'text-green-700' : 'text-gray-600'}`}>
+            {doublesOk
+              ? `✓ You have selected ${DOUBLES_ALLOWED} answer${DOUBLES_ALLOWED!==1?'s':''} to double.`
+              : `You must select exactly ${DOUBLES_ALLOWED} answer${DOUBLES_ALLOWED!==1?'s':''} to double. (${doubleSelections.length} selected)`}
+          </p>
+        </div>
+        <button onClick={handleFinalSubmission} disabled={!doublesOk} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+          <Check size={20}/> Final Submission
+        </button>
+      </div>
+    );
+  }
+
+  if (mode==='submitted') return (
+    <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen flex flex-col items-center justify-center">
+      <div className="bg-white rounded-xl shadow-md p-10 text-center w-full">
+        <div className="text-5xl mb-4">🎉</div>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Quiz Submitted!</h1>
+        <p className="text-gray-600 mb-6">Your answers for <span className="font-semibold">{activeQuiz?.title}</span> have been recorded. Results and scores will be posted once everyone has completed the quiz — stay tuned!</p>
+        <button onClick={()=>setMode('setup')} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Back to Quiz List</button>
+      </div>
+    </div>
+  );
 
   if (mode==='results' && activeQuiz?.type==='fillintheblank') {
     const{correct,total}=getScore();
