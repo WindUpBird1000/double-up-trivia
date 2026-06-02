@@ -97,6 +97,14 @@ const QuizApp = () => {
   const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
+    // Restore Supabase session on page load
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        setCurrentUser(session.user);
+        await fetchUserData(session.user);
+        setMode('setup');
+      }
+    });
     fetch('/quizzes/knownquizzes.json').then(r => r.json())
       .then(config => {
         const keys = config.quizzes || [];
@@ -196,7 +204,6 @@ const QuizApp = () => {
       setCurrentAttemptId(existing.id);
     } else {
       setStudentAnswers({});
-      setDoubleSelections([]);
       const { data } = await supabase.from('quiz_attempts').insert({ user_id: currentUser.id, quiz_key: selectedQuizKey, status: 'in_progress', answers: {} }).select().single();
       if (data) {
         setCurrentAttemptId(data.id);
@@ -247,7 +254,7 @@ const QuizApp = () => {
     return cleaned.length > 60 ? cleaned.slice(0, 60) + '…' : cleaned;
   };
 
-  const submitQuiz = () => { setMode('summary'); };
+  const submitQuiz = () => { setDoubleSelections([]); setMode('summary'); };
 
   const saveProgress = async () => {
     if (!currentAttemptId || !currentUser) return;
@@ -514,7 +521,7 @@ const QuizApp = () => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl">
         <h2 className="text-xl font-semibold mb-3">Exit Quiz?</h2>
-        <p className="text-gray-600 mb-6">Your progress will be lost. Are you sure?</p>
+        <p className="text-gray-600 mb-6">Your answers will be saved and you can continue this quiz later.</p>
         <div className="flex gap-3">
           <button onClick={async()=>{await saveProgress();setShowResetModal(false);setMode('setup');}} className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium">Yes, Exit</button>
           <button onClick={()=>setShowResetModal(false)} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
