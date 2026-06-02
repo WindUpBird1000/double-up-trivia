@@ -196,6 +196,7 @@ const QuizApp = () => {
       setCurrentAttemptId(existing.id);
     } else {
       setStudentAnswers({});
+      setDoubleSelections([]);
       const { data } = await supabase.from('quiz_attempts').insert({ user_id: currentUser.id, quiz_key: selectedQuizKey, status: 'in_progress', answers: {} }).select().single();
       if (data) {
         setCurrentAttemptId(data.id);
@@ -246,7 +247,7 @@ const QuizApp = () => {
     return cleaned.length > 60 ? cleaned.slice(0, 60) + '…' : cleaned;
   };
 
-  const submitQuiz = () => { setDoubleSelections([]); setMode('summary'); };
+  const submitQuiz = () => { setMode('summary'); };
 
   const saveProgress = async () => {
     if (!currentAttemptId || !currentUser) return;
