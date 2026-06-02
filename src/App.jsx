@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Check, X, ChevronLeft, ChevronRight, Settings, BookOpen, LogOut, Plus, Trash2, Download, Edit2, Star, List } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  'https://jcsoyacjqjfznsprmxcj.supabase.co',
+  'sb_publishable_zGvjNAiBtoaRersumsUjWA_OGLXkrJz'
+);
 
 const parseSentence = (rawText) => {
   const match = rawText.match(/\[([^\]]+)\]/);
@@ -76,7 +82,15 @@ const shortTypeLabel = (t) => t === 'MC' ? 'MC' : t === 'OR' ? 'OR' : t === 'FIT
 const promptPreview = (q) => { const text = q.prompt || q.text || ''; return text.length > 50 ? text.slice(0, 50) + '…' : text; };
 
 const QuizApp = () => {
-  const [mode, setMode] = useState('setup');
+  const [mode, setMode] = useState('login');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotSending, setForgotSending] = useState(false);
   const [knownQuizzes, setKnownQuizzes] = useState({ quizzes: [] });
   const [allQuizData, setAllQuizData] = useState({});
   const [isLoading, setIsLoading] = useState(true);
@@ -99,7 +113,6 @@ const QuizApp = () => {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [adminUsername, setAdminUsername] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedQuizKey, setSelectedQuizKey] = useState('');
   const [activeQuiz, setActiveQuiz] = useState(null);
@@ -206,11 +219,42 @@ const QuizApp = () => {
     return { correct, total: activeQuestions.length };
   };
 
+  const handleLogin = async () => {
+    setLoginError('');
+    const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
+    if (error) { setLoginError('Invalid email or password.'); return; }
+    setCurrentUser(data.user);
+    setMode('setup');
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+    setLoginEmail('');
+    setLoginPassword('');
+    setMode('login');
+  };
+
+  const handleForgotSubmit = async () => {
+    if (!forgotEmail.trim()) return;
+    setForgotSending(true);
+    try {
+      await window.emailjs.send('service_u91y3sw', 'template_mrur50g', {
+        user_email: forgotEmail.trim(),
+        to_email: 'doubleuptrivia@gmail.com',
+      }, '0k_9ewelPuyyBY1HX');
+      setForgotSent(true);
+    } catch(e) {
+      alert('Could not send request. Please email doubleuptrivia@gmail.com directly.');
+    }
+    setForgotSending(false);
+  };
+
   const adminLogin = () => {
     if (adminUsername === 'twerner' && adminPassword === 'password') { setIsAdminAuthenticated(true); setLoginError(''); }
     else setLoginError('Invalid username or password.');
   };
-  const adminLogout = () => { setIsAdminAuthenticated(false); setAdminUsername(''); setAdminPassword(''); setMode('setup'); };
+  const adminLogout = () => { setIsAdminAuthenticated(false); setAdminUsername(''); setAdminPassword(''); setMode('login'); };
 
   const resetQuizBuilder = () => {
     setEditingKey(null); setNewQuizTitle(''); setNewQuizKey(''); setNewQuizCategory('');
@@ -490,12 +534,67 @@ const QuizApp = () => {
     );
   };
 
+  const ForgotModal = () => showForgotModal ? (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+        <h2 className="text-lg font-bold text-gray-800 mb-2">Request Login Info</h2>
+        {forgotSent ? (
+          <>
+            <p className="text-green-700 text-sm mb-4">Your request has been sent! You'll receive your login info by email shortly.</p>
+            <button onClick={()=>{setShowForgotModal(false);setForgotSent(false);setForgotEmail('');}} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Close</button>
+          </>
+        ) : (
+          <>
+            <p className="text-gray-600 text-sm mb-4">Enter your email address and the admin will send you your login info.</p>
+            <input type="email" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="Your email address" className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 text-sm"/>
+            <div className="flex gap-3">
+              <button onClick={handleForgotSubmit} disabled={!forgotEmail.trim()||forgotSending} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40">{forgotSending?'Sending...':'Submit'}</button>
+              <button onClick={()=>{setShowForgotModal(false);setForgotEmail('');}} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  ) : null;
+
+  if (mode==='login') return (
+    <div className="max-w-md mx-auto p-6 bg-gray-50 min-h-screen flex flex-col justify-center">
+      <ForgotModal/>
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold text-gray-800 tracking-tight mb-2">Double Up Trivia</h1>
+        <p className="text-gray-500">Sign in to play</p>
+      </div>
+      <div className="bg-white rounded-xl shadow-md p-8">
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
+          <input type="email" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleLogin()} placeholder="you@example.com" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"/>
+        </div>
+        <div className="mb-2">
+          <label className="block text-sm font-medium text-gray-600 mb-1">Password</label>
+          <input type="password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleLogin()} placeholder="••••••••" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"/>
+        </div>
+        {loginError && <p className="text-red-600 text-sm mb-3">{loginError}</p>}
+        <button onClick={handleLogin} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg mt-4 mb-6">Log In</button>
+        <div className="border-t pt-4 text-center">
+          <p className="text-sm text-gray-500 mb-2">Forgot your username and/or password?</p>
+          <button onClick={()=>{setShowForgotModal(true);setForgotSent(false);}} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-sm font-medium">Click Here</button>
+        </div>
+      </div>
+      <div className="text-center mt-6">
+        <button onClick={()=>setMode('admin')} className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium mx-auto"><Settings size={18}/> Admin</button>
+      </div>
+    </div>
+  );
+
   if (isLoading) return <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center"><div className="text-xl text-gray-500">Loading quizzes...</div></div>;
   if (mode==='setup') return (
     <div className="max-w-2xl mx-auto bg-gray-50 min-h-screen" style={{padding:"1.5rem"}}>
       <div style={{position:"relative"}}>
-        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:"1.25rem"}}>
-          <button onClick={()=>setMode('admin')} className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"><Settings size={18}/> Admin</button>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
+          <span className="text-sm text-gray-500">{currentUser?.email}</span>
+          <div className="flex gap-2">
+            <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
+          </div>
         </div>
         <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
           <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Set Up Your Practice Session</h1>
