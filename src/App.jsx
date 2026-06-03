@@ -320,16 +320,6 @@ const QuizApp = () => {
     }
   };
 
-  const getQuestionDisplay = (q) => {
-    const qtype = activeQuiz?.type === 'combination' ? q.questionType : activeQuiz?.type;
-    if (qtype === 'fillintheblank') {
-      const { display } = parseSentence(q.text);
-      const ans = studentAnswers[activeQuestions.indexOf(q)];
-      return display.replace('______', ans ? `[${ans}]` : '______');
-    }
-    return q.prompt || q.text || '';
-  };
-
   const handleSendDisputes = async () => {
     setDisputeSending(true);
     const disputeList = Object.keys(disputedQuestions).filter(i => disputedQuestions[i]);
@@ -352,6 +342,8 @@ const QuizApp = () => {
     }
     setDisputeSending(false);
   };
+
+  const fetchUserData = async (user) => {
     const { data: profile } = await supabase.from('profiles').select('display_name').eq('user_id', user.id).single();
     if (profile) setDisplayName(profile.display_name || '');
     const { data: attempts } = await supabase.from('quiz_attempts').select('*').eq('user_id', user.id);
@@ -940,11 +932,8 @@ const QuizApp = () => {
         <div className="bg-white rounded-xl shadow-md p-6 mb-4">
           <h1 className="text-2xl font-bold text-gray-800 mb-1">Quiz Submitted!</h1>
           <p className="text-gray-600">Your answers for <span className="font-semibold">{activeQuiz?.title}</span> have been recorded. Results and scores will be posted once everyone has completed the quiz — stay tuned!</p>
-          {doubleSelections.length > 0 && (
-            <p className="text-sm text-gray-500 mt-2">⭐ = doubled question</p>
-          )}
+          {doubleSelections.length > 0 && <p className="text-sm text-gray-500 mt-2">⭐ = doubled question</p>}
         </div>
-
         <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
           <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
             <div className="col-span-1 text-center">#</div>
@@ -961,46 +950,30 @@ const QuizApp = () => {
             return (
               <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
                 <div className="grid grid-cols-12 gap-2 px-4 py-3 items-center">
-                  <div className="col-span-1 text-center text-sm font-medium text-gray-500">
-                    {i+1}{doubled && <span className="ml-1 text-yellow-500">⭐</span>}
-                  </div>
+                  <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}{doubled && <span className="ml-1 text-yellow-500">⭐</span>}</div>
                   <div className="col-span-5 text-sm text-gray-700">{getPromptPreview(q)}</div>
                   <div className={`col-span-2 text-sm font-medium ${correct ? 'text-green-700' : 'text-red-600'}`}>{getAnswerDisplay(q, i)}</div>
                   <div className="col-span-2 text-sm text-gray-600">{correct ? '✓' : getCorrectAnswerDisplay(q)}</div>
                   <div className="col-span-2 flex justify-center">
-                    {alreadyDisputed ? (
-                      <input type="checkbox" checked readOnly className="w-5 h-5 accent-blue-500 cursor-not-allowed"/>
-                    ) : correct ? null : (
-                      <input type="checkbox" checked={disputing} onChange={e=>setDisputedQuestions(p=>({...p,[i]:e.target.checked}))} className="w-5 h-5 accent-red-500 cursor-pointer"/>
-                    )}
+                    {alreadyDisputed
+                      ? <input type="checkbox" checked readOnly className="w-5 h-5 accent-blue-500 cursor-not-allowed"/>
+                      : correct ? null
+                      : <input type="checkbox" checked={disputing} onChange={e=>setDisputedQuestions(p=>({...p,[i]:e.target.checked}))} className="w-5 h-5 accent-red-500 cursor-pointer"/>}
                   </div>
                 </div>
                 {disputing && !alreadyDisputed && (
                   <div className="px-4 pb-3">
-                    <textarea
-                      value={disputeReasons[i] || ''}
-                      onChange={e=>setDisputeReasons(p=>({...p,[i]:e.target.value}))}
-                      placeholder="Briefly explain why you disagree, i.e., spelling error, factual error, etc."
-                      rows={2}
-                      className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-300 resize-none"
-                    />
+                    <textarea value={disputeReasons[i]||''} onChange={e=>setDisputeReasons(p=>({...p,[i]:e.target.value}))} placeholder="Briefly explain why you disagree, i.e., spelling error, factual error, etc." rows={2} className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-300 resize-none"/>
                   </div>
                 )}
-                {alreadyDisputed && (
-                  <div className="px-4 pb-2">
-                    <p className="text-xs text-blue-600 italic">Dispute submitted.</p>
-                  </div>
-                )}
+                {alreadyDisputed && <div className="px-4 pb-2"><p className="text-xs text-blue-600 italic">Dispute submitted.</p></div>}
               </div>
             );
           })}
         </div>
-
         <div className="flex gap-3">
           <button onClick={()=>setMode('setup')} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Back to Quiz List</button>
-          <button onClick={handleSendDisputes} disabled={!hasDisputes||disputeSending} className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
-            {disputeSending ? 'Sending...' : 'Send Disputes'}
-          </button>
+          <button onClick={handleSendDisputes} disabled={!hasDisputes||disputeSending} className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold disabled:opacity-40 disabled:cursor-not-allowed">{disputeSending?'Sending...':'Send Disputes'}</button>
         </div>
       </div>
     );
