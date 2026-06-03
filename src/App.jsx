@@ -97,17 +97,24 @@ const QuizApp = () => {
   const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
-    fetch('/quizzes/knownquizzes.json').then(r => r.json())
-      .then(config => {
-        const keys = config.quizzes || [];
+    // Restore session on page load
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        setCurrentUser(session.user);
+        await fetchUserData(session.user);
+        setMode('setup');
+      }
+    });
+    // Load quizzes from Supabase
+    supabase.from('quizzes').select('*')
+      .then(({ data, error }) => {
+        if (error || !data) { setLoadError('Could not load quiz data.'); setIsLoading(false); return; }
+        const keys = data.map(q => q.quiz_key);
         setKnownQuizzes({ quizzes: keys });
-        return Promise.all(keys.map(key => fetch(`/quizzes/${key}.json`).then(r => r.json()).then(data => ({ key, data })).catch(() => null)));
-      })
-      .then(results => {
-        const m = {}; results.filter(Boolean).forEach(({ key, data }) => { m[key] = data; });
+        const m = {};
+        data.forEach(q => { m[q.quiz_key] = { ...q.data, status: q.status, title: q.title, category: q.category, type: q.type }; });
         setAllQuizData(m); setIsLoading(false);
-      })
-      .catch(() => { setLoadError('Could not load quiz data.'); setIsLoading(false); });
+      });
   }, []);
 
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
@@ -603,26 +610,36 @@ const QuizApp = () => {
     if (!validateQuizBuilder()) return;
     const quizData = buildQuizJSON();
     const key = newQuizKey;
+
+    // Save to Supabase
+    const { error } = await supabase.from('quizzes').upsert({
+      quiz_key: key,
+      title: quizData.title,
+      category: quizData.category,
+      status: quizData.status,
+      type: quizData.type,
+      data: quizData,
+    }, { onConflict: 'quiz_key' });
+
+    if (error) { alert('Error saving quiz: ' + error.message); return; }
+
+    // Update local state
     setAllQuizData(p => ({ ...p, [key]: quizData }));
     if (!knownQuizzes.quizzes.includes(key)) setKnownQuizzes(p => ({ quizzes: [...p.quizzes, key] }));
 
     if (newQuizStatus === 'Scored') {
-      // Fetch all submitted attempts for this quiz
       const { data: attempts } = await supabase.from('quiz_attempts').select('*').eq('quiz_key', key).eq('status', 'submitted');
       if (attempts && attempts.length > 0) {
-        // Fetch display names
         const userIds = attempts.map(a => a.user_id);
         const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
         const profileMap = {};
         (profiles || []).forEach(p => { profileMap[p.user_id] = p.display_name; });
-        // Score each attempt with the latest quiz JSON
         const attemptsWithCorrectness = attempts.map(a => ({
           ...a,
           display_name: profileMap[a.user_id] || a.user_id,
           correctness: scoreAttempt(quizData, a.answers || {}),
         }));
         const { pointValues, userScores } = computeQuizResults(quizData, attemptsWithCorrectness);
-        // Save to quiz_results
         await supabase.from('quiz_results').upsert({
           quiz_key: key,
           quiz_title: quizData.title,
