@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Check, X, ChevronLeft, ChevronRight, Settings, BookOpen, LogOut, Plus, Trash2, Download, Edit2, Star, List } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 const supabase = createClient(
   'https://jcsoyacjqjfznsprmxcj.supabase.co',
@@ -1122,6 +1123,7 @@ const QuizApp = () => {
   ) : null;
 
   if (mode==='login') return (
+    <>
     <div className="max-w-md mx-auto p-6 bg-gray-50 min-h-screen flex flex-col justify-center">
       <ForgotModal/>
       <div className="text-center mb-8">
@@ -1148,10 +1150,18 @@ const QuizApp = () => {
         <button onClick={()=>setMode('admin')} className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium mx-auto"><Settings size={18}/> Admin</button>
       </div>
     </div>
+      <SpeedInsights />
+    </>
   );
 
-  if (isLoading) return <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center"><div className="text-xl text-gray-500">Loading quizzes...</div></div>;
+  if (isLoading) return (
+    <>
+      <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center"><div className="text-xl text-gray-500">Loading quizzes...</div></div>
+      <SpeedInsights />
+    </>
+  );
   if (mode==='setup') return (
+    <>
     <div className="max-w-2xl mx-auto bg-gray-50 min-h-screen" style={{padding:"1.5rem"}}>
       <div style={{position:"relative"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
@@ -1207,6 +1217,8 @@ const QuizApp = () => {
         </>
       )}
     </div>
+      <SpeedInsights />
+    </>
   );
   if (mode==='assessment' && activeQuiz?.type==='fillintheblank') {
     const sentence=activeQuestions[currentQuestionIndex]; const {display}=parseSentence(sentence.text);
@@ -1846,7 +1858,7 @@ const QuizApp = () => {
     );
   }
 
-  return null;
+  return <SpeedInsights />;
 };
 
 export default QuizApp;
