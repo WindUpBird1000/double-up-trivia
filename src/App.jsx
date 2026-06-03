@@ -88,7 +88,7 @@ const ordinal = (n) => {
   return n + (s[(v-20)%10] || s[v] || s[0]);
 };
 
-const ScoreboardsListScreen = ({ currentUser, allQuizData, onSelectQuiz, onQuizzes }) => {
+const ScoreboardsListScreen = ({ currentUser, allQuizData, onSelectQuiz, onQuizzes, onLogout }) => {
   const [allResults, setAllResults] = React.useState([]);
   const [myAttempts, setMyAttempts] = React.useState({});
   const [loading, setLoading] = React.useState(true);
@@ -127,16 +127,14 @@ const ScoreboardsListScreen = ({ currentUser, allQuizData, onSelectQuiz, onQuizz
     return null;
   };
 
-  const QuizResultCard = ({ result, compact = false }) => {
+  const QuizResultCard = ({ result, index = 0 }) => {
     const quiz = allQuizData[result.quiz_key];
     const totalUsers = result.scores?.userScores?.length || 0;
     const placement = getUserPlacement(result);
     const tookQuiz = myAttempts[result.quiz_key]?.status === 'submitted';
     return (
-      <div onClick={() => onSelectQuiz(result.quiz_key)} className="cursor-pointer hover:bg-blue-50 rounded-lg p-3 transition-colors border border-transparent hover:border-blue-200">
-        <p className="font-bold text-gray-800">{result.quiz_title || quiz?.title || result.quiz_key}</p>
-        <p className="text-xs text-gray-500 mt-0.5">{quiz?.category || ''}</p>
-        <p className="text-xs text-gray-500">Taken by {totalUsers} user{totalUsers !== 1 ? 's' : ''}</p>
+      <div onClick={() => onSelectQuiz(result.quiz_key)} className={`cursor-pointer hover:bg-blue-50 rounded-lg p-3 transition-colors border border-transparent hover:border-blue-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+        <p className="font-bold text-gray-800">{result.quiz_title || quiz?.title || result.quiz_key} <span className="text-xs font-normal text-gray-500">({quiz?.category || ''})</span> <span className="text-xs font-normal text-gray-500">— Taken by {totalUsers} user{totalUsers !== 1 ? 's' : ''}.</span></p>
         {tookQuiz
           ? <p className="text-xs text-blue-600 font-medium mt-0.5">{placement ? `You finished in ${ordinal(placement)} place.` : 'You took this quiz.'}</p>
           : <p className="text-xs text-gray-400 italic mt-0.5">You didn't take this quiz.</p>}
@@ -164,7 +162,10 @@ const ScoreboardsListScreen = ({ currentUser, allQuizData, onSelectQuiz, onQuizz
     <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Scoreboards</h1>
-        <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+        <div className="flex gap-2">
+          <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+          {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+        </div>
       </div>
 
       {allResults.length === 0 ? (
@@ -174,8 +175,8 @@ const ScoreboardsListScreen = ({ currentUser, allQuizData, onSelectQuiz, onQuizz
           {/* Recent */}
           <div className="bg-white rounded-xl shadow-md p-5 mb-6">
             <h2 className="text-lg font-bold text-gray-700 mb-3">Five Most Recently Scored Quizzes</h2>
-            <div className="divide-y">
-              {recent.map(r => <QuizResultCard key={r.quiz_key} result={r}/>)}
+            <div className="rounded-lg overflow-hidden">
+              {recent.map((r, idx) => <QuizResultCard key={r.quiz_key} result={r} index={idx}/>)}
             </div>
           </div>
 
@@ -197,8 +198,8 @@ const ScoreboardsListScreen = ({ currentUser, allQuizData, onSelectQuiz, onQuizz
                           {MONTH_NAMES[m]}
                         </button>
                         {openMonths[`${y}-${m}`] && (
-                          <div className="ml-4 divide-y">
-                            {grouped[y][m].map(r => <QuizResultCard key={r.quiz_key} result={r}/>)}
+                          <div className="rounded-lg overflow-hidden ml-4">
+                            {grouped[y][m].map((r, idx) => <QuizResultCard key={r.quiz_key} result={r} index={idx}/>)}
                           </div>
                         )}
                       </div>
@@ -214,7 +215,7 @@ const ScoreboardsListScreen = ({ currentUser, allQuizData, onSelectQuiz, onQuizz
   );
 };
 
-const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQuizzes }) => {
+const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQuizzes, onLogout }) => {
   const [results, setResults] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [myAttempt, setMyAttempt] = React.useState(null);
@@ -330,6 +331,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
         <div className="flex gap-2">
           <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"><Star size={16}/> Scoreboards</button>
           <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+          {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
         </div>
       </div>
 
@@ -1308,13 +1310,13 @@ const QuizApp = () => {
     );
   }
 
-  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onQuizzes={()=>setMode('setup')}/>;
+  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout}/>;
 
 
   if (mode==='scoreboard' && viewScoringKey) {
     const quiz = allQuizData[viewScoringKey];
     const quizResults = null; // will be loaded async — see below
-    return <ScoreboardScreen quiz={quiz} quizKey={viewScoringKey} currentUser={currentUser} displayName={displayName} onBack={()=>setMode('scoreboards')} onQuizzes={()=>setMode('setup')}/>;
+    return <ScoreboardScreen quiz={quiz} quizKey={viewScoringKey} currentUser={currentUser} displayName={displayName} onBack={()=>setMode('scoreboards')} onQuizzes={()=>setMode('setup')} onLogout={handleLogout}/>;
   }
 
   if (mode==='summary') {
