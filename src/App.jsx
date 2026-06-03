@@ -81,6 +81,186 @@ const ImageHelper = () => {
 const shortTypeLabel = (t) => t === 'MC' ? 'MC' : t === 'OR' ? 'OR' : t === 'FITB' ? 'FitB' : t;
 const promptPreview = (q) => { const text = q.prompt || q.text || ''; return text.length > 50 ? text.slice(0, 50) + '…' : text; };
 
+const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQuizzes }) => {
+  const [results, setResults] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [myAttempt, setMyAttempt] = React.useState(null);
+  const [popupAnswers, setPopupAnswers] = React.useState(null);
+
+  React.useEffect(() => {
+    Promise.all([
+      supabase.from('quiz_results').select('*').eq('quiz_key', quizKey).single(),
+      supabase.from('quiz_attempts').select('*').eq('quiz_key', quizKey).eq('user_id', currentUser.id).single(),
+    ]).then(([{ data: r }, { data: a }]) => {
+      setResults(r);
+      setMyAttempt(a);
+      setLoading(false);
+    });
+  }, [quizKey]);
+
+  if (loading) return <div className="max-w-3xl mx-auto p-6 flex items-center justify-center min-h-screen"><p className="text-gray-500">Loading scoreboard...</p></div>;
+  if (!results) return <div className="max-w-3xl mx-auto p-6"><p className="text-red-600">No scoring data found for this quiz.</p></div>;
+
+  const { pointValues, userScores, correctnessByUser, correctCounts } = results.scores;
+  const questions = quiz.type === 'fillintheblank' ? quiz.sentences : quiz.questions;
+  const myAnswers = myAttempt?.answers || {};
+  const myDoubles = myAttempt?.doubles || [];
+  const totalUsers = userScores.length;
+
+  // Build ranked leaderboard with tiebreaking
+  const ranked = [...userScores]
+    .map(u => ({ ...u, questionsCorrect: typeof u.questionsCorrect === 'number' ? u.questionsCorrect : 0 }))
+    .sort((a, b) => b.score - a.score || b.questionsCorrect - a.questionsCorrect || a.display_name.localeCompare(b.display_name));
+  let rank = 1;
+  const withRanks = ranked.map((u, i) => {
+    if (i > 0 && ranked[i].score === ranked[i-1].score && ranked[i].questionsCorrect === ranked[i-1].questionsCorrect) {
+      return { ...u, rank: withRanks[i-1].rank };
+    }
+    const r = rank;
+    rank = i + 2;
+    return { ...u, rank: r };
+  });
+
+  const isCorrect = (q, i) => {
+    const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
+    const ans = myAnswers[i];
+    if (qtype === 'MC') {
+      const displayOpts = q.options.map((opt, oi) => ({ opt, correct: q.correctIndices.includes(oi) })).filter(o => o.opt.trim() !== '');
+      const correctOpts = displayOpts.filter(o => o.correct).map(o => o.opt);
+      const sel = ans || [];
+      return sel.length === correctOpts.length && correctOpts.every(o => sel.includes(o));
+    } else if (qtype === 'OR' || qtype === 'openresponse') {
+      return ans && q.acceptedAnswers.some(a => (a||'').trim().toLowerCase() === (ans||'').trim().toLowerCase());
+    } else {
+      const parsed = ans; const correct = q.text?.match(/\[([^\]]+)\]/)?.[1];
+      return parsed === correct;
+    }
+  };
+
+  const getCorrectDisplay = (q) => {
+    const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
+    if (qtype === 'MC') {
+      const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const opts = q.options.map((opt, oi) => ({ opt, correct: q.correctIndices.includes(oi) })).filter(o => o.opt.trim() !== '');
+      return opts.filter(o => o.correct).map(o => { const idx = opts.findIndex(d => d.opt === o.opt); return `${labels[idx]}. ${o.opt}`; }).join(', ');
+    } else if (qtype === 'OR' || qtype === 'openresponse') {
+      return q.acceptedAnswers[q.primaryAnswerIndex ?? 0] || q.acceptedAnswers[0] || '';
+    } else {
+      return q.text?.match(/\[([^\]]+)\]/)?.[1] || '';
+    }
+  };
+
+  const getMyAnswerDisplay = (q, i) => {
+    const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
+    const ans = myAnswers[i];
+    if (qtype === 'MC') {
+      const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const opts = q.options.map((opt, oi) => ({ opt, correct: q.correctIndices.includes(oi) })).filter(o => o.opt.trim() !== '');
+      return (ans || []).map(a => { const idx = opts.findIndex(o => o.opt === a); return `${idx >= 0 ? labels[idx]+'. ' : ''}${a}`; }).join(', ') || '—';
+    }
+    if (qtype === 'fillintheblank') return ans || '—';
+    return ans || '—';
+  };
+
+  const getFullQuestion = (q, i) => {
+    const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
+    if (qtype === 'fillintheblank') {
+      const ans = myAnswers[i];
+      return (q.text || '').replace(/\[[^\]]+\]/, ans ? `[${ans}]` : '______');
+    }
+    return q.prompt || q.text || '';
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
+      {popupAnswers && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4" onClick={()=>setPopupAnswers(null)}>
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full" onClick={e=>e.stopPropagation()}>
+            <h3 className="font-bold text-gray-800 mb-3">All Accepted Answers</h3>
+            <ul className="space-y-1">
+              {popupAnswers.map((a, i) => <li key={i} className={`text-sm ${i === 0 ? 'font-bold text-gray-900' : 'text-gray-600'}`}>{a}</li>)}
+            </ul>
+            <button onClick={()=>setPopupAnswers(null)} className="mt-4 px-4 py-2 bg-gray-200 rounded-lg text-sm font-medium hover:bg-gray-300 w-full">Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">{quiz.title}</h1>
+          <p className="text-gray-500 mt-1">{quiz.category} · Closed {results.posted_at ? new Date(results.posted_at).toLocaleDateString() : ''}</p>
+          <p className="text-gray-600 mt-1">This quiz was taken by <strong>{totalUsers}</strong> user{totalUsers !== 1 ? 's' : ''}.</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"><Star size={16}/> Scoreboards</button>
+          <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+        </div>
+      </div>
+
+      {/* Leaderboard */}
+      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+        <div className="px-5 py-3 bg-gray-100 border-b">
+          <h2 className="font-bold text-gray-700">Leaderboard</h2>
+        </div>
+        <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
+          <div className="col-span-1">#</div>
+          <div className="col-span-7">Player</div>
+          <div className="col-span-2 text-center">Correct</div>
+          <div className="col-span-2 text-right">Points</div>
+        </div>
+        {withRanks.map((u, i) => {
+          const isMe = u.user_id === currentUser?.id;
+          const isFirst = u.rank === 1;
+          return (
+            <div key={i} className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center ${isMe ? 'bg-green-50' : 'bg-white'}`}>
+              <div className={`col-span-1 text-sm ${isFirst ? 'font-bold' : 'text-gray-500'}`}>{u.rank}</div>
+              <div className={`col-span-7 text-sm ${isFirst ? 'font-bold' : ''} ${isMe ? 'text-green-800' : 'text-gray-800'}`}>{u.display_name}{isMe ? ' (you)' : ''}</div>
+              <div className={`col-span-2 text-center text-sm ${isFirst ? 'font-bold' : 'text-gray-600'}`}>{u.questionsCorrect}</div>
+              <div className={`col-span-2 text-right text-sm ${isFirst ? 'font-bold' : 'text-gray-600'}`}>{u.score}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Per-question breakdown */}
+      {myAttempt && (
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="px-5 py-3 bg-gray-100 border-b">
+            <h2 className="font-bold text-gray-700">Your Results</h2>
+            {myDoubles.length > 0 && <p className="text-xs text-gray-500 mt-1">⭐ = doubled question</p>}
+          </div>
+          {questions.map((q, i) => {
+            const correct = isCorrect(q, i);
+            const doubled = myDoubles.includes(i);
+            const pts = pointValues[i] || 0;
+            const myPts = correct ? (doubled ? pts * 2 : pts) : 0;
+            const correctCount = userScores.filter(u => u.user_id && results.scores?.correctnessByUser?.[u.user_id]?.[i]).length;
+            const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
+            const hasOtherAnswers = (qtype === 'OR' || qtype === 'openresponse') && q.acceptedAnswers?.length > 1;
+            return (
+              <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
+                <div className="grid grid-cols-3 gap-4 p-4">
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-800 mb-2">{i+1}. {doubled && <span className="text-yellow-500 mr-1">⭐</span>}{getFullQuestion(q, i)}</p>
+                    <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {getCorrectDisplay(q)}{hasOtherAnswers && <button onClick={()=>setPopupAnswers(q.acceptedAnswers)} className="ml-2 text-blue-500 underline text-xs">and {q.acceptedAnswers.length - 1} other{q.acceptedAnswers.length > 2 ? 's' : ''}</button>}</p>
+                    <p className={`text-xs mt-1 ${correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Your Answer:</span> {getMyAnswerDisplay(q, i)}</p>
+                  </div>
+                  <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
+                    <p><span className="font-semibold">{correctCounts?.[i] ?? '—'}/{totalUsers}</span> Correct</p>
+                    <p>Question Value: <span className="font-semibold">{pts} pts</span></p>
+                    <p className={`font-semibold ${correct ? 'text-green-700' : 'text-red-600'}`}>Your Score: {myPts} pts{doubled && correct ? ' (doubled)' : ''}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const QuizApp = () => {
   const [mode, setMode] = useState('login');
   const [currentUser, setCurrentUser] = useState(null);
@@ -142,6 +322,8 @@ const QuizApp = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportContent, setExportContent] = useState('');
   const [exportFilename, setExportFilename] = useState('');
+  const [viewScoringKey, setViewScoringKey] = useState(null);
+  const [confirmDeleteKey, setConfirmDeleteKey] = useState(null);
   const [adminStatusFilter, setAdminStatusFilter] = useState('All');
   const [newSentenceInput, setNewSentenceInput] = useState('');
   const [newQuizSentences, setNewQuizSentences] = useState([]);
@@ -345,6 +527,15 @@ const QuizApp = () => {
       alert('Could not send disputes. Please try again or email doubleuptrivia@gmail.com directly.');
     }
     setDisputeSending(false);
+  };
+
+  const handleDeleteQuiz = async (key) => {
+    await supabase.from('quiz_attempts').delete().eq('quiz_key', key);
+    await supabase.from('quiz_results').delete().eq('quiz_key', key);
+    await supabase.from('quizzes').delete().eq('quiz_key', key);
+    setAllQuizData(p => { const n = {...p}; delete n[key]; return n; });
+    setKnownQuizzes(p => ({ quizzes: p.quizzes.filter(k => k !== key) }));
+    setConfirmDeleteKey(null);
   };
 
   const fetchUserData = async (user) => {
@@ -575,35 +766,34 @@ const QuizApp = () => {
   const computeQuizResults = (quiz, attempts) => {
     const questions = quiz.type === 'fillintheblank' ? quiz.sentences : quiz.questions;
     const n = questions.length;
-    // For each question, count how many users got it correct
     const correctCounts = questions.map((_, i) => attempts.filter(a => a.correctness[i]).length);
-    // Rank questions by difficulty (fewest correct = hardest)
     const sorted = [...correctCounts.map((c, i) => ({ i, c }))].sort((a, b) => a.c - b.c || a.i - b.i);
-    // Assign point values with tie averaging
     const pointValues = new Array(n).fill(0);
     let rank = n;
     let j = 0;
     while (j < sorted.length) {
       let k = j;
       while (k < sorted.length - 1 && sorted[k+1].c === sorted[k].c) k++;
-      // questions j..k are tied; average their ranks
       const avgPoints = Math.round(((sorted.slice(j, k+1).reduce((s, _, ii) => s + (rank - ii), 0)) / (k - j + 1)) * 10) / 10;
       for (let m = j; m <= k; m++) pointValues[sorted[m].i] = avgPoints;
       rank -= (k - j + 1);
       j = k + 1;
     }
-    // Score each user
+    const correctnessByUser = {};
     const userScores = attempts.map(a => {
       let total = 0;
+      let questionsCorrect = 0;
+      correctnessByUser[a.user_id] = a.correctness;
       a.correctness.forEach((correct, i) => {
         if (!correct) return;
+        questionsCorrect++;
         const pts = pointValues[i];
         const doubled = (a.doubles || []).includes(i);
         total += doubled ? pts * 2 : pts;
       });
-      return { user_id: a.user_id, display_name: a.display_name, score: Math.round(total * 10) / 10 };
+      return { user_id: a.user_id, display_name: a.display_name, score: Math.round(total * 10) / 10, questionsCorrect };
     });
-    return { pointValues, userScores };
+    return { pointValues, userScores, correctnessByUser, correctCounts };
   };
 
   const saveQuizLocally = async () => {
@@ -829,7 +1019,10 @@ const QuizApp = () => {
       <div style={{position:"relative"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
           <span className="text-sm text-gray-500">{displayName || currentUser?.email}</span>
-          <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
+          <div className="flex gap-2">
+            <button onClick={()=>setMode('scoreboards')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"><Star size={16}/> Scoreboards</button>
+            <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
+          </div>
         </div>
         <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
           <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Select From Active, Unfinished Quizzes</h1>
@@ -978,6 +1171,24 @@ const QuizApp = () => {
         <ContactLine/><ExitModal/>
       </div>
     );
+  }
+
+  if (mode==='scoreboards') return (
+    <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">Scoreboards</h1>
+        <button onClick={()=>setMode('setup')} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Quizzes</button>
+      </div>
+      <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500">
+        List of scored quizzes will go here.
+      </div>
+    </div>
+  );
+
+  if (mode==='scoreboard' && viewScoringKey) {
+    const quiz = allQuizData[viewScoringKey];
+    const quizResults = null; // will be loaded async — see below
+    return <ScoreboardScreen quiz={quiz} quizKey={viewScoringKey} currentUser={currentUser} displayName={displayName} onBack={()=>setMode('scoreboards')} onQuizzes={()=>setMode('setup')}/>;
   }
 
   if (mode==='summary') {
@@ -1160,7 +1371,6 @@ const QuizApp = () => {
           <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
           <div className="flex gap-2">
             <button onClick={adminLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"><LogOut size={18}/> Log Out</button>
-            <button onClick={adminLogout} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium"><LogOut size={18}/> Logout</button>
           </div>
         </div>
         <div className="flex items-center gap-3 mb-6 flex-wrap">
@@ -1204,7 +1414,8 @@ const QuizApp = () => {
                     </div>
                     <div className="flex gap-2">
                       <button onClick={()=>startEditQuiz(key)} className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium"><Edit2 size={16}/> Edit</button>
-                      <button onClick={()=>{setExportContent(JSON.stringify(quiz,null,2));setExportFilename(key+'.json');setShowExportModal(true);}} className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"><Download size={16}/> Export</button>
+                      {(quiz.status||'Active')==='Scored' && <button onClick={()=>{setViewScoringKey(key);setMode('scoreboard');}} className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium"><Star size={16}/> View Scoring</button>}
+                      <button onClick={()=>setConfirmDeleteKey(key)} className="flex items-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm font-medium"><Trash2 size={16}/></button>
                     </div>
                   </div>
                   <details className="mt-4">
@@ -1486,6 +1697,19 @@ const QuizApp = () => {
               <div className="px-5 pb-5 flex gap-3">
                 <button onClick={copyToClipboard} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-center">Copy to Clipboard</button>
                 <button onClick={()=>setShowExportModal(false)} className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {confirmDeleteKey&&(
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+              <h2 className="text-lg font-bold text-gray-800 mb-2">Delete Quiz?</h2>
+              <p className="text-gray-600 mb-1">Are you sure you want to delete <strong>{allQuizData[confirmDeleteKey]?.title}</strong>?</p>
+              <p className="text-red-600 text-sm mb-5">This will permanently delete the quiz, all user attempts, and all scoring data.</p>
+              <div className="flex gap-3">
+                <button onClick={()=>handleDeleteQuiz(confirmDeleteKey)} className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium">Yes, Delete</button>
+                <button onClick={()=>setConfirmDeleteKey(null)} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
               </div>
             </div>
           </div>
