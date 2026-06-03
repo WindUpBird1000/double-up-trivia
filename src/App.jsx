@@ -192,14 +192,13 @@ const QuizApp = () => {
     const preparedQs = prepareActiveQuestions(quiz);
     setActiveQuestions(preparedQs);
     if (existing) {
-      setStudentAnswers(existing.answers || {});
+      const { data: freshAttempt } = await supabase.from('quiz_attempts').select('*').eq('id', existing.id).single();
+      setStudentAnswers(freshAttempt?.answers || {});
       setCurrentAttemptId(existing.id);
     } else {
       setStudentAnswers({});
-      const { data, error: insertError } = await supabase.from('quiz_attempts').insert({ user_id: currentUser.id, quiz_key: selectedQuizKey, status: 'in_progress', answers: {} }).select().single();
-      if (insertError) console.log('insert error:', insertError);
+      const { data } = await supabase.from('quiz_attempts').insert({ user_id: currentUser.id, quiz_key: selectedQuizKey, status: 'in_progress', answers: {} }).select().single();
       if (data) {
-        console.log('attempt created, id=', data.id);
         setCurrentAttemptId(data.id);
         setUserAttempts(p => ({ ...p, [selectedQuizKey]: data }));
       }
@@ -251,13 +250,8 @@ const QuizApp = () => {
   const submitQuiz = () => { setDoubleSelections([]); setMode('summary'); };
 
   const saveProgress = async () => {
-    if (!currentAttemptId || !currentUser) {
-      console.log('saveProgress bailed: currentAttemptId=', currentAttemptId, 'currentUser=', currentUser?.id);
-      return;
-    }
-    const { error } = await supabase.from('quiz_attempts').update({ answers: studentAnswers }).eq('id', currentAttemptId);
-    if (error) console.log('saveProgress error:', error);
-    else console.log('saveProgress success, answers saved:', studentAnswers);
+    if (!currentAttemptId || !currentUser) return;
+    await supabase.from('quiz_attempts').update({ answers: studentAnswers }).eq('id', currentAttemptId);
   };
 
   const handleFinalSubmission = async () => {
@@ -707,11 +701,8 @@ const QuizApp = () => {
             <select value={selectedQuizKey} onChange={e=>setSelectedQuizKey(e.target.value)} disabled={!selectedCategory} className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-800 bg-white focus:ring-2 focus:ring-blue-500 text-base mb-6">
               <option value="">— Select a quiz —</option>
               {quizzesInCategory.map(key => {
-                const attempt = userAttempts[key];
-                const completed = attempt?.status === 'submitted';
-                const inProgress = attempt?.status === 'in_progress';
-                const label = `${allQuizData[key]?.title||key}${completed ? ' ★ Completed' : inProgress ? ' ! Unfinished' : ''}`;
-                return <option key={key} value={key}>{label}</option>;
+                const completed = userAttempts[key]?.status === 'submitted';
+                return <option key={key} value={key}>{allQuizData[key]?.title||key}{completed ? ' ★ Completed' : ''}</option>;
               })}
             </select>
             {selectedQuizKey && userAttempts[selectedQuizKey]?.status === 'submitted' ? (
