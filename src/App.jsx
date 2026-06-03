@@ -166,19 +166,16 @@ const QuizApp = () => {
 
   const prepareActiveQuestions = (quiz) => {
     if (quiz.type === 'MC') {
-      const qs = quiz.randomizeQuestions ? shuffleArray(quiz.questions) : [...quiz.questions];
-      return qs.map(q => ({ ...q, displayOptions: (q.randomizeOptions ? shuffleArray : x=>x)(q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '')) }));
+      return [...quiz.questions].map(q => ({ ...q, displayOptions: q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '') }));
     }
-    if (quiz.type === 'openresponse') return quiz.randomizeQuestions ? shuffleArray(quiz.questions) : [...quiz.questions];
+    if (quiz.type === 'openresponse') return [...quiz.questions];
     if (quiz.type === 'combination') return quiz.questions.map(q => {
       if (q.questionType === 'MC') {
-        return { ...q, displayOptions: (q.randomizeOptions ? shuffleArray : x=>x)(
-          q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '')
-        )};
+        return { ...q, displayOptions: q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '') };
       }
       return q;
     });
-    return shuffleArray(quiz.sentences);
+    return [...quiz.sentences];
   };
 
   const loadQuiz = async () => {
@@ -798,7 +795,7 @@ const QuizApp = () => {
   if (mode==='assessment' && activeQuiz?.type==='combination') {
     const q=activeQuestions[currentQuestionIndex]; const total=activeQuestions.length;
     const answeredCount=activeQuestions.filter((aq,i)=>{const qt=aq.questionType;if(qt==='MC')return(studentAnswers[i]||[]).length>0;if(qt==='OR')return(studentAnswers[i]||'').trim()!=='';return studentAnswers[i]!==undefined;}).length;
-    const qWithDisplay=q.questionType==='MC'?{...q,displayOptions:(q.randomizeOptions?shuffleArray:x=>x)(q.options.map((opt,i)=>({opt,correct:q.correctIndices.includes(i)})).filter(o=>o.opt.trim()!==''))}:q;
+    const qWithDisplay=q.questionType==='MC'?{...q,displayOptions:q.options.map((opt,i)=>({opt,correct:q.correctIndices.includes(i)})).filter(o=>o.opt.trim()!=='')}:q;
     const fitbAnswers=activeQuestions.filter(aq=>aq.questionType==='FITB').map(aq=>parseSentence(aq.text).answer);
     const sortedWB=[...new Set(fitbAnswers)].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
     const usedFITB=activeQuestions.map((_,i)=>studentAnswers[i]).filter(Boolean);

@@ -3,7 +3,7 @@
   "category": "Grammar",
   "status": "Active",
   "type": "MC",
-  "randomizeQuestions": true,
+  "randomizeQuestions": false,
   "questions": [
     {
       "prompt": "Which sentence is grammatically correct?",
