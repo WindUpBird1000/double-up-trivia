@@ -88,10 +88,11 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
   const [popupAnswers, setPopupAnswers] = React.useState(null);
 
   React.useEffect(() => {
-    Promise.all([
-      supabase.from('quiz_results').select('*').eq('quiz_key', quizKey).single(),
-      supabase.from('quiz_attempts').select('*').eq('quiz_key', quizKey).eq('user_id', currentUser.id).single(),
-    ]).then(([{ data: r }, { data: a }]) => {
+    const fetchResults = supabase.from('quiz_results').select('*').eq('quiz_key', quizKey).single();
+    const fetchAttempt = currentUser
+      ? supabase.from('quiz_attempts').select('*').eq('quiz_key', quizKey).eq('user_id', currentUser.id).single()
+      : Promise.resolve({ data: null });
+    Promise.all([fetchResults, fetchAttempt]).then(([{ data: r }, { data: a }]) => {
       setResults(r);
       setMyAttempt(a);
       setLoading(false);
@@ -101,7 +102,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
   if (loading) return <div className="max-w-3xl mx-auto p-6 flex items-center justify-center min-h-screen"><p className="text-gray-500">Loading scoreboard...</p></div>;
   if (!results) return <div className="max-w-3xl mx-auto p-6"><p className="text-red-600">No scoring data found for this quiz.</p></div>;
 
-  const { pointValues, userScores, correctnessByUser, correctCounts } = results.scores;
+  const { pointValues, userScores, correctCounts } = results.scores;
   const questions = quiz.type === 'fillintheblank' ? quiz.sentences : quiz.questions;
   const myAnswers = myAttempt?.answers || {};
   const myDoubles = myAttempt?.doubles || [];
@@ -111,14 +112,15 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
   const ranked = [...userScores]
     .map(u => ({ ...u, questionsCorrect: typeof u.questionsCorrect === 'number' ? u.questionsCorrect : 0 }))
     .sort((a, b) => b.score - a.score || b.questionsCorrect - a.questionsCorrect || a.display_name.localeCompare(b.display_name));
+  const withRanks = [];
   let rank = 1;
-  const withRanks = ranked.map((u, i) => {
+  ranked.forEach((u, i) => {
     if (i > 0 && ranked[i].score === ranked[i-1].score && ranked[i].questionsCorrect === ranked[i-1].questionsCorrect) {
-      return { ...u, rank: withRanks[i-1].rank };
+      withRanks.push({ ...u, rank: withRanks[i-1].rank });
+    } else {
+      withRanks.push({ ...u, rank });
+      rank = i + 2;
     }
-    const r = rank;
-    rank = i + 2;
-    return { ...u, rank: r };
   });
 
   const isCorrect = (q, i) => {
