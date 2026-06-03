@@ -81,6 +81,139 @@ const ImageHelper = () => {
 const shortTypeLabel = (t) => t === 'MC' ? 'MC' : t === 'OR' ? 'OR' : t === 'FITB' ? 'FitB' : t;
 const promptPreview = (q) => { const text = q.prompt || q.text || ''; return text.length > 50 ? text.slice(0, 50) + '…' : text; };
 
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const ordinal = (n) => {
+  const s = ['th','st','nd','rd'], v = n % 100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
+};
+
+const ScoreboardsListScreen = ({ currentUser, allQuizData, onSelectQuiz, onQuizzes }) => {
+  const [allResults, setAllResults] = React.useState([]);
+  const [myAttempts, setMyAttempts] = React.useState({});
+  const [loading, setLoading] = React.useState(true);
+  const [openYears, setOpenYears] = React.useState({});
+  const [openMonths, setOpenMonths] = React.useState({});
+
+  React.useEffect(() => {
+    const fetchResults = supabase.from('quiz_results').select('*').order('posted_at', { ascending: false });
+    const fetchAttempts = currentUser
+      ? supabase.from('quiz_attempts').select('quiz_key, status').eq('user_id', currentUser.id)
+      : Promise.resolve({ data: [] });
+    Promise.all([fetchResults, fetchAttempts]).then(([{ data: results }, { data: attempts }]) => {
+      setAllResults(results || []);
+      const map = {};
+      (attempts || []).forEach(a => { map[a.quiz_key] = a; });
+      setMyAttempts(map);
+      setLoading(false);
+    });
+  }, []);
+
+  const getUserPlacement = (result) => {
+    if (!currentUser) return null;
+    const { userScores } = result.scores;
+    const me = userScores.find(u => u.user_id === currentUser.id);
+    if (!me) return null;
+    const ranked = [...userScores].sort((a, b) => b.score - a.score || b.questionsCorrect - a.questionsCorrect);
+    let rank = 1;
+    for (let i = 0; i < ranked.length; i++) {
+      if (i > 0 && ranked[i].score === ranked[i-1].score && ranked[i].questionsCorrect === ranked[i-1].questionsCorrect) {
+        // same rank as previous
+      } else {
+        rank = i + 1;
+      }
+      if (ranked[i].user_id === currentUser.id) return rank;
+    }
+    return null;
+  };
+
+  const QuizResultCard = ({ result, compact = false }) => {
+    const quiz = allQuizData[result.quiz_key];
+    const totalUsers = result.scores?.userScores?.length || 0;
+    const placement = getUserPlacement(result);
+    const tookQuiz = myAttempts[result.quiz_key]?.status === 'submitted';
+    return (
+      <div onClick={() => onSelectQuiz(result.quiz_key)} className="cursor-pointer hover:bg-blue-50 rounded-lg p-3 transition-colors border border-transparent hover:border-blue-200">
+        <p className="font-bold text-gray-800">{result.quiz_title || quiz?.title || result.quiz_key}</p>
+        <p className="text-xs text-gray-500 mt-0.5">{quiz?.category || ''}</p>
+        <p className="text-xs text-gray-500">Taken by {totalUsers} user{totalUsers !== 1 ? 's' : ''}</p>
+        {tookQuiz
+          ? <p className="text-xs text-blue-600 font-medium mt-0.5">{placement ? `You finished in ${ordinal(placement)} place.` : 'You took this quiz.'}</p>
+          : <p className="text-xs text-gray-400 italic mt-0.5">You didn't take this quiz.</p>}
+      </div>
+    );
+  };
+
+  if (loading) return <div className="max-w-2xl mx-auto p-6 min-h-screen flex items-center justify-center"><p className="text-gray-500">Loading scoreboards...</p></div>;
+
+  const recent = allResults.slice(0, 5);
+
+  // Group by year then month
+  const grouped = {};
+  allResults.forEach(r => {
+    const d = new Date(r.posted_at);
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    if (!grouped[y]) grouped[y] = {};
+    if (!grouped[y][m]) grouped[y][m] = [];
+    grouped[y][m].push(r);
+  });
+  const years = Object.keys(grouped).map(Number).sort((a, b) => b - a);
+
+  return (
+    <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">Scoreboards</h1>
+        <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+      </div>
+
+      {allResults.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500">No scored quizzes yet.</div>
+      ) : (
+        <>
+          {/* Recent */}
+          <div className="bg-white rounded-xl shadow-md p-5 mb-6">
+            <h2 className="text-lg font-bold text-gray-700 mb-3">Five Most Recently Scored Quizzes</h2>
+            <div className="divide-y">
+              {recent.map(r => <QuizResultCard key={r.quiz_key} result={r}/>)}
+            </div>
+          </div>
+
+          {/* All quizzes by year/month */}
+          <div className="bg-white rounded-xl shadow-md p-5">
+            <h2 className="text-lg font-bold text-gray-700 mb-3">All Quizzes</h2>
+            {years.map(y => (
+              <div key={y} className="mb-2">
+                <button onClick={()=>setOpenYears(p=>({...p,[y]:!p[y]}))} className="flex items-center gap-2 w-full text-left py-2 px-1 hover:bg-gray-50 rounded font-semibold text-gray-700">
+                  <span className={`transition-transform text-gray-400 ${openYears[y]?'rotate-90':''}`} style={{display:'inline-block'}}>▶</span>
+                  {y}
+                </button>
+                {openYears[y] && (
+                  <div className="ml-4">
+                    {Object.keys(grouped[y]).map(Number).sort((a,b)=>b-a).map(m => (
+                      <div key={m} className="mb-1">
+                        <button onClick={()=>setOpenMonths(p=>({...p,[`${y}-${m}`]:!p[`${y}-${m}`]}))} className="flex items-center gap-2 w-full text-left py-1.5 px-1 hover:bg-gray-50 rounded text-gray-600">
+                          <span className={`transition-transform text-gray-400 text-xs ${openMonths[`${y}-${m}`]?'rotate-90':''}`} style={{display:'inline-block'}}>▶</span>
+                          {MONTH_NAMES[m]}
+                        </button>
+                        {openMonths[`${y}-${m}`] && (
+                          <div className="ml-4 divide-y">
+                            {grouped[y][m].map(r => <QuizResultCard key={r.quiz_key} result={r}/>)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQuizzes }) => {
   const [results, setResults] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
@@ -1175,17 +1308,8 @@ const QuizApp = () => {
     );
   }
 
-  if (mode==='scoreboards') return (
-    <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Scoreboards</h1>
-        <button onClick={()=>setMode('setup')} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Quizzes</button>
-      </div>
-      <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500">
-        List of scored quizzes will go here.
-      </div>
-    </div>
-  );
+  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onQuizzes={()=>setMode('setup')}/>;
+
 
   if (mode==='scoreboard' && viewScoringKey) {
     const quiz = allQuizData[viewScoringKey];
