@@ -166,19 +166,16 @@ const QuizApp = () => {
 
   const prepareActiveQuestions = (quiz) => {
     if (quiz.type === 'MC') {
-      const qs = quiz.randomizeQuestions ? shuffleArray(quiz.questions) : [...quiz.questions];
-      return qs.map(q => ({ ...q, displayOptions: (q.randomizeOptions ? shuffleArray : x=>x)(q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '')) }));
+      return [...quiz.questions].map(q => ({ ...q, displayOptions: q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '') }));
     }
-    if (quiz.type === 'openresponse') return quiz.randomizeQuestions ? shuffleArray(quiz.questions) : [...quiz.questions];
+    if (quiz.type === 'openresponse') return [...quiz.questions];
     if (quiz.type === 'combination') return quiz.questions.map(q => {
       if (q.questionType === 'MC') {
-        return { ...q, displayOptions: (q.randomizeOptions ? shuffleArray : x=>x)(
-          q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '')
-        )};
+        return { ...q, displayOptions: q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '') };
       }
       return q;
     });
-    return shuffleArray(quiz.sentences);
+    return [...quiz.sentences];
   };
 
   const loadQuiz = async () => {
@@ -573,7 +570,7 @@ const QuizApp = () => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl">
         <h2 className="text-xl font-semibold mb-3">Exit Quiz?</h2>
-        <p className="text-gray-600 mb-6">Your progress will be lost. Are you sure?</p>
+        <p className="text-gray-600 mb-6">Your answers will be saved and you can continue this quiz later.</p>
         <div className="flex gap-3">
           <button onClick={async()=>{await saveProgress();setShowResetModal(false);setMode('setup');}} className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium">Yes, Exit</button>
           <button onClick={()=>setShowResetModal(false)} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
@@ -854,7 +851,7 @@ const QuizApp = () => {
   if (mode==='assessment' && activeQuiz?.type==='combination') {
     const q=activeQuestions[currentQuestionIndex]; const total=activeQuestions.length;
     const answeredCount=activeQuestions.filter((aq,i)=>{const qt=aq.questionType;if(qt==='MC')return(studentAnswers[i]||[]).length>0;if(qt==='OR')return(studentAnswers[i]||'').trim()!=='';return studentAnswers[i]!==undefined;}).length;
-    const qWithDisplay=q.questionType==='MC'?{...q,displayOptions:(q.randomizeOptions?shuffleArray:x=>x)(q.options.map((opt,i)=>({opt,correct:q.correctIndices.includes(i)})).filter(o=>o.opt.trim()!==''))}:q;
+    const qWithDisplay=q.questionType==='MC'?{...q,displayOptions:q.options.map((opt,i)=>({opt,correct:q.correctIndices.includes(i)})).filter(o=>o.opt.trim()!=='')}:q;
     const fitbAnswers=activeQuestions.filter(aq=>aq.questionType==='FITB').map(aq=>parseSentence(aq.text).answer);
     const sortedWB=[...new Set(fitbAnswers)].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
     const usedFITB=activeQuestions.map((_,i)=>studentAnswers[i]).filter(Boolean);
@@ -954,9 +951,9 @@ const QuizApp = () => {
                   <div className="col-span-5 text-sm text-gray-700">{getPromptPreview(q)}</div>
                   <div className={`col-span-2 text-sm font-medium ${correct ? 'text-green-700' : 'text-red-600'}`}>{getAnswerDisplay(q, i)}</div>
                   <div className="col-span-2 text-sm text-gray-600">{correct ? '✓' : getCorrectAnswerDisplay(q)}</div>
-                  <div className="col-span-2 flex justify-center">
+                  <div className="col-span-2 flex flex-col items-center justify-center">
                     {alreadyDisputed
-                      ? <input type="checkbox" checked readOnly className="w-5 h-5 accent-blue-500 cursor-not-allowed"/>
+                      ? <><input type="checkbox" checked readOnly className="w-5 h-5 mb-1 cursor-not-allowed opacity-40"/><span className="text-xs text-gray-400 italic">Disputed</span></>
                       : correct ? null
                       : <input type="checkbox" checked={disputing} onChange={e=>setDisputedQuestions(p=>({...p,[i]:e.target.checked}))} className="w-5 h-5 accent-red-500 cursor-pointer"/>}
                   </div>
@@ -966,7 +963,6 @@ const QuizApp = () => {
                     <textarea value={disputeReasons[i]||''} onChange={e=>setDisputeReasons(p=>({...p,[i]:e.target.value}))} placeholder="Briefly explain why you disagree, i.e., spelling error, factual error, etc." rows={2} className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-300 resize-none"/>
                   </div>
                 )}
-                {alreadyDisputed && <div className="px-4 pb-2"><p className="text-xs text-blue-600 italic">Dispute submitted.</p></div>}
               </div>
             );
           })}
