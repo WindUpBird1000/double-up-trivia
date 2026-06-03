@@ -447,7 +447,7 @@ const QuizApp = () => {
   const [othersPopupQuestion, setOthersPopupQuestion] = useState(null);
   const [showNewQuizConfirm, setShowNewQuizConfirm] = useState(false);
   const [adminSection, setAdminSection] = useState('list');
-  const [newQuizTypeSelector, setNewQuizTypeSelector] = useState('fillintheblank');
+  const [newQuizTypeSelector, setNewQuizTypeSelector] = useState('openresponse');
   const [editingKey, setEditingKey] = useState(null);
   const [newQuizTitle, setNewQuizTitle] = useState('');
   const [newQuizKey, setNewQuizKey] = useState('');
@@ -455,6 +455,7 @@ const QuizApp = () => {
   const [newCategoryInput, setNewCategoryInput] = useState('');
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newQuizStatus, setNewQuizStatus] = useState('Active');
+  const [newQuizAuthorNote, setNewQuizAuthorNote] = useState('');
   const [newQuizType, setNewQuizType] = useState('fillintheblank');
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportContent, setExportContent] = useState('');
@@ -528,7 +529,7 @@ const QuizApp = () => {
         setUserAttempts(p => ({ ...p, [selectedQuizKey]: data }));
       }
     }
-    setMode('assessment');
+    setMode(quiz.authorNote?.trim() ? 'authornote' : 'assessment');
   };
 
   const usedWords = Object.values(studentAnswers);
@@ -730,7 +731,7 @@ const QuizApp = () => {
 
   const resetQuizBuilder = () => {
     setEditingKey(null); setNewQuizTitle(''); setNewQuizKey(''); setNewQuizCategory('');
-    setNewCategoryInput(''); setShowNewCategoryInput(false); setNewQuizStatus('Active');
+    setNewCategoryInput(''); setShowNewCategoryInput(false); setNewQuizStatus('Active'); setNewQuizAuthorNote('');
     setNewQuizType('fillintheblank'); setNewSentenceInput(''); setNewQuizSentences([]);
     setExtraWords([]); setMcQuestions([emptyMCQuestion()]); setMcCurrentIndex(0); setMcRandomizeQuestions(false);
     setOrQuestions([emptyORQuestion()]); setOrCurrentIndex(0); setOrRandomizeQuestions(false); setOrAnswerInput('');
@@ -752,7 +753,7 @@ const QuizApp = () => {
   const startEditQuiz = (key) => {
     const quiz = allQuizData[key]; if (!quiz) return;
     setEditingKey(key); setNewQuizTitle(quiz.title); setNewQuizKey(key);
-    setNewQuizCategory(quiz.category || ''); setNewQuizStatus(quiz.status || 'Active');
+    setNewQuizCategory(quiz.category || ''); setNewQuizStatus(quiz.status || 'Active'); setNewQuizAuthorNote(quiz.authorNote || '');
     setNewQuizType(quiz.type || 'fillintheblank');
     setShowNewCategoryInput(false); setNewCategoryInput('');
     if (quiz.type === 'MC') {
@@ -861,7 +862,7 @@ const QuizApp = () => {
 
   const buildQuizJSON = () => {
     const category = getEffectiveCategory();
-    const base = { title: newQuizTitle, category, status: newQuizStatus, type: newQuizType };
+    const base = { title: newQuizTitle, category, status: newQuizStatus, type: newQuizType, authorNote: newQuizAuthorNote.trim() };
     if (newQuizType==='fillintheblank') {
       const aw = extractAnswerWords(newQuizSentences.map(t=>({text:t})));
       return { ...base, wordBank: Array.from(new Set([...aw,...extraWords])), sentences: newQuizSentences.map(t=>({text:t,answer:parseSentence(t).answer})) };
@@ -1319,6 +1320,31 @@ const QuizApp = () => {
     return <ScoreboardScreen quiz={quiz} quizKey={viewScoringKey} currentUser={currentUser} displayName={displayName} onBack={()=>setMode('scoreboards')} onQuizzes={()=>setMode('setup')} onLogout={handleLogout}/>;
   }
 
+  if (mode==='authornote') return (
+    <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="flex justify-end mb-4">
+        <button onClick={()=>setShowResetModal(true)} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium text-sm"><X size={16}/> Exit Quiz</button>
+      </div>
+      <div className="bg-white rounded-xl shadow-md p-8">
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">Author's Note</h1>
+        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{activeQuiz?.authorNote}</p>
+        <button onClick={()=>setMode('assessment')} className="w-full mt-8 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg">Continue to Quiz</button>
+      </div>
+      {showResetModal&&(
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Exit Quiz?</h2>
+            <p className="text-gray-600 mb-6">Your answers will be saved and you can continue this quiz later.</p>
+            <div className="flex gap-3">
+              <button onClick={async()=>{await saveProgress();setShowResetModal(false);setMode('setup');}} className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium">Yes, Exit</button>
+              <button onClick={()=>setShowResetModal(false)} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   if (mode==='summary') {
     const doublesOk = doubleSelections.length === DOUBLES_ALLOWED;
     return (
@@ -1506,9 +1532,9 @@ const QuizApp = () => {
           <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${adminSection==='create'&&!editingKey?'border-gray-800 bg-gray-50':'border-gray-300 bg-white'}`}>
             <span className="text-sm font-medium text-gray-600 whitespace-nowrap">New Quiz:</span>
             <select value={newQuizTypeSelector} onChange={e=>setNewQuizTypeSelector(e.target.value)} className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500">
-              <option value="fillintheblank">Fill-in-the-blank</option>
-              <option value="MC">Multiple Choice</option>
               <option value="openresponse">Open Response</option>
+              <option value="MC">Multiple Choice</option>
+              <option value="fillintheblank">Fill-in-the-blank</option>
               <option value="combination">Combination</option>
             </select>
             <button onClick={startCreateQuiz} className="px-3 py-1 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">Create</button>
@@ -1596,6 +1622,10 @@ const QuizApp = () => {
               </div>
               {showNewCategoryInput&&<div className="mb-3"><input type="text" value={newCategoryInput} onChange={e=>setNewCategoryInput(e.target.value)} placeholder="New category name" autoFocus className="w-full px-3 py-2 border border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500"/></div>}
               {effectiveCategory&&<p className="text-xs text-gray-400">Category: <span className="font-semibold text-gray-600">{effectiveCategory}</span></p>}
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-600 mb-1">Author's Note <span className="text-xs text-gray-400">(optional — shown to users before they begin the quiz)</span></label>
+                <textarea value={newQuizAuthorNote} onChange={e=>setNewQuizAuthorNote(e.target.value)} placeholder="Special instructions, context, or notes for quiz-takers..." rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none text-sm"/>
+              </div>
             </div>
 
             {newQuizType==='combination'&&(
