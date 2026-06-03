@@ -388,7 +388,7 @@ const QuizApp = () => {
   };
 
   const adminLogin = () => {
-    if (adminUsername === 'twerner' && adminPassword === 'password') { setIsAdminAuthenticated(true); setLoginError(''); }
+    if (adminUsername === 'doubleuptrivia@gmail.com' && adminPassword === 'doubleup1000') { setIsAdminAuthenticated(true); setLoginError(''); }
     else setLoginError('Invalid username or password.');
   };
   const adminLogout = () => { setIsAdminAuthenticated(false); setAdminUsername(''); setAdminPassword(''); setMode('login'); };
@@ -546,13 +546,96 @@ const QuizApp = () => {
 
   const exportQuiz = () => { if(!validateQuizBuilder()) return; setExportContent(JSON.stringify(buildQuizJSON(),null,2)); setExportFilename(newQuizKey+'.json'); setShowExportModal(true); };
   const copyToClipboard = () => { navigator.clipboard.writeText(exportContent).then(()=>{setShowExportModal(false);alert('Copied to clipboard!');}).catch(()=>{alert('Could not copy automatically. Please select all and copy manually (Ctrl+A, Ctrl+C).');}); };
-  const saveQuizLocally = () => {
-    if(!validateQuizBuilder()) return;
-    const quizData=buildQuizJSON(); const key=newQuizKey;
-    setAllQuizData(p=>({...p,[key]:quizData}));
-    if(!knownQuizzes.quizzes.includes(key)) setKnownQuizzes(p=>({quizzes:[...p.quizzes,key]}));
-    const verb=editingKey?'updated':'saved'; resetQuizBuilder(); setAdminSection('list');
-    alert(`Quiz "${quizData.title}" ${verb}!`);
+  const scoreAttempt = (quiz, answers) => {
+    const questions = quiz.type === 'fillintheblank' ? quiz.sentences : quiz.questions;
+    return questions.map((q, i) => {
+      const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
+      const ans = answers[i];
+      if (qtype === 'MC') {
+        const displayOpts = q.options.map((opt, oi) => ({ opt, correct: q.correctIndices.includes(oi) })).filter(o => o.opt.trim() !== '');
+        const correctOpts = displayOpts.filter(o => o.correct).map(o => o.opt);
+        const sel = ans || [];
+        return sel.length === correctOpts.length && correctOpts.every(o => sel.includes(o));
+      } else if (qtype === 'OR' || qtype === 'openresponse') {
+        return ans && q.acceptedAnswers.some(a => normalizeAnswer(a) === normalizeAnswer(ans));
+      } else if (qtype === 'FITB' || quiz.type === 'fillintheblank') {
+        return ans === parseSentence(q.text).answer;
+      }
+      return false;
+    });
+  };
+
+  const computeQuizResults = (quiz, attempts) => {
+    const questions = quiz.type === 'fillintheblank' ? quiz.sentences : quiz.questions;
+    const n = questions.length;
+    // For each question, count how many users got it correct
+    const correctCounts = questions.map((_, i) => attempts.filter(a => a.correctness[i]).length);
+    // Rank questions by difficulty (fewest correct = hardest)
+    const sorted = [...correctCounts.map((c, i) => ({ i, c }))].sort((a, b) => a.c - b.c || a.i - b.i);
+    // Assign point values with tie averaging
+    const pointValues = new Array(n).fill(0);
+    let rank = n;
+    let j = 0;
+    while (j < sorted.length) {
+      let k = j;
+      while (k < sorted.length - 1 && sorted[k+1].c === sorted[k].c) k++;
+      // questions j..k are tied; average their ranks
+      const avgPoints = Math.round(((sorted.slice(j, k+1).reduce((s, _, ii) => s + (rank - ii), 0)) / (k - j + 1)) * 10) / 10;
+      for (let m = j; m <= k; m++) pointValues[sorted[m].i] = avgPoints;
+      rank -= (k - j + 1);
+      j = k + 1;
+    }
+    // Score each user
+    const userScores = attempts.map(a => {
+      let total = 0;
+      a.correctness.forEach((correct, i) => {
+        if (!correct) return;
+        const pts = pointValues[i];
+        const doubled = (a.doubles || []).includes(i);
+        total += doubled ? pts * 2 : pts;
+      });
+      return { user_id: a.user_id, display_name: a.display_name, score: Math.round(total * 10) / 10 };
+    });
+    return { pointValues, userScores };
+  };
+
+  const saveQuizLocally = async () => {
+    if (!validateQuizBuilder()) return;
+    const quizData = buildQuizJSON();
+    const key = newQuizKey;
+    setAllQuizData(p => ({ ...p, [key]: quizData }));
+    if (!knownQuizzes.quizzes.includes(key)) setKnownQuizzes(p => ({ quizzes: [...p.quizzes, key] }));
+
+    if (newQuizStatus === 'Scored') {
+      // Fetch all submitted attempts for this quiz
+      const { data: attempts } = await supabase.from('quiz_attempts').select('*').eq('quiz_key', key).eq('status', 'submitted');
+      if (attempts && attempts.length > 0) {
+        // Fetch display names
+        const userIds = attempts.map(a => a.user_id);
+        const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
+        const profileMap = {};
+        (profiles || []).forEach(p => { profileMap[p.user_id] = p.display_name; });
+        // Score each attempt with the latest quiz JSON
+        const attemptsWithCorrectness = attempts.map(a => ({
+          ...a,
+          display_name: profileMap[a.user_id] || a.user_id,
+          correctness: scoreAttempt(quizData, a.answers || {}),
+        }));
+        const { pointValues, userScores } = computeQuizResults(quizData, attemptsWithCorrectness);
+        // Save to quiz_results
+        await supabase.from('quiz_results').upsert({
+          quiz_key: key,
+          quiz_title: quizData.title,
+          posted_at: new Date().toISOString(),
+          scores: { pointValues, userScores },
+        }, { onConflict: 'quiz_key' });
+      }
+    }
+
+    const verb = editingKey ? 'updated' : 'saved';
+    resetQuizBuilder();
+    setAdminSection('list');
+    alert(`Quiz "${quizData.title}" ${verb}!${newQuizStatus === 'Scored' ? ' Scores have been calculated.' : ''}`);
   };
   const Header = ({ title, rightSlot }) => (
     <div className="flex justify-between items-center mb-8">
@@ -1036,7 +1119,7 @@ const QuizApp = () => {
           <div><label className="block text-sm font-medium text-gray-600 mb-1">Username</label><input type="text" value={adminUsername} onChange={e=>setAdminUsername(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/></div>
           <div><label className="block text-sm font-medium text-gray-600 mb-1">Password</label><input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&adminLogin()} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/></div>
           <button onClick={adminLogin} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Login</button>
-          <button onClick={()=>setMode('setup')} className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Back to Student View</button>
+          <button onClick={()=>setMode('login')} className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Back to Main Login Page</button>
         </div>
       </div>
     </div>
@@ -1059,7 +1142,7 @@ const QuizApp = () => {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
           <div className="flex gap-2">
-            <button onClick={()=>setMode('setup')} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"><BookOpen size={18}/> Student View</button>
+            <button onClick={adminLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"><LogOut size={18}/> Log Out</button>
             <button onClick={adminLogout} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium"><LogOut size={18}/> Logout</button>
           </div>
         </div>
@@ -1082,7 +1165,7 @@ const QuizApp = () => {
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium text-gray-600">Show:</label>
               <select value={adminStatusFilter} onChange={e=>setAdminStatusFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white">
-                <option value="All">All</option><option value="Active">Active</option><option value="Inactive">Inactive</option>
+                <option value="All">All</option><option value="Active">Active</option><option value="Inactive">Inactive</option><option value="Scored">Scored</option>
               </select>
             </div>
             {knownQuizzes.quizzes.filter(key=>{const q=allQuizData[key];if(!q)return false;return adminStatusFilter==='All'||(q.status||'Active')===adminStatusFilter;}).map(key=>{
@@ -1096,7 +1179,7 @@ const QuizApp = () => {
                     <div>
                       <h3 className="text-xl font-bold text-gray-800">{quiz.title}</h3>
                       <p className="text-sm text-gray-500 mt-1 flex items-center gap-2 flex-wrap">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${(quiz.status||'Active')==='Active'?'bg-green-100 text-green-700':'bg-gray-200 text-gray-500'}`}>{quiz.status||'Active'}</span>
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${(quiz.status||'Active')==='Active'?'bg-green-100 text-green-700':(quiz.status||'Active')==='Scored'?'bg-purple-100 text-purple-700':'bg-gray-200 text-gray-500'}`}>{quiz.status||'Active'}</span>
                         {quiz.category&&<span className="inline-block bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-medium">{quiz.category}</span>}
                         <span className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">{typeLabel(qType)}</span>
                         {itemCount} {itemLabel}{itemCount!==1?'s':''}
@@ -1151,18 +1234,12 @@ const QuizApp = () => {
                 <div style={{flexShrink:0}}>
                   <label className="block text-sm font-medium text-gray-600 mb-1">Status <span className="text-red-500">*</span></label>
                   <select value={newQuizStatus} onChange={e=>setNewQuizStatus(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <option value="Active">Active</option><option value="Inactive">Inactive</option>
+                    <option value="Active">Active</option><option value="Inactive">Inactive</option><option value="Scored">Scored</option>
                   </select>
                 </div>
               </div>
               {showNewCategoryInput&&<div className="mb-3"><input type="text" value={newCategoryInput} onChange={e=>setNewCategoryInput(e.target.value)} placeholder="New category name" autoFocus className="w-full px-3 py-2 border border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500"/></div>}
               {effectiveCategory&&<p className="text-xs text-gray-400">Category: <span className="font-semibold text-gray-600">{effectiveCategory}</span></p>}
-              {(newQuizType==='MC'||newQuizType==='openresponse'||newQuizType==='combination')&&(
-                <div className="flex items-center gap-2 mt-4">
-                  <input type="checkbox" id="randomizeQ" checked={newQuizType==='MC'?mcRandomizeQuestions:orRandomizeQuestions} onChange={e=>newQuizType==='MC'?setMcRandomizeQuestions(e.target.checked):setOrRandomizeQuestions(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600"/>
-                  <label htmlFor="randomizeQ" className="text-sm font-medium text-gray-700">Randomize Question Order</label>
-                </div>
-              )}
             </div>
 
             {newQuizType==='combination'&&(
@@ -1218,7 +1295,6 @@ const QuizApp = () => {
                           <div className="mb-4">
                             <div className="flex items-center justify-between mb-2">
                               <label className="text-sm font-medium text-gray-600">Options</label>
-                              <div className="flex items-center gap-2"><input type="checkbox" checked={combDraft.randomizeOptions||false} onChange={e=>updateCombDraft('randomizeOptions',e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600"/><span className="text-sm text-gray-600">Randomize option order</span></div>
                             </div>
                             <div className="space-y-2">
                               <div className="grid grid-cols-12 gap-2 mb-1"><div className="col-span-10 text-xs font-semibold text-gray-400 uppercase pl-1">Option text</div><div className="col-span-2 text-xs font-semibold text-gray-400 uppercase text-center">Correct</div></div>
@@ -1311,7 +1387,6 @@ const QuizApp = () => {
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium text-gray-600">Options</label>
-                    <div className="flex items-center gap-2"><input type="checkbox" checked={mcQ.randomizeOptions||false} onChange={e=>updateMCQuestion('randomizeOptions',e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600"/><label className="text-sm text-gray-600">Randomize Answer Option Order</label></div>
                   </div>
                   <div className="space-y-2">
                     <div className="grid grid-cols-12 gap-2 mb-1"><div className="col-span-10 text-xs font-semibold text-gray-400 uppercase pl-1">Option text</div><div className="col-span-2 text-xs font-semibold text-gray-400 uppercase text-center">Correct</div></div>
