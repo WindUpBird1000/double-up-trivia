@@ -166,16 +166,19 @@ const QuizApp = () => {
 
   const prepareActiveQuestions = (quiz) => {
     if (quiz.type === 'MC') {
-      return [...quiz.questions].map(q => ({ ...q, displayOptions: q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '') }));
+      const qs = quiz.randomizeQuestions ? shuffleArray(quiz.questions) : [...quiz.questions];
+      return qs.map(q => ({ ...q, displayOptions: (q.randomizeOptions ? shuffleArray : x=>x)(q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '')) }));
     }
-    if (quiz.type === 'openresponse') return [...quiz.questions];
+    if (quiz.type === 'openresponse') return quiz.randomizeQuestions ? shuffleArray(quiz.questions) : [...quiz.questions];
     if (quiz.type === 'combination') return quiz.questions.map(q => {
       if (q.questionType === 'MC') {
-        return { ...q, displayOptions: q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '') };
+        return { ...q, displayOptions: (q.randomizeOptions ? shuffleArray : x=>x)(
+          q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '')
+        )};
       }
       return q;
     });
-    return [...quiz.sentences];
+    return shuffleArray(quiz.sentences);
   };
 
   const loadQuiz = async () => {
@@ -218,6 +221,10 @@ const QuizApp = () => {
   const goToQuestion = (delta) => { const t = activeQuestions.length; setCurrentQuestionIndex((currentQuestionIndex + t + delta) % t); };
   const [doubleSelections, setDoubleSelections] = useState([]);
   const DOUBLES_ALLOWED = 3;
+  const [disputedQuestions, setDisputedQuestions] = useState({});
+  const [disputeReasons, setDisputeReasons] = useState({});
+  const [submittedDisputes, setSubmittedDisputes] = useState([]);
+  const [disputeSending, setDisputeSending] = useState(false);
 
   const toggleDouble = (i) => {
     setDoubleSelections(prev =>
@@ -284,7 +291,67 @@ const QuizApp = () => {
     return { correct, total: activeQuestions.length };
   };
 
-  const fetchUserData = async (user) => {
+  const isQuestionCorrect = (q, i) => {
+    const qtype = activeQuiz?.type === 'combination' ? q.questionType : activeQuiz?.type;
+    if (qtype === 'MC') {
+      const sel = studentAnswers[i] || [];
+      const correctOpts = q.displayOptions.filter(o=>o.correct).map(o=>o.opt);
+      return sel.length === correctOpts.length && correctOpts.every(o => sel.includes(o));
+    } else if (qtype === 'OR' || qtype === 'openresponse') {
+      const ans = normalizeAnswer(studentAnswers[i] || '');
+      return ans !== '' && q.acceptedAnswers.some(a => normalizeAnswer(a) === ans);
+    } else {
+      return studentAnswers[i] === parseSentence(q.text).answer;
+    }
+  };
+
+  const getCorrectAnswerDisplay = (q) => {
+    const qtype = activeQuiz?.type === 'combination' ? q.questionType : activeQuiz?.type;
+    if (qtype === 'MC') {
+      const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      return q.displayOptions.filter(o=>o.correct).map(o => {
+        const idx = q.displayOptions.findIndex(d=>d.opt===o.opt);
+        return `${labels[idx]}. ${o.opt}`;
+      }).join(', ');
+    } else if (qtype === 'OR' || qtype === 'openresponse') {
+      return q.acceptedAnswers[q.primaryAnswerIndex ?? 0] || q.acceptedAnswers[0] || '';
+    } else {
+      return parseSentence(q.text).answer;
+    }
+  };
+
+  const getQuestionDisplay = (q) => {
+    const qtype = activeQuiz?.type === 'combination' ? q.questionType : activeQuiz?.type;
+    if (qtype === 'fillintheblank') {
+      const { display } = parseSentence(q.text);
+      const ans = studentAnswers[activeQuestions.indexOf(q)];
+      return display.replace('______', ans ? `[${ans}]` : '______');
+    }
+    return q.prompt || q.text || '';
+  };
+
+  const handleSendDisputes = async () => {
+    setDisputeSending(true);
+    const disputeList = Object.keys(disputedQuestions).filter(i => disputedQuestions[i]);
+    const disputeText = disputeList.map(i => {
+      const q = activeQuestions[parseInt(i)];
+      const reason = disputeReasons[i] || '(no reason given)';
+      return `Q${parseInt(i)+1}: ${getPromptPreview(q)}\nYour answer: ${getAnswerDisplay(q, parseInt(i))}\nCorrect answer: ${getCorrectAnswerDisplay(q)}\nReason: ${reason}`;
+    }).join('\n\n');
+    try {
+      await window.emailjs.send('service_u91y3sw', 'template_dcdqon6', {
+        display_name: displayName || currentUser?.email,
+        quiz_title: activeQuiz?.title,
+        disputes: disputeText,
+      }, '0k_9ewelPuyyBY1HX');
+      setSubmittedDisputes(prev => [...prev, ...disputeList.map(Number)]);
+      setDisputedQuestions({});
+      setDisputeReasons({});
+    } catch(e) {
+      alert('Could not send disputes. Please try again or email doubleuptrivia@gmail.com directly.');
+    }
+    setDisputeSending(false);
+  };
     const { data: profile } = await supabase.from('profiles').select('display_name').eq('user_id', user.id).single();
     if (profile) setDisplayName(profile.display_name || '');
     const { data: attempts } = await supabase.from('quiz_attempts').select('*').eq('user_id', user.id);
@@ -795,7 +862,7 @@ const QuizApp = () => {
   if (mode==='assessment' && activeQuiz?.type==='combination') {
     const q=activeQuestions[currentQuestionIndex]; const total=activeQuestions.length;
     const answeredCount=activeQuestions.filter((aq,i)=>{const qt=aq.questionType;if(qt==='MC')return(studentAnswers[i]||[]).length>0;if(qt==='OR')return(studentAnswers[i]||'').trim()!=='';return studentAnswers[i]!==undefined;}).length;
-    const qWithDisplay=q.questionType==='MC'?{...q,displayOptions:q.options.map((opt,i)=>({opt,correct:q.correctIndices.includes(i)})).filter(o=>o.opt.trim()!=='')}:q;
+    const qWithDisplay=q.questionType==='MC'?{...q,displayOptions:(q.randomizeOptions?shuffleArray:x=>x)(q.options.map((opt,i)=>({opt,correct:q.correctIndices.includes(i)})).filter(o=>o.opt.trim()!==''))}:q;
     const fitbAnswers=activeQuestions.filter(aq=>aq.questionType==='FITB').map(aq=>parseSentence(aq.text).answer);
     const sortedWB=[...new Set(fitbAnswers)].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
     const usedFITB=activeQuestions.map((_,i)=>studentAnswers[i]).filter(Boolean);
@@ -866,16 +933,78 @@ const QuizApp = () => {
     );
   }
 
-  if (mode==='submitted') return (
-    <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen flex flex-col items-center justify-center">
-      <div className="bg-white rounded-xl shadow-md p-10 text-center w-full">
-        <div className="text-5xl mb-4">🎉</div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Quiz Submitted!</h1>
-        <p className="text-gray-600 mb-6">Your answers for <span className="font-semibold">{activeQuiz?.title}</span> have been recorded. Results and scores will be posted once everyone has completed the quiz — stay tuned!</p>
-        <button onClick={()=>setMode('setup')} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Back to Quiz List</button>
+  if (mode==='submitted') {
+    const hasDisputes = Object.values(disputedQuestions).some(v=>v);
+    return (
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <div className="bg-white rounded-xl shadow-md p-6 mb-4">
+          <h1 className="text-2xl font-bold text-gray-800 mb-1">Quiz Submitted!</h1>
+          <p className="text-gray-600">Your answers for <span className="font-semibold">{activeQuiz?.title}</span> have been recorded. Results and scores will be posted once everyone has completed the quiz — stay tuned!</p>
+          {doubleSelections.length > 0 && (
+            <p className="text-sm text-gray-500 mt-2">⭐ = doubled question</p>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
+          <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <div className="col-span-1 text-center">#</div>
+            <div className="col-span-5">Question</div>
+            <div className="col-span-2">Your Answer</div>
+            <div className="col-span-2">Correct Answer</div>
+            <div className="col-span-2 text-center">Dispute</div>
+          </div>
+          {activeQuestions.map((q, i) => {
+            const correct = isQuestionCorrect(q, i);
+            const doubled = doubleSelections.includes(i);
+            const alreadyDisputed = submittedDisputes.includes(i);
+            const disputing = disputedQuestions[i] || false;
+            return (
+              <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
+                <div className="grid grid-cols-12 gap-2 px-4 py-3 items-center">
+                  <div className="col-span-1 text-center text-sm font-medium text-gray-500">
+                    {i+1}{doubled && <span className="ml-1 text-yellow-500">⭐</span>}
+                  </div>
+                  <div className="col-span-5 text-sm text-gray-700">{getPromptPreview(q)}</div>
+                  <div className={`col-span-2 text-sm font-medium ${correct ? 'text-green-700' : 'text-red-600'}`}>{getAnswerDisplay(q, i)}</div>
+                  <div className="col-span-2 text-sm text-gray-600">{correct ? '✓' : getCorrectAnswerDisplay(q)}</div>
+                  <div className="col-span-2 flex justify-center">
+                    {alreadyDisputed ? (
+                      <input type="checkbox" checked readOnly className="w-5 h-5 accent-blue-500 cursor-not-allowed"/>
+                    ) : correct ? null : (
+                      <input type="checkbox" checked={disputing} onChange={e=>setDisputedQuestions(p=>({...p,[i]:e.target.checked}))} className="w-5 h-5 accent-red-500 cursor-pointer"/>
+                    )}
+                  </div>
+                </div>
+                {disputing && !alreadyDisputed && (
+                  <div className="px-4 pb-3">
+                    <textarea
+                      value={disputeReasons[i] || ''}
+                      onChange={e=>setDisputeReasons(p=>({...p,[i]:e.target.value}))}
+                      placeholder="Briefly explain why you disagree, i.e., spelling error, factual error, etc."
+                      rows={2}
+                      className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-300 resize-none"
+                    />
+                  </div>
+                )}
+                {alreadyDisputed && (
+                  <div className="px-4 pb-2">
+                    <p className="text-xs text-blue-600 italic">Dispute submitted.</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex gap-3">
+          <button onClick={()=>setMode('setup')} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Back to Quiz List</button>
+          <button onClick={handleSendDisputes} disabled={!hasDisputes||disputeSending} className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
+            {disputeSending ? 'Sending...' : 'Send Disputes'}
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   if (mode==='results' && activeQuiz?.type==='fillintheblank') {
     const{correct,total}=getScore();
