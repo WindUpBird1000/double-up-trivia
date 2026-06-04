@@ -470,6 +470,7 @@ const QuizApp = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportContent, setExportContent] = useState('');
   const [exportFilename, setExportFilename] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
   const [viewScoringKey, setViewScoringKey] = useState(null);
   const [confirmDeleteKey, setConfirmDeleteKey] = useState(null);
   const [adminStatusFilter, setAdminStatusFilter] = useState('All');
@@ -1817,7 +1818,7 @@ const QuizApp = () => {
                     <button onClick={()=>removeMCQuestion(mcCurrentIndex)} className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200 ml-1"><Trash2 size={16}/></button>
                   </div>
                 </div>
-                <div className="mb-5"><label className="block text-sm font-medium text-gray-600 mb-1">Prompt <span className="text-red-500">*</span></label><textarea value={mcQ.prompt} onChange={e=>updateMCQuestion('prompt',e.target.value)} placeholder="Enter the question..." rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/><ImageHelper/></div>
+                <div className="mb-5"><label className="block text-sm font-medium text-gray-600 mb-1">Prompt <span className="text-red-500">*</span></label><textarea value={mcQ.prompt} onChange={e=>updateMCQuestion('prompt',e.target.value)} placeholder="Enter the question..." rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/><ImageHelper key={`mc-${mcCurrentIndex}`}/></div>
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium text-gray-600">Options</label>
@@ -1840,7 +1841,7 @@ const QuizApp = () => {
                     <button onClick={()=>removeORQuestion(orCurrentIndex)} className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200 ml-1"><Trash2 size={16}/></button>
                   </div>
                 </div>
-                <div className="mb-5"><label className="block text-sm font-medium text-gray-600 mb-1">Prompt <span className="text-red-500">*</span></label><textarea value={orQ.prompt} onChange={e=>updateORQuestion('prompt',e.target.value)} placeholder="Enter the question..." rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/><ImageHelper/></div>
+                <div className="mb-5"><label className="block text-sm font-medium text-gray-600 mb-1">Prompt <span className="text-red-500">*</span></label><textarea value={orQ.prompt} onChange={e=>updateORQuestion('prompt',e.target.value)} placeholder="Enter the question..." rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/><ImageHelper key={`or-${orCurrentIndex}`}/></div>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-600 mb-1">Correct Answer</label>
                   <div className="flex gap-2"><input type="text" value={orAnswerInput} onChange={e=>setOrAnswerInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addORAnswer()} placeholder="Type an accepted answer..." className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/><button onClick={addORAnswer} className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"><Plus size={18}/> Include</button></div>
@@ -1873,7 +1874,7 @@ const QuizApp = () => {
               {newQuizType==='MC'&&<button onClick={addMCQuestion} className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-semibold"><Plus size={18}/> Add Next Question</button>}
               {newQuizType==='openresponse'&&<button onClick={addORQuestion} className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-semibold"><Plus size={18}/> Add Next Question</button>}
               <button onClick={saveQuizLocally} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">{editingKey?'Save Changes':'Save Quiz'}</button>
-              <button onClick={exportQuiz} className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"><Download size={20}/> Export Data</button>
+              <button onClick={()=>setShowPreview(true)} className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold"><BookOpen size={20}/> Preview Question</button>
               <button onClick={()=>{resetQuizBuilder();setAdminSection('list');}} className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
             </div>
           </div>
@@ -1941,6 +1942,71 @@ const QuizApp = () => {
           </div>
         )}
 
+        {showPreview&&(()=>{
+          const previewQ = newQuizType==='MC' ? mcQ : newQuizType==='openresponse' ? orQ : null;
+          const previewType = newQuizType;
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl shadow-xl w-full max-w-xl flex flex-col max-h-screen overflow-y-auto">
+                <div className="flex justify-between items-center p-5 border-b">
+                  <h2 className="text-lg font-bold text-gray-800">Question Preview</h2>
+                  <button onClick={()=>setShowPreview(false)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button>
+                </div>
+                <div className="p-6">
+                  <div className="bg-white rounded-xl border-2 border-gray-100 p-6 mb-4">
+                    {previewType==='MC'&&previewQ&&(
+                      <>
+                        <div className="text-lg font-semibold text-gray-800 mb-4">{renderPrompt(previewQ.prompt||'')}</div>
+                        <div className="space-y-2">
+                          {previewQ.options.filter(o=>o.trim()).map((opt,i)=>(
+                            <div key={i} className={`px-4 py-3 rounded-lg border-2 font-medium text-gray-700 border-gray-200 bg-gray-50`}>
+                              {'ABCDEFGHIJ'[i]}. {opt}
+                              {previewQ.correctIndices.includes(i)&&<span className="ml-2 text-xs text-green-600 font-bold">(correct)</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {previewType==='openresponse'&&previewQ&&(
+                      <>
+                        <div className="text-lg font-semibold text-gray-800 mb-4">{renderPrompt(previewQ.prompt||'')}</div>
+                        <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-400 bg-gray-50">Student types answer here...</div>
+                        {previewQ.acceptedAnswers?.filter(a=>a.trim()).length>0&&(
+                          <p className="mt-3 text-sm text-green-700"><span className="font-semibold">Accepted answers:</span> {previewQ.acceptedAnswers.filter(a=>a.trim()).join(', ')}</p>
+                        )}
+                      </>
+                    )}
+                    {previewType==='fillintheblank'&&(
+                      <div className="text-lg font-semibold text-gray-800">{renderPrompt(newQuizSentences[newQuizSentences.length-1]||'(No sentences yet)')}</div>
+                    )}
+                    {previewType==='combination'&&combDraft&&(
+                      <>
+                        <div className="text-lg font-semibold text-gray-800 mb-4">{renderPrompt(combDraft.prompt||'')}</div>
+                        {combDraft.questionType==='MC'&&(
+                          <div className="space-y-2">
+                            {(combDraft.options||[]).filter(o=>o.trim()).map((opt,i)=>(
+                              <div key={i} className="px-4 py-3 rounded-lg border-2 border-gray-200 bg-gray-50 font-medium text-gray-700">
+                                {'ABCDEFGHIJ'[i]}. {opt}
+                                {(combDraft.correctIndices||[]).includes(i)&&<span className="ml-2 text-xs text-green-600 font-bold">(correct)</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {combDraft.questionType==='OR'&&(
+                          <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-400 bg-gray-50">Student types answer here...</div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 text-center">This is a visual preview only — not interactive.</p>
+                </div>
+                <div className="px-5 pb-5">
+                  <button onClick={()=>setShowPreview(false)} className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
         {showExportModal&&(
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-lg flex flex-col">
