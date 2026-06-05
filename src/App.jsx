@@ -215,20 +215,28 @@ const ScoreboardsListScreen = ({ currentUser, allQuizData, onSelectQuiz, onQuizz
   );
 };
 
-const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQuizzes, onLogout }) => {
+const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQuizzes, onLogout, isAdminView, onAdminDashboard }) => {
   const [results, setResults] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [myAttempt, setMyAttempt] = React.useState(null);
   const [popupAnswers, setPopupAnswers] = React.useState(null);
+  const [allAttempts, setAllAttempts] = React.useState({});
+  const [selectedUserId, setSelectedUserId] = React.useState(null);
 
   React.useEffect(() => {
     const fetchResults = supabase.from('quiz_results').select('*').eq('quiz_key', quizKey).single();
     const fetchAttempt = currentUser
       ? supabase.from('quiz_attempts').select('*').eq('quiz_key', quizKey).eq('user_id', currentUser.id).single()
       : Promise.resolve({ data: null });
-    Promise.all([fetchResults, fetchAttempt]).then(([{ data: r }, { data: a }]) => {
+    const fetchAllAttempts = isAdminView
+      ? supabase.from('quiz_attempts').select('*').eq('quiz_key', quizKey).eq('status', 'submitted')
+      : Promise.resolve({ data: [] });
+    Promise.all([fetchResults, fetchAttempt, fetchAllAttempts]).then(([{ data: r }, { data: a }, { data: allA }]) => {
       setResults(r);
       setMyAttempt(a);
+      const map = {};
+      (allA || []).forEach(att => { map[att.user_id] = att; });
+      setAllAttempts(map);
       setLoading(false);
     });
   }, [quizKey]);
@@ -257,9 +265,10 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
     }
   });
 
-  const isCorrect = (q, i) => {
+  // Correctness check — accepts an answers map and doubles array
+  const isCorrectForAnswers = (q, i, answers) => {
     const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
-    const ans = myAnswers[i];
+    const ans = answers[i];
     if (qtype === 'MC') {
       const displayOpts = q.options.map((opt, oi) => ({ opt, correct: q.correctIndices.includes(oi) })).filter(o => o.opt.trim() !== '');
       const correctOpts = displayOpts.filter(o => o.correct).map(o => o.opt);
@@ -268,10 +277,12 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
     } else if (qtype === 'OR' || qtype === 'openresponse') {
       return ans && q.acceptedAnswers.some(a => (a||'').trim().toLowerCase() === (ans||'').trim().toLowerCase());
     } else {
-      const parsed = ans; const correct = q.text?.match(/\[([^\]]+)\]/)?.[1];
-      return parsed === correct;
+      const correct = q.text?.match(/\[([^\]]+)\]/)?.[1];
+      return ans === correct;
     }
   };
+
+  const isCorrect = (q, i) => isCorrectForAnswers(q, i, myAnswers);
 
   const getCorrectDisplay = (q) => {
     const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
@@ -286,26 +297,40 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
     }
   };
 
-  const getMyAnswerDisplay = (q, i) => {
+  const getAnswerDisplayForAnswers = (q, i, answers) => {
     const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
-    const ans = myAnswers[i];
+    const ans = answers[i];
     if (qtype === 'MC') {
       const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       const opts = q.options.map((opt, oi) => ({ opt, correct: q.correctIndices.includes(oi) })).filter(o => o.opt.trim() !== '');
       return (ans || []).map(a => { const idx = opts.findIndex(o => o.opt === a); return `${idx >= 0 ? labels[idx]+'. ' : ''}${a}`; }).join(', ') || '—';
     }
-    if (qtype === 'fillintheblank') return ans || '—';
     return ans || '—';
   };
 
-  const getFullQuestion = (q, i) => {
+  const getMyAnswerDisplay = (q, i) => getAnswerDisplayForAnswers(q, i, myAnswers);
+
+  const getFullQuestion = (q, i, answers) => {
     const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
     if (qtype === 'fillintheblank') {
-      const ans = myAnswers[i];
+      const ans = answers[i];
       return (q.text || '').replace(/\[[^\]]+\]/, ans ? `[${ans}]` : '______');
     }
     return q.prompt || q.text || '';
   };
+
+  // Raw question text for admin view — no formatting, just the literal string
+  const getRawQuestionText = (q) => {
+    const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
+    if (qtype === 'fillintheblank') return q.text || '';
+    return q.prompt || q.text || '';
+  };
+
+  // Admin drill-down: selected user's attempt data
+  const selectedAttempt = selectedUserId ? allAttempts[selectedUserId] : null;
+  const selectedAnswers = selectedAttempt?.answers || {};
+  const selectedDoubles = selectedAttempt?.doubles || [];
+  const selectedUserName = selectedUserId ? (withRanks.find(u => u.user_id === selectedUserId)?.display_name || selectedUserId) : null;
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
@@ -329,9 +354,18 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
           <p className="text-gray-600 mt-1">This quiz was taken by <strong>{totalUsers}</strong> user{totalUsers !== 1 ? 's' : ''}.</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"><Star size={16}/> Scoreboards</button>
-          <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
-          {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+          {isAdminView ? (
+            <>
+              <button onClick={onAdminDashboard} className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm"><Settings size={16}/> Admin Dashboard</button>
+              {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+            </>
+          ) : (
+            <>
+              <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"><Star size={16}/> Scoreboards</button>
+              <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+              {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+            </>
+          )}
         </div>
       </div>
 
@@ -339,6 +373,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
       <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
         <div className="px-5 py-3 bg-gray-100 border-b">
           <h2 className="font-bold text-gray-700">Leaderboard</h2>
+          {isAdminView && <p className="text-xs text-gray-500 mt-0.5">Click any row to view that player's answers.</p>}
         </div>
         <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
           <div className="col-span-1">#</div>
@@ -347,12 +382,21 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
           <div className="col-span-2 text-right">Points</div>
         </div>
         {withRanks.map((u, i) => {
-          const isMe = u.user_id === currentUser?.id;
+          const isMe = !isAdminView && u.user_id === currentUser?.id;
           const isFirst = u.rank === 1;
+          const isSelected = isAdminView && u.user_id === selectedUserId;
           return (
-            <div key={i} className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center ${isMe ? 'bg-green-50' : 'bg-white'}`}>
+            <div
+              key={i}
+              onClick={isAdminView ? () => setSelectedUserId(prev => prev === u.user_id ? null : u.user_id) : undefined}
+              className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center
+                ${isAdminView ? 'cursor-pointer hover:bg-blue-50' : ''}
+                ${isSelected ? 'bg-blue-100' : isMe ? 'bg-green-50' : 'bg-white'}`}
+            >
               <div className={`col-span-1 text-sm ${isFirst ? 'font-bold' : 'text-gray-500'}`}>{u.rank}</div>
-              <div className={`col-span-7 text-sm ${isFirst ? 'font-bold' : ''} ${isMe ? 'text-green-800' : 'text-gray-800'}`}>{u.display_name}{isMe ? ' (you)' : ''}</div>
+              <div className={`col-span-7 text-sm ${isFirst ? 'font-bold' : ''} ${isMe ? 'text-green-800' : isSelected ? 'text-blue-800' : 'text-gray-800'}`}>
+                {u.display_name}{isMe ? ' (you)' : ''}
+              </div>
               <div className={`col-span-2 text-center text-sm ${isFirst ? 'font-bold' : 'text-gray-600'}`}>{u.questionsCorrect}</div>
               <div className={`col-span-2 text-right text-sm ${isFirst ? 'font-bold' : 'text-gray-600'}`}>{u.score}</div>
             </div>
@@ -360,8 +404,50 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
         })}
       </div>
 
-      {/* Per-question breakdown */}
-      {myAttempt && (
+      {/* Admin: selected user's answer drill-down */}
+      {isAdminView && selectedUserId && (
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+          <div className="px-5 py-3 bg-gray-100 border-b flex justify-between items-center">
+            <div>
+              <h2 className="font-bold text-gray-700">{selectedUserName}'s Answers</h2>
+              {selectedDoubles.length > 0 && <p className="text-xs text-gray-500 mt-0.5">⭐ = doubled question</p>}
+            </div>
+            <button onClick={()=>setSelectedUserId(null)} className="text-gray-400 hover:text-gray-600 text-xs font-medium">Close ✕</button>
+          </div>
+          {!selectedAttempt ? (
+            <p className="px-5 py-4 text-sm text-gray-500 italic">No submitted attempt found for this user.</p>
+          ) : (
+            questions.map((q, i) => {
+              const correct = isCorrectForAnswers(q, i, selectedAnswers);
+              const doubled = selectedDoubles.includes(i);
+              const pts = pointValues[i] || 0;
+              const earnedPts = correct ? (doubled ? pts * 2 : pts) : 0;
+              const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
+              const rawText = getRawQuestionText(q);
+              const answerDisplay = getAnswerDisplayForAnswers(q, i, selectedAnswers);
+              const correctDisplay = getCorrectDisplay(q);
+              return (
+                <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <div className="grid grid-cols-3 gap-4 p-4">
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500 mb-1 font-mono">{i+1}. {doubled && <span className="text-yellow-500 mr-1">⭐</span>}{rawText}</p>
+                      <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {correctDisplay}</p>
+                      <p className={`text-xs mt-0.5 ${correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Their Answer:</span> {answerDisplay}</p>
+                    </div>
+                    <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
+                      <p>Value: <span className="font-semibold">{pts} pts</span></p>
+                      <p className={`font-semibold ${correct ? 'text-green-700' : 'text-red-600'}`}>{earnedPts} pts{doubled && correct ? ' (doubled)' : ''}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* User: per-question breakdown */}
+      {!isAdminView && myAttempt && (
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
           <div className="px-5 py-3 bg-gray-100 border-b">
             <h2 className="font-bold text-gray-700">Your Results</h2>
@@ -372,14 +458,13 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
             const doubled = myDoubles.includes(i);
             const pts = pointValues[i] || 0;
             const myPts = correct ? (doubled ? pts * 2 : pts) : 0;
-            const correctCount = userScores.filter(u => u.user_id && results.scores?.correctnessByUser?.[u.user_id]?.[i]).length;
             const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
             const hasOtherAnswers = (qtype === 'OR' || qtype === 'openresponse') && q.acceptedAnswers?.length > 1;
             return (
               <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
                 <div className="grid grid-cols-3 gap-4 p-4">
                   <div className="col-span-2">
-                    <p className="text-sm text-gray-800 mb-2">{i+1}. {doubled && <span className="text-yellow-500 mr-1">⭐</span>}{getFullQuestion(q, i)}</p>
+                    <p className="text-sm text-gray-800 mb-2">{i+1}. {doubled && <span className="text-yellow-500 mr-1">⭐</span>}{getFullQuestion(q, i, myAnswers)}</p>
                     <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {getCorrectDisplay(q)}{hasOtherAnswers && <button onClick={()=>setPopupAnswers(q.acceptedAnswers)} className="ml-2 text-blue-500 underline text-xs">and {q.acceptedAnswers.length - 1} other{q.acceptedAnswers.length > 2 ? 's' : ''}</button>}</p>
                     <p className={`text-xs mt-1 ${correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Your Answer:</span> {getMyAnswerDisplay(q, i)}</p>
                   </div>
@@ -1015,12 +1100,12 @@ const QuizApp = () => {
           display_name: profileMap[a.user_id] || a.user_id,
           correctness: scoreAttempt(quizData, a.answers || {}),
         }));
-        const { pointValues, userScores } = computeQuizResults(quizData, attemptsWithCorrectness);
+        const { pointValues, userScores, correctnessByUser, correctCounts } = computeQuizResults(quizData, attemptsWithCorrectness);
         await supabase.from('quiz_results').upsert({
           quiz_key: key,
           quiz_title: quizData.title,
           posted_at: new Date().toISOString(),
-          scores: { pointValues, userScores },
+          scores: { pointValues, userScores, correctnessByUser, correctCounts },
         }, { onConflict: 'quiz_key' });
       }
     }
@@ -1364,8 +1449,7 @@ const QuizApp = () => {
 
   if (mode==='scoreboard' && viewScoringKey) {
     const quiz = allQuizData[viewScoringKey];
-    const quizResults = null; // will be loaded async — see below
-    return <ScoreboardScreen quiz={quiz} quizKey={viewScoringKey} currentUser={currentUser} displayName={displayName} onBack={()=>setMode('scoreboards')} onQuizzes={()=>setMode('setup')} onLogout={handleLogout}/>;
+    return <ScoreboardScreen quiz={quiz} quizKey={viewScoringKey} currentUser={currentUser} displayName={displayName} onBack={()=>setMode('scoreboards')} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')}/>;
   }
 
   if (mode==='authornote') return (
