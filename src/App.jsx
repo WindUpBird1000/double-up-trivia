@@ -1696,18 +1696,25 @@ const QuizApp = () => {
     const allAssigned = assignedCount === totalTokens;
 
     const handleDragStartFromBin = (e, tokenType, instanceId) => {
-      setDragState({ tokenType, fromQuestion: null, instanceId });
+      e.dataTransfer.setData('tokenType', tokenType);
+      e.dataTransfer.setData('fromQuestion', '');
       e.dataTransfer.effectAllowed = 'move';
+      setDragState({ tokenType, fromQuestion: null, instanceId });
     };
     const handleDragStartFromQuestion = (e, tokenType, questionIndex) => {
-      setDragState({ tokenType, fromQuestion: questionIndex });
+      e.dataTransfer.setData('tokenType', tokenType);
+      e.dataTransfer.setData('fromQuestion', String(questionIndex));
       e.dataTransfer.effectAllowed = 'move';
+      setDragState({ tokenType, fromQuestion: questionIndex });
     };
+    const handleDragEnd = () => setDragState(null);
     const handleDropOnQuestion = (e, questionIndex) => {
       e.preventDefault();
-      if (!dragState) return;
-      const { tokenType, fromQuestion } = dragState;
-      // If dropping on an occupied slot, do nothing
+      const tokenType = e.dataTransfer.getData('tokenType');
+      const fromStr = e.dataTransfer.getData('fromQuestion');
+      const fromQuestion = fromStr === '' ? null : Number(fromStr);
+      if (!tokenType) return;
+      // If dropping on an occupied slot that isn't the source, do nothing
       if (tokenAssignments[questionIndex] && fromQuestion !== questionIndex) {
         setDragState(null); return;
       }
@@ -1721,8 +1728,10 @@ const QuizApp = () => {
     };
     const handleDropOnBin = (e) => {
       e.preventDefault();
-      if (!dragState || dragState.fromQuestion === null) { setDragState(null); return; }
-      setTokenAssignments(prev => { const next = {...prev}; delete next[dragState.fromQuestion]; return next; });
+      const fromStr = e.dataTransfer.getData('fromQuestion');
+      if (fromStr === '') { setDragState(null); return; }
+      const fromQuestion = Number(fromStr);
+      setTokenAssignments(prev => { const next = {...prev}; delete next[fromQuestion]; return next; });
       setDragState(null);
     };
     const handleDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
@@ -1759,13 +1768,14 @@ const QuizApp = () => {
       setTapSelected(null);
     };
 
-    const TokenChip = ({ tokenType, size=36, draggable=false, onDragStart, onClick, isSelected=false, style={} }) => {
+    const TokenChip = ({ tokenType, size=36, draggable=false, onDragStart, onDragEnd, onClick, isSelected=false, style={} }) => {
       const cfg = TOKEN_CONFIG[tokenType];
       if (!cfg) return null;
       return (
         <div
           draggable={draggable}
           onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
           onClick={onClick}
           title={cfg.description}
           style={{
@@ -1799,8 +1809,8 @@ const QuizApp = () => {
           {activeQuestions.map((q, i) => {
             const assigned = tokenAssignments[i];
             const cfg = assigned ? TOKEN_CONFIG[assigned] : null;
-            const isTapTarget = !!tapSelected && (!assigned || tapSelected.fromQuestion === i);
-            const isDragTarget = !!dragState && (!assigned || dragState.fromQuestion === i);
+            const isBeingMoved = (tapSelected?.fromQuestion === i) || (dragState?.fromQuestion === i);
+            const isValidDropTarget = !assigned && (!!tapSelected || !!dragState) && !isBeingMoved;
             return (
               <div
                 key={i}
@@ -1808,9 +1818,10 @@ const QuizApp = () => {
                 onDrop={e => handleDropOnQuestion(e, i)}
                 onClick={() => handleTapQuestion(i)}
                 className={`grid grid-cols-12 gap-2 px-4 py-3 border-b last:border-b-0 items-center transition-colors
-                  ${assigned ? 'bg-yellow-50' : ''}
-                  ${isTapTarget || isDragTarget ? 'bg-indigo-50 ring-2 ring-inset ring-indigo-300' : ''}
-                  ${(tapSelected || dragState) && !assigned ? 'cursor-pointer' : ''}`}
+                  ${assigned && !isBeingMoved ? 'bg-yellow-50' : ''}
+                  ${isBeingMoved ? 'bg-indigo-50 ring-2 ring-inset ring-indigo-300' : ''}
+                  ${isValidDropTarget ? 'bg-indigo-50 ring-2 ring-inset ring-indigo-300 cursor-pointer' : ''}
+                  ${(tapSelected || dragState) && !assigned && !isValidDropTarget ? '' : ''}`}
               >
                 <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}</div>
                 <div className="col-span-6 text-sm text-gray-700">{getPromptPreview(q)}</div>
@@ -1821,16 +1832,17 @@ const QuizApp = () => {
                       tokenType={assigned}
                       size={36}
                       draggable
-                      isSelected={tapSelected?.fromQuestion === i}
+                      isSelected={isBeingMoved}
                       onDragStart={e => handleDragStartFromQuestion(e, assigned, i)}
+                      onDragEnd={handleDragEnd}
                       onClick={e => { e.stopPropagation(); handleTapToken(assigned, i, `q-${i}`); }}
                     />
                   ) : (
                     <div
                       style={{
                         width:36, height:36, borderRadius:'50%',
-                        border: (isTapTarget||isDragTarget) ? '2px dashed #6366f1' : '2px dashed #d1d5db',
-                        background: (isTapTarget||isDragTarget) ? '#eef2ff' : 'transparent',
+                        border: isValidDropTarget ? '2px dashed #6366f1' : '2px dashed #d1d5db',
+                        background: isValidDropTarget ? '#eef2ff' : 'transparent',
                         transition: 'all 0.15s'
                       }}
                     />
@@ -1862,6 +1874,7 @@ const QuizApp = () => {
                     draggable
                     isSelected={tapSelected?.instanceId === tok.instanceId && tapSelected?.fromQuestion === null}
                     onDragStart={e => handleDragStartFromBin(e, tok.tokenType, tok.instanceId)}
+                    onDragEnd={handleDragEnd}
                     onClick={e => { e.stopPropagation(); handleTapToken(tok.tokenType, null, tok.instanceId); }}
                   />
                   <span className="text-xs text-gray-500 capitalize">{tok.tokenType}</span>
