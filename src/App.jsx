@@ -101,7 +101,8 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
       ? supabase.from('quiz_attempts').select('quiz_key, status').eq('user_id', currentUser.id)
       : Promise.resolve({ data: [] });
     Promise.all([fetchResults, fetchAttempts]).then(([{ data: results }, { data: attempts }]) => {
-      setAllResults(results || []);
+      const scoredResults = (results || []).filter(r => allQuizData[r.quiz_key]?.status === 'Scored');
+      setAllResults(scoredResults);
       const map = {};
       (attempts || []).forEach(a => { map[a.quiz_key] = a; });
       setMyAttempts(map);
