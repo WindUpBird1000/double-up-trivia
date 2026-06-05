@@ -88,7 +88,7 @@ const ordinal = (n) => {
   return n + (s[(v-20)%10] || s[v] || s[0]);
 };
 
-const ScoreboardsListScreen = ({ currentUser, allQuizData, onSelectQuiz, onQuizzes, onLogout }) => {
+const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelectQuiz, onQuizzes, onLogout }) => {
   const [allResults, setAllResults] = React.useState([]);
   const [myAttempts, setMyAttempts] = React.useState({});
   const [loading, setLoading] = React.useState(true);
@@ -160,12 +160,15 @@ const ScoreboardsListScreen = ({ currentUser, allQuizData, onSelectQuiz, onQuizz
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Scoreboards</h1>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
+        <span className="text-sm text-gray-500">{displayName || ''}</span>
         <div className="flex gap-2">
           <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
           {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
         </div>
+      </div>
+      <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
+        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Scoreboards</h1>
       </div>
 
       {allResults.length === 0 ? (
@@ -347,25 +350,32 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
       )}
 
       {/* Header */}
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">{quiz.title}</h1>
-          <p className="text-gray-500 mt-1">{quiz.category} · Closed {results.posted_at ? new Date(results.posted_at).toLocaleDateString() : ''}</p>
-          <p className="text-gray-600 mt-1">This quiz was taken by <strong>{totalUsers}</strong> user{totalUsers !== 1 ? 's' : ''}.</p>
+      <div className="mb-6">
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
+          {isAdminView
+            ? <span className="text-sm text-gray-500"></span>
+            : <span className="text-sm text-gray-500">{displayName || ''}</span>
+          }
+          <div className="flex gap-2">
+            {isAdminView ? (
+              <>
+                <button onClick={onAdminDashboard} className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm"><Settings size={16}/> Admin Dashboard</button>
+                {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+              </>
+            ) : (
+              <>
+                <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"><Star size={16}/> Scoreboards</button>
+                <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+                {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+              </>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2">
-          {isAdminView ? (
-            <>
-              <button onClick={onAdminDashboard} className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm"><Settings size={16}/> Admin Dashboard</button>
-              {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
-            </>
-          ) : (
-            <>
-              <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"><Star size={16}/> Scoreboards</button>
-              <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
-              {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
-            </>
-          )}
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">{quiz.title}</h1>
+          <p className="text-gray-500 mt-1">
+            {quiz.category} · Closed {results.posted_at ? new Date(results.posted_at).toLocaleDateString() : ''} · {totalUsers} participant{totalUsers !== 1 ? 's' : ''}
+          </p>
         </div>
       </div>
 
@@ -1452,7 +1462,7 @@ const QuizApp = () => {
     );
   }
 
-  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout}/>;
+  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout}/>;
 
 
   if (mode==='scoreboard' && viewScoringKey) {
