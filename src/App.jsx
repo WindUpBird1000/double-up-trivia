@@ -81,6 +81,7 @@ const TOKEN_CONFIG = {
   },
 };
 
+const parseSentence = (rawText) => {
   const match = rawText.match(/\[([^\]]+)\]/);
   if (!match) return { display: rawText, answer: '' };
   return { display: rawText.replace(/\[[^\]]+\]/, '______'), answer: match[1] };
