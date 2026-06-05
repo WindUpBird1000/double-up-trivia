@@ -775,8 +775,12 @@ const QuizApp = () => {
   };
 
   const fetchUserData = async (user) => {
-    const { data: profile } = await supabase.from('profiles').select('display_name').eq('user_id', user.id).single();
-    if (profile) setDisplayName(profile.display_name || '');
+    const { data: profile } = await supabase.from('profiles').select('display_name, email').eq('user_id', user.id).single();
+    if (profile) {
+      setDisplayName(profile.display_name || profile.email || user.email || '');
+    } else {
+      setDisplayName(user.email || '');
+    }
     const { data: attempts } = await supabase.from('quiz_attempts').select('*').eq('user_id', user.id);
     if (attempts) {
       const map = {};
@@ -1092,9 +1096,9 @@ const QuizApp = () => {
       const { data: attempts } = await supabase.from('quiz_attempts').select('*').eq('quiz_key', key).eq('status', 'submitted');
       if (attempts && attempts.length > 0) {
         const userIds = attempts.map(a => a.user_id);
-        const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
+        const { data: profiles } = await supabase.from('profiles').select('user_id, display_name, email').in('user_id', userIds);
         const profileMap = {};
-        (profiles || []).forEach(p => { profileMap[p.user_id] = p.display_name; });
+        (profiles || []).forEach(p => { profileMap[p.user_id] = p.display_name || p.email || p.user_id; });
         const attemptsWithCorrectness = attempts.map(a => ({
           ...a,
           display_name: profileMap[a.user_id] || a.user_id,
@@ -1289,7 +1293,7 @@ const QuizApp = () => {
     <div className="max-w-2xl mx-auto bg-gray-50 min-h-screen" style={{padding:"1.5rem"}}>
       <div style={{position:"relative"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
-          <span className="text-sm text-gray-500">{displayName || currentUser?.email}</span>
+          <span className="text-sm text-gray-500">{displayName || currentUser?.email || ''}</span>
           <div className="flex gap-2">
             <button onClick={()=>setMode('scoreboards')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"><Star size={16}/> Scoreboards</button>
             <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
