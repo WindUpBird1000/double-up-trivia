@@ -1732,7 +1732,7 @@ const QuizApp = () => {
           title={cfg.description}
           style={{
             width: size, height: size, borderRadius: '50%', display: 'inline-flex',
-            alignItems: 'center', justifyContent: 'center', cursor: draggable||onClick ? 'grab' : 'default',
+            alignItems: 'center', justifyContent: 'center', cursor: onClick ? 'pointer' : 'default',
             border: `2px solid ${isSelected ? '#6366f1' : cfg.border}`,
             boxShadow: isSelected ? '0 0 0 3px #a5b4fc' : '0 1px 3px rgba(0,0,0,0.15)',
             background: cfg.bg, flexShrink: 0, ...style
