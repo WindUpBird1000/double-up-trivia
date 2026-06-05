@@ -1300,7 +1300,7 @@ const QuizApp = () => {
           </div>
         </div>
         <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
-          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Select From Active, Unfinished Quizzes</h1>
+          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Available Quizzes</h1>
         </div>
       </div>
       {loadError ? (
@@ -1328,7 +1328,7 @@ const QuizApp = () => {
                 const attempt = userAttempts[key];
                 const completed = attempt?.status === 'submitted';
                 const inProgress = attempt?.status === 'in_progress';
-                const label = `${allQuizData[key]?.title||key}${completed ? ' ★ Completed' : inProgress ? ' ! Unfinished' : ''}`;
+                const label = `${allQuizData[key]?.title||key}${completed ? ' (Completed)' : inProgress ? ' (In Progress)' : ''}`;
                 return <option key={key} value={key}>{label}</option>;
               })}
             </select>
