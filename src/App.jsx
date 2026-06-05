@@ -588,6 +588,7 @@ const QuizApp = () => {
   const [showQuestionSummary, setShowQuestionSummary] = useState(false);
   const DEFAULT_TOKEN_SLOTS = ['doubler','doubler','doubler','none','none','none'];
   const [newQuizTokenSlots, setNewQuizTokenSlots] = useState([...DEFAULT_TOKEN_SLOTS]);
+  const [newQuizClosingDate, setNewQuizClosingDate] = useState('');
   const [combDraft, setCombDraft] = useState(null);
   const [userAttempts, setUserAttempts] = useState({});
   const [displayName, setDisplayName] = useState('');
@@ -596,7 +597,15 @@ const QuizApp = () => {
   const activeQuizKeys = knownQuizzes.quizzes.filter(key => (allQuizData[key]?.status || 'Active') === 'Active');
   const allCategories = Array.from(new Set(activeQuizKeys.map(key => allQuizData[key]?.category).filter(Boolean))).sort((a,b) => a.localeCompare(b));
   const allCategoriesAdmin = Array.from(new Set(Object.values(allQuizData).map(q => q.category).filter(Boolean))).sort((a,b) => a.localeCompare(b));
-  const quizzesInCategory = selectedCategory ? activeQuizKeys.filter(key => allQuizData[key]?.category === selectedCategory).sort((a,b) => (allQuizData[a]?.title||'').localeCompare(allQuizData[b]?.title||'')) : [];
+  const quizzesInCategory = selectedCategory ? activeQuizKeys.filter(key => allQuizData[key]?.category === selectedCategory).sort((a, b) => {
+    const dateA = allQuizData[a]?.closingDate;
+    const dateB = allQuizData[b]?.closingDate;
+    if (!dateA && !dateB) return (allQuizData[a]?.title||'').localeCompare(allQuizData[b]?.title||'');
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    const parse = d => { const [m,day,y] = d.split('/'); return new Date(y, m-1, day); };
+    return parse(dateA) - parse(dateB);
+  }) : [];
 
   const handleCategoryChange = (cat) => { setSelectedCategory(cat); setSelectedQuizKey(''); };
 
@@ -883,7 +892,7 @@ const QuizApp = () => {
     setEditingKey(null); setNewQuizTitle(''); setNewQuizKey(''); setNewQuizCategory('');
     setNewCategoryInput(''); setShowNewCategoryInput(false); setNewQuizStatus('Active'); setNewQuizAuthorNote('');
     setNewQuizType('fillintheblank'); setNewSentenceInput(''); setNewQuizSentences([]);
-    setNewQuizTokenSlots([...DEFAULT_TOKEN_SLOTS]);
+    setNewQuizTokenSlots([...DEFAULT_TOKEN_SLOTS]); setNewQuizClosingDate('');
     setExtraWords([]); setMcQuestions([emptyMCQuestion()]); setMcCurrentIndex(0); setMcRandomizeQuestions(false);
     setOrQuestions([emptyORQuestion()]); setOrCurrentIndex(0); setOrRandomizeQuestions(false); setOrAnswerInput('');
     setCombQuestions([]); setCombCurrentIndex(null); setCombNewQType('MC'); setCombDraft(null);
@@ -906,6 +915,7 @@ const QuizApp = () => {
     setEditingKey(key); setNewQuizTitle(quiz.title); setNewQuizKey(key);
     setNewQuizCategory(quiz.category || ''); setNewQuizStatus(quiz.status || 'Active'); setNewQuizAuthorNote(quiz.authorNote || '');
     setNewQuizTokenSlots(quiz.tokenSlots || [...DEFAULT_TOKEN_SLOTS]);
+    setNewQuizClosingDate(quiz.closingDate || '');
     setNewQuizType(quiz.type || 'fillintheblank');
     setShowNewCategoryInput(false); setNewCategoryInput('');
     if (quiz.type === 'MC') {
@@ -1014,7 +1024,7 @@ const QuizApp = () => {
 
   const buildQuizJSON = () => {
     const category = getEffectiveCategory();
-    const base = { title: newQuizTitle, category, status: newQuizStatus, type: newQuizType, authorNote: newQuizAuthorNote.trim(), tokenSlots: newQuizTokenSlots };
+    const base = { title: newQuizTitle, category, status: newQuizStatus, type: newQuizType, authorNote: newQuizAuthorNote.trim(), tokenSlots: newQuizTokenSlots, closingDate: newQuizClosingDate.trim() };
     if (newQuizType==='fillintheblank') {
       const aw = extractAnswerWords(newQuizSentences.map(t=>({text:t})));
       return { ...base, wordBank: Array.from(new Set([...aw,...extraWords])), sentences: newQuizSentences.map(t=>({text:t,answer:parseSentence(t).answer})) };
@@ -1343,7 +1353,7 @@ const QuizApp = () => {
                 const attempt = userAttempts[key];
                 const completed = attempt?.status === 'submitted';
                 const inProgress = attempt?.status === 'in_progress';
-                const label = `${allQuizData[key]?.title||key}${completed ? ' (Completed)' : inProgress ? ' (In Progress)' : ''}`;
+                const label = `${allQuizData[key]?.title||key}${completed ? ' (Completed)' : inProgress ? ' (In Progress)' : ''}${allQuizData[key]?.closingDate ? ` - Closes on ${allQuizData[key].closingDate}` : ''}`;
                 return <option key={key} value={key}>{label}</option>;
               })}
             </select>
@@ -1757,19 +1767,30 @@ const QuizApp = () => {
                 </div>
               </div>
               <div className="flex gap-3 items-end mb-3">
-                <div className="flex-1">
+                <div style={{flex:'0 1 160px',minWidth:0}}>
                   <label className="block text-sm font-medium text-gray-600 mb-1">Category <span className="text-red-500">*</span></label>
-                  <select value={showNewCategoryInput?'__new__':newQuizCategory} onChange={e=>{if(e.target.value==='__new__'){setShowNewCategoryInput(true);setNewQuizCategory('');}else{setShowNewCategoryInput(false);setNewQuizCategory(e.target.value);}}} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <option value="">— Select a category —</option>
+                  <select value={showNewCategoryInput?'__new__':newQuizCategory} onChange={e=>{if(e.target.value==='__new__'){setShowNewCategoryInput(true);setNewQuizCategory('');}else{setShowNewCategoryInput(false);setNewQuizCategory(e.target.value);}}} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                    <option value="">— Category —</option>
                     {allCategoriesAdmin.map(cat=><option key={cat} value={cat}>{cat}</option>)}
-                    <option value="__new__">+ Add new category…</option>
+                    <option value="__new__">+ New…</option>
                   </select>
                 </div>
                 <div style={{flexShrink:0}}>
                   <label className="block text-sm font-medium text-gray-600 mb-1">Status <span className="text-red-500">*</span></label>
-                  <select value={newQuizStatus} onChange={e=>setNewQuizStatus(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                  <select value={newQuizStatus} onChange={e=>setNewQuizStatus(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                     <option value="Active">Active</option><option value="Inactive">Inactive</option><option value="Scored">Scored</option>
                   </select>
+                </div>
+                <div style={{flexShrink:0}}>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Closing Date</label>
+                  <input
+                    type="text"
+                    value={newQuizClosingDate}
+                    onChange={e => setNewQuizClosingDate(e.target.value)}
+                    placeholder="MM/DD/YYYY"
+                    maxLength={10}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm w-32"
+                  />
                 </div>
               </div>
               {showNewCategoryInput&&<div className="mb-3"><input type="text" value={newCategoryInput} onChange={e=>setNewCategoryInput(e.target.value)} placeholder="New category name" autoFocus className="w-full px-3 py-2 border border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500"/></div>}
