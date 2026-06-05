@@ -7,7 +7,80 @@ const supabase = createClient(
   'sb_publishable_zGvjNAiBtoaRersumsUjWA_OGLXkrJz'
 );
 
-const parseSentence = (rawText) => {
+const SNIPER_POINTS = 8;
+
+const TOKEN_CONFIG = {
+  doubler: {
+    label: '×2',
+    color: '#b45309',
+    bg: '#fef9c3',
+    border: '#f59e0b',
+    textColor: '#92400e',
+    description: 'Doubles the points you receive for a correct answer.',
+    svgIcon: (size=32) => (
+      <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="16" cy="16" r="14" fill="#fbbf24" stroke="#d97706" strokeWidth="2"/>
+        <text x="16" y="21" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#78350f" fontFamily="sans-serif">×2</text>
+      </svg>
+    ),
+  },
+  insurance: {
+    label: 'INS',
+    color: '#1d4ed8',
+    bg: '#eff6ff',
+    border: '#3b82f6',
+    textColor: '#1e40af',
+    description: 'Wrong answer? You still earn half the question\'s point value.',
+    svgIcon: (size=32) => (
+      <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 3 L28 8 L28 18 C28 24 22 29 16 31 C10 29 4 24 4 18 L4 8 Z" fill="#3b82f6" stroke="#1d4ed8" strokeWidth="1.5"/>
+        <path d="M16 5 L26 9.5 L26 18 C26 23 21 27.5 16 29.5 C11 27.5 6 23 6 18 L6 9.5 Z" fill="#93c5fd"/>
+        <text x="16" y="21" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#1e3a8a" fontFamily="sans-serif">INS</text>
+      </svg>
+    ),
+  },
+  sniper: {
+    label: '🎯',
+    color: '#b91c1c',
+    bg: '#fef2f2',
+    border: '#ef4444',
+    textColor: '#991b1b',
+    description: `Correct answer scores ${SNIPER_POINTS} points flat, regardless of question value.`,
+    svgIcon: (size=32) => (
+      <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="16" cy="16" r="13" fill="#fca5a5" stroke="#dc2626" strokeWidth="2"/>
+        <circle cx="16" cy="16" r="9" fill="none" stroke="#dc2626" strokeWidth="1.5"/>
+        <circle cx="16" cy="16" r="5" fill="none" stroke="#dc2626" strokeWidth="1.5"/>
+        <circle cx="16" cy="16" r="2" fill="#dc2626"/>
+        <line x1="16" y1="3" x2="16" y2="7" stroke="#dc2626" strokeWidth="1.5"/>
+        <line x1="16" y1="25" x2="16" y2="29" stroke="#dc2626" strokeWidth="1.5"/>
+        <line x1="3" y1="16" x2="7" y2="16" stroke="#dc2626" strokeWidth="1.5"/>
+        <line x1="25" y1="16" x2="29" y2="16" stroke="#dc2626" strokeWidth="1.5"/>
+      </svg>
+    ),
+  },
+  parasite: {
+    label: 'PAR',
+    color: '#15803d',
+    bg: '#f0fdf4',
+    border: '#22c55e',
+    textColor: '#166534',
+    description: 'Your score equals the average score for this question across all participants.',
+    svgIcon: (size=32) => (
+      <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="16" cy="18" rx="7" ry="9" fill="#4ade80" stroke="#16a34a" strokeWidth="1.5"/>
+        <ellipse cx="16" cy="10" rx="4" ry="5" fill="#86efac" stroke="#16a34a" strokeWidth="1.2"/>
+        <line x1="9" y1="16" x2="4" y2="12" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round"/>
+        <line x1="9" y1="20" x2="4" y2="22" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round"/>
+        <line x1="23" y1="16" x2="28" y2="12" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round"/>
+        <line x1="23" y1="20" x2="28" y2="22" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round"/>
+        <circle cx="14" cy="9" r="1" fill="#166534"/>
+        <circle cx="18" cy="9" r="1" fill="#166534"/>
+      </svg>
+    ),
+  },
+};
+
   const match = rawText.match(/\[([^\]]+)\]/);
   if (!match) return { display: rawText, answer: '' };
   return { display: rawText.replace(/\[[^\]]+\]/, '______'), answer: match[1] };
@@ -234,8 +307,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
       : Promise.resolve({ data: null });
     const fetchAllAttempts = isAdminView
       ? supabase.from('quiz_attempts').select('*').eq('quiz_key', quizKey).eq('status', 'submitted')
-      : Promise.resolve({ data: [] });
-    Promise.all([fetchResults, fetchAttempt, fetchAllAttempts]).then(([{ data: r }, { data: a }, { data: allA }]) => {
+      : Promise.resolve({ data: [] });    Promise.all([fetchResults, fetchAttempt, fetchAllAttempts]).then(([{ data: r }, { data: a }, { data: allA }]) => {
       setResults(r);
       setMyAttempt(a);
       const map = {};
@@ -421,7 +493,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
           <div className="px-5 py-3 bg-gray-100 border-b flex justify-between items-center">
             <div>
               <h2 className="font-bold text-gray-700">{selectedUserName}'s Answers</h2>
-              {selectedDoubles.length > 0 && <p className="text-xs text-gray-500 mt-0.5">⭐ = doubled question</p>}
+              {Object.keys(selectedAttempt?.token_assignments || {}).length > 0 && <p className="text-xs text-gray-500 mt-0.5">Token icons show assignments.</p>}
             </div>
             <button onClick={()=>setSelectedUserId(null)} className="text-gray-400 hover:text-gray-600 text-xs font-medium">Close ✕</button>
           </div>
@@ -430,10 +502,28 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
           ) : (
             questions.map((q, i) => {
               const correct = isCorrectForAnswers(q, i, selectedAnswers);
-              const doubled = selectedDoubles.includes(i);
+              const tokenMap = selectedAttempt.token_assignments || {};
+              const doublesArr = selectedAttempt.doubles || [];
+              const token = tokenMap[i] || (doublesArr.includes(i) ? 'doubler' : null);
               const pts = pointValues[i] || 0;
-              const earnedPts = correct ? (doubled ? pts * 2 : pts) : 0;
-              const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
+              const totalAttempts = withRanks.length;
+              let earnedPts = 0;
+              let tokenLabel = null;
+              if (token === 'doubler') {
+                earnedPts = correct ? Math.round(pts * 2 * 10) / 10 : 0;
+                if (correct) tokenLabel = 'doubler';
+              } else if (token === 'insurance') {
+                earnedPts = correct ? pts : Math.round(pts / 2 * 10) / 10;
+                if (!correct) tokenLabel = 'insurance';
+              } else if (token === 'sniper') {
+                earnedPts = correct ? SNIPER_POINTS : 0;
+                if (correct) tokenLabel = 'sniper';
+              } else if (token === 'parasite') {
+                earnedPts = totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0;
+                tokenLabel = 'parasite';
+              } else {
+                earnedPts = correct ? pts : 0;
+              }
               const rawText = getRawQuestionText(q);
               const answerDisplay = getAnswerDisplayForAnswers(q, i, selectedAnswers);
               const correctDisplay = getCorrectDisplay(q);
@@ -441,13 +531,17 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                 <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
                   <div className="grid grid-cols-3 gap-4 p-4">
                     <div className="col-span-2">
-                      <p className="text-xs text-gray-500 mb-1 font-mono">{i+1}. {doubled && <span className="text-yellow-500 mr-1">⭐</span>}{rawText}</p>
+                      <p className="text-xs text-gray-500 mb-1 font-mono flex items-center gap-1">
+                        {i+1}. {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(16)}</span>} {rawText}
+                      </p>
                       <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {correctDisplay}</p>
                       <p className={`text-xs mt-0.5 ${correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Their Answer:</span> {answerDisplay}</p>
                     </div>
                     <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
                       <p>Value: <span className="font-semibold">{pts} pts</span></p>
-                      <p className={`font-semibold ${correct ? 'text-green-700' : 'text-red-600'}`}>{earnedPts} pts{doubled && correct ? ' (doubled)' : ''}</p>
+                      <p className={`font-semibold ${correct || token === 'insurance' ? 'text-green-700' : 'text-red-600'}`}>
+                        {earnedPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -462,27 +556,51 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
           <div className="px-5 py-3 bg-gray-100 border-b">
             <h2 className="font-bold text-gray-700">Your Results</h2>
-            {myDoubles.length > 0 && <p className="text-xs text-gray-500 mt-1">⭐ = doubled question</p>}
           </div>
           {questions.map((q, i) => {
             const correct = isCorrect(q, i);
-            const doubled = myDoubles.includes(i);
+            const myTokenMap = myAttempt.token_assignments || {};
+            const myDoublesArr = myDoubles || [];
+            const token = myTokenMap[i] || (myDoublesArr.includes(i) ? 'doubler' : null);
             const pts = pointValues[i] || 0;
-            const myPts = correct ? (doubled ? pts * 2 : pts) : 0;
+            const totalUsers2 = totalUsers;
+            let myPts = 0;
+            let tokenLabel = null;
+            if (token === 'doubler') {
+              myPts = correct ? Math.round(pts * 2 * 10) / 10 : 0;
+              if (correct) tokenLabel = 'doubler';
+            } else if (token === 'insurance') {
+              myPts = correct ? pts : Math.round(pts / 2 * 10) / 10;
+              if (!correct) tokenLabel = 'insurance';
+            } else if (token === 'sniper') {
+              myPts = correct ? SNIPER_POINTS : 0;
+              if (correct) tokenLabel = 'sniper';
+            } else if (token === 'parasite') {
+              myPts = totalUsers2 > 0 ? Math.round((correctCounts[i] * pts / totalUsers2) * 10) / 10 : 0;
+              tokenLabel = 'parasite';
+            } else {
+              myPts = correct ? pts : 0;
+            }
             const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
             const hasOtherAnswers = (qtype === 'OR' || qtype === 'openresponse') && q.acceptedAnswers?.length > 1;
             return (
               <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
                 <div className="grid grid-cols-3 gap-4 p-4">
                   <div className="col-span-2">
-                    <p className="text-sm text-gray-800 mb-2">{i+1}. {doubled && <span className="text-yellow-500 mr-1">⭐</span>}{getFullQuestion(q, i, myAnswers)}</p>
+                    <p className="text-sm text-gray-800 mb-2 flex items-center gap-1 flex-wrap">
+                      <span>{i+1}.</span>
+                      {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(20)}</span>}
+                      <span>{getFullQuestion(q, i, myAnswers)}</span>
+                    </p>
                     <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {getCorrectDisplay(q)}{hasOtherAnswers && <button onClick={()=>setPopupAnswers(q.acceptedAnswers)} className="ml-2 text-blue-500 underline text-xs">and {q.acceptedAnswers.length - 1} other{q.acceptedAnswers.length > 2 ? 's' : ''}</button>}</p>
                     <p className={`text-xs mt-1 ${correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Your Answer:</span> {getMyAnswerDisplay(q, i)}</p>
                   </div>
                   <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
                     <p><span className="font-semibold">{correctCounts?.[i] ?? '—'}/{totalUsers}</span> Correct</p>
                     <p>Question Value: <span className="font-semibold">{pts} pts</span></p>
-                    <p className={`font-semibold ${correct ? 'text-green-700' : 'text-red-600'}`}>Your Score: {myPts} pts{doubled && correct ? ' (doubled)' : ''}</p>
+                    <p className={`font-semibold ${correct || token === 'insurance' ? 'text-green-700' : 'text-red-600'}`}>
+                      Your Score: {myPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -637,10 +755,12 @@ const QuizApp = () => {
       const { data: freshAttempt } = await supabase.from('quiz_attempts').select('*').eq('id', existing.id).single();
       setStudentAnswers(freshAttempt?.answers || {});
       setDoubleSelections(freshAttempt?.doubles || []);
+      setTokenAssignments(freshAttempt?.token_assignments || {});
       setCurrentAttemptId(existing.id);
     } else {
       setStudentAnswers({});
       setDoubleSelections([]);
+      setTokenAssignments({});
       const { data } = await supabase.from('quiz_attempts').insert({ user_id: currentUser.id, quiz_key: selectedQuizKey, status: 'in_progress', answers: {} }).select().single();
       if (data) {
         setCurrentAttemptId(data.id);
@@ -664,6 +784,9 @@ const QuizApp = () => {
   };
   const goToQuestion = (delta) => { const t = activeQuestions.length; setCurrentQuestionIndex((currentQuestionIndex + t + delta) % t); };
   const [doubleSelections, setDoubleSelections] = useState([]);
+  const [tokenAssignments, setTokenAssignments] = useState({}); // { questionIndex: tokenType }
+  const [dragState, setDragState] = useState(null); // { tokenType, fromQuestion: number|null, instanceId: string }
+  const [tapSelected, setTapSelected] = useState(null); // { tokenType, fromQuestion: number|null, instanceId: string }
   const DOUBLES_ALLOWED = (activeQuiz?.tokenSlots || ['doubler','doubler','doubler']).filter(t => t === 'doubler').length;
   const [disputedQuestions, setDisputedQuestions] = useState({});
   const [disputeReasons, setDisputeReasons] = useState({});
@@ -701,15 +824,17 @@ const QuizApp = () => {
 
   const saveProgress = async () => {
     if (!currentAttemptId || !currentUser) return;
-    const { error } = await supabase.from('quiz_attempts').update({ answers: studentAnswers, doubles: doubleSelections }).eq('id', currentAttemptId);
+    const doubles = Object.entries(tokenAssignments).filter(([,t])=>t==='doubler').map(([i])=>Number(i));
+    const { error } = await supabase.from('quiz_attempts').update({ answers: studentAnswers, doubles, token_assignments: tokenAssignments }).eq('id', currentAttemptId);
     if (error) console.log('saveProgress error:', error);
   };
 
   const handleFinalSubmission = async () => {
     if (currentAttemptId) {
       const now = new Date().toISOString();
+      const doubles = Object.entries(tokenAssignments).filter(([,t])=>t==='doubler').map(([i])=>Number(i));
       await supabase.from('quiz_attempts').update({
-        status: 'submitted', answers: studentAnswers, submitted_at: now
+        status: 'submitted', answers: studentAnswers, submitted_at: now, doubles, token_assignments: tokenAssignments
       }).eq('id', currentAttemptId);
       setUserAttempts(p => ({ ...p, [selectedQuizKey]: { ...p[selectedQuizKey], status: 'submitted' } }));
     }
@@ -1067,6 +1192,7 @@ const QuizApp = () => {
     const questions = quiz.type === 'fillintheblank' ? quiz.sentences : quiz.questions;
     const n = questions.length;
     const correctCounts = questions.map((_, i) => attempts.filter(a => a.correctness[i]).length);
+    const totalAttempts = attempts.length;
     const sorted = [...correctCounts.map((c, i) => ({ i, c }))].sort((a, b) => a.c - b.c || a.i - b.i);
     const pointValues = new Array(n).fill(0);
     let rank = n;
@@ -1084,12 +1210,26 @@ const QuizApp = () => {
       let total = 0;
       let questionsCorrect = 0;
       correctnessByUser[a.user_id] = a.correctness;
+      const tokenMap = a.token_assignments || {};
+      // doubles fallback for old attempts without token_assignments
+      const doublesArr = a.doubles || [];
       a.correctness.forEach((correct, i) => {
-        if (!correct) return;
-        questionsCorrect++;
         const pts = pointValues[i];
-        const doubled = (a.doubles || []).includes(i);
-        total += doubled ? pts * 2 : pts;
+        const token = tokenMap[i] || (doublesArr.includes(i) ? 'doubler' : null);
+        if (correct) questionsCorrect++;
+        if (token === 'doubler') {
+          total += correct ? pts * 2 : 0;
+        } else if (token === 'insurance') {
+          total += correct ? pts : Math.round((pts / 2) * 10) / 10;
+        } else if (token === 'sniper') {
+          total += correct ? SNIPER_POINTS : 0;
+        } else if (token === 'parasite') {
+          // parasite: (correctCount * pts) / totalAttempts
+          const parasiteScore = totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0;
+          total += parasiteScore;
+        } else {
+          total += correct ? pts : 0;
+        }
       });
       return { user_id: a.user_id, display_name: a.display_name, score: Math.round(total * 10) / 10, questionsCorrect };
     });
@@ -1507,41 +1647,241 @@ const QuizApp = () => {
   );
 
   if (mode==='summary') {
-    const doublesOk = doubleSelections.length === DOUBLES_ALLOWED;
+    // Build the pool of tokens from the quiz's tokenSlots config
+    const tokenSlots = activeQuiz?.tokenSlots || ['doubler','doubler','doubler','none','none','none'];
+    const allTokens = tokenSlots
+      .filter(t => t !== 'none')
+      .map((t, i) => ({ tokenType: t, instanceId: `slot-${i}` }));
+
+    // Tokens already assigned to questions
+    const assignedInstanceIds = new Set(
+      Object.entries(tokenAssignments).map(([qi, tt]) => {
+        // find the instanceId for this assignment by matching tokenType in order
+        const idx = allTokens.findIndex(tok => tok.tokenType === tt &&
+          !Object.entries(tokenAssignments)
+            .filter(([qi2]) => qi2 < qi)
+            .some(([, tt2]) => tt2 === tt && allTokens.findIndex(tok2 => tok2.tokenType === tt2) === allTokens.indexOf(tok)));
+        return idx >= 0 ? allTokens[idx].instanceId : null;
+      }).filter(Boolean)
+    );
+
+    // Simpler: track which instanceIds are in the bin vs assigned
+    // Build a map: tokenType -> list of instanceIds available
+    const assignedByType = {};
+    Object.values(tokenAssignments).forEach(tt => { assignedByType[tt] = (assignedByType[tt]||0)+1; });
+    const binTokens = allTokens.filter(tok => {
+      const used = assignedByType[tok.tokenType] || 0;
+      const totalOfType = allTokens.filter(t2 => t2.tokenType === tok.tokenType).length;
+      // show this token in bin if there are still unassigned copies
+      const assignedSoFar = allTokens
+        .filter(t2 => t2.tokenType === tok.tokenType)
+        .filter(t2 => t2.instanceId < tok.instanceId)
+        .length;
+      // count how many of this type are assigned
+      return assignedSoFar >= (assignedByType[tok.tokenType] || 0)
+        ? false
+        : true;
+    });
+    // Simpler approach: just compute remaining counts
+    const remainingByType = {};
+    allTokens.forEach(tok => { remainingByType[tok.tokenType] = (remainingByType[tok.tokenType]||0)+1; });
+    Object.values(tokenAssignments).forEach(tt => { if (remainingByType[tt]) remainingByType[tt]--; });
+    const binTokensList = Object.entries(remainingByType).flatMap(([tt, count]) =>
+      Array.from({length: count}, (_, i) => ({ tokenType: tt, instanceId: `bin-${tt}-${i}` }))
+    );
+
+    const totalTokens = allTokens.length;
+    const assignedCount = Object.keys(tokenAssignments).length;
+    const allAssigned = assignedCount === totalTokens;
+
+    const handleDragStartFromBin = (e, tokenType, instanceId) => {
+      setDragState({ tokenType, fromQuestion: null, instanceId });
+      e.dataTransfer.effectAllowed = 'move';
+    };
+    const handleDragStartFromQuestion = (e, tokenType, questionIndex) => {
+      setDragState({ tokenType, fromQuestion: questionIndex });
+      e.dataTransfer.effectAllowed = 'move';
+    };
+    const handleDropOnQuestion = (e, questionIndex) => {
+      e.preventDefault();
+      if (!dragState) return;
+      const { tokenType, fromQuestion } = dragState;
+      // If dropping on an occupied slot, do nothing
+      if (tokenAssignments[questionIndex] && fromQuestion !== questionIndex) {
+        setDragState(null); return;
+      }
+      setTokenAssignments(prev => {
+        const next = { ...prev };
+        if (fromQuestion !== null) delete next[fromQuestion];
+        next[questionIndex] = tokenType;
+        return next;
+      });
+      setDragState(null);
+    };
+    const handleDropOnBin = (e) => {
+      e.preventDefault();
+      if (!dragState || dragState.fromQuestion === null) { setDragState(null); return; }
+      setTokenAssignments(prev => { const next = {...prev}; delete next[dragState.fromQuestion]; return next; });
+      setDragState(null);
+    };
+    const handleDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+
+    // Tap-to-assign
+    const handleTapToken = (tokenType, fromQuestion, instanceId) => {
+      if (tapSelected) {
+        // Second tap on same token = deselect
+        if (tapSelected.instanceId === instanceId && tapSelected.fromQuestion === fromQuestion) {
+          setTapSelected(null); return;
+        }
+        // Tapped another token in bin while one selected — switch selection
+        if (fromQuestion === null) { setTapSelected({ tokenType, fromQuestion, instanceId }); return; }
+      }
+      setTapSelected({ tokenType, fromQuestion: fromQuestion ?? null, instanceId });
+    };
+    const handleTapQuestion = (questionIndex) => {
+      if (!tapSelected) return;
+      const { tokenType, fromQuestion } = tapSelected;
+      if (tokenAssignments[questionIndex] && fromQuestion !== questionIndex) {
+        setTapSelected(null); return;
+      }
+      setTokenAssignments(prev => {
+        const next = { ...prev };
+        if (fromQuestion !== null) delete next[fromQuestion];
+        next[questionIndex] = tokenType;
+        return next;
+      });
+      setTapSelected(null);
+    };
+    const handleTapBin = () => {
+      if (!tapSelected || tapSelected.fromQuestion === null) { setTapSelected(null); return; }
+      setTokenAssignments(prev => { const next = {...prev}; delete next[tapSelected.fromQuestion]; return next; });
+      setTapSelected(null);
+    };
+
+    const TokenChip = ({ tokenType, size=36, draggable=false, onDragStart, onClick, isSelected=false, style={} }) => {
+      const cfg = TOKEN_CONFIG[tokenType];
+      if (!cfg) return null;
+      return (
+        <div
+          draggable={draggable}
+          onDragStart={onDragStart}
+          onClick={onClick}
+          title={cfg.description}
+          style={{
+            width: size, height: size, borderRadius: '50%', display: 'inline-flex',
+            alignItems: 'center', justifyContent: 'center', cursor: draggable||onClick ? 'grab' : 'default',
+            border: `2px solid ${isSelected ? '#6366f1' : cfg.border}`,
+            boxShadow: isSelected ? '0 0 0 3px #a5b4fc' : '0 1px 3px rgba(0,0,0,0.15)',
+            background: cfg.bg, flexShrink: 0, ...style
+          }}
+        >
+          {cfg.svgIcon(size - 6)}
+        </div>
+      );
+    };
+
     return (
       <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">{activeQuiz?.title}</h1>
           <button onClick={()=>{setCurrentQuestionIndex(0);setMode('assessment');}} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">← Back to Questions</button>
         </div>
+
+        {/* Question table */}
         <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
           <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
             <div className="col-span-1 text-center">#</div>
             <div className="col-span-6">Question</div>
             <div className="col-span-3">Your Answer</div>
-            <div className="col-span-2 text-center">Double?</div>
+            <div className="col-span-2 text-center">Token</div>
           </div>
-          {activeQuestions.map((q, i) => (
-            <div key={i} className={`grid grid-cols-12 gap-2 px-4 py-3 border-b last:border-b-0 items-center ${doubleSelections.includes(i) ? 'bg-yellow-50' : 'bg-white'}`}>
-              <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}</div>
-              <div className="col-span-6 text-sm text-gray-700">{getPromptPreview(q)}</div>
-              <div className="col-span-3 text-sm text-blue-700 font-medium">{getAnswerDisplay(q, i)}</div>
-              <div className="col-span-2 flex justify-center">
-                <input type="checkbox" checked={doubleSelections.includes(i)} onChange={()=>toggleDouble(i)}
-                  disabled={!doubleSelections.includes(i) && doubleSelections.length >= DOUBLES_ALLOWED}
-                  className="w-5 h-5 accent-yellow-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"/>
+          {activeQuestions.map((q, i) => {
+            const assigned = tokenAssignments[i];
+            const cfg = assigned ? TOKEN_CONFIG[assigned] : null;
+            const isTapTarget = !!tapSelected && (!assigned || tapSelected.fromQuestion === i);
+            const isDragTarget = !!dragState && (!assigned || dragState.fromQuestion === i);
+            return (
+              <div
+                key={i}
+                onDragOver={handleDragOver}
+                onDrop={e => handleDropOnQuestion(e, i)}
+                onClick={() => handleTapQuestion(i)}
+                className={`grid grid-cols-12 gap-2 px-4 py-3 border-b last:border-b-0 items-center transition-colors
+                  ${assigned ? 'bg-yellow-50' : ''}
+                  ${isTapTarget || isDragTarget ? 'bg-indigo-50 ring-2 ring-inset ring-indigo-300' : ''}
+                  ${(tapSelected || dragState) && !assigned ? 'cursor-pointer' : ''}`}
+              >
+                <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}</div>
+                <div className="col-span-6 text-sm text-gray-700">{getPromptPreview(q)}</div>
+                <div className="col-span-3 text-sm text-blue-700 font-medium">{getAnswerDisplay(q, i)}</div>
+                <div className="col-span-2 flex justify-center items-center min-h-[40px]">
+                  {assigned && cfg ? (
+                    <TokenChip
+                      tokenType={assigned}
+                      size={36}
+                      draggable
+                      isSelected={tapSelected?.fromQuestion === i}
+                      onDragStart={e => handleDragStartFromQuestion(e, assigned, i)}
+                      onClick={e => { e.stopPropagation(); handleTapToken(assigned, i, `q-${i}`); }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width:36, height:36, borderRadius:'50%',
+                        border: (isTapTarget||isDragTarget) ? '2px dashed #6366f1' : '2px dashed #d1d5db',
+                        background: (isTapTarget||isDragTarget) ? '#eef2ff' : 'transparent',
+                        transition: 'all 0.15s'
+                      }}
+                    />
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-        <div className="bg-white rounded-xl shadow-md p-5 mb-4">
-          <p className={`text-center font-medium ${doublesOk ? 'text-green-700' : 'text-gray-600'}`}>
-            {doublesOk
-              ? `✓ You have selected ${DOUBLES_ALLOWED} answer${DOUBLES_ALLOWED!==1?'s':''} to double.`
-              : `You must select exactly ${DOUBLES_ALLOWED} answer${DOUBLES_ALLOWED!==1?'s':''} to double. (${doubleSelections.length} selected)`}
+
+        {/* Token bin */}
+        <div
+          className="bg-white rounded-xl shadow-md p-5 mb-4"
+          onDragOver={handleDragOver}
+          onDrop={handleDropOnBin}
+          onClick={handleTapBin}
+        >
+          <p className="text-sm font-semibold text-gray-700 mb-1">
+            Your tokens — drag or tap to assign to a question
+          </p>
+          <p className="text-xs text-gray-400 mb-3">Hover over a token to see what it does. Drag a token from a question back here to unassign it.</p>
+          {binTokensList.length > 0 ? (
+            <div className="flex flex-wrap gap-3 items-center">
+              {binTokensList.map((tok) => (
+                <div key={tok.instanceId} className="flex flex-col items-center gap-1">
+                  <TokenChip
+                    tokenType={tok.tokenType}
+                    size={40}
+                    draggable
+                    isSelected={tapSelected?.instanceId === tok.instanceId && tapSelected?.fromQuestion === null}
+                    onDragStart={e => handleDragStartFromBin(e, tok.tokenType, tok.instanceId)}
+                    onClick={e => { e.stopPropagation(); handleTapToken(tok.tokenType, null, tok.instanceId); }}
+                  />
+                  <span className="text-xs text-gray-500 capitalize">{tok.tokenType}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">All tokens assigned ✓</p>
+          )}
+          <p className={`text-sm font-medium mt-3 ${allAssigned ? 'text-green-700' : 'text-gray-500'}`}>
+            {allAssigned
+              ? `✓ All ${totalTokens} token${totalTokens !== 1 ? 's' : ''} assigned.`
+              : `${assignedCount} of ${totalTokens} token${totalTokens !== 1 ? 's' : ''} assigned.`}
           </p>
         </div>
-        <button onClick={handleFinalSubmission} disabled={!doublesOk} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+
+        <button
+          onClick={handleFinalSubmission}
+          disabled={!allAssigned}
+          className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+        >
           <Check size={20}/> Final Submission
         </button>
       </div>
@@ -1555,7 +1895,7 @@ const QuizApp = () => {
         <div className="bg-white rounded-xl shadow-md p-6 mb-4">
           <h1 className="text-2xl font-bold text-gray-800 mb-1">Quiz Submitted!</h1>
           <p className="text-gray-600">Your answers for <span className="font-semibold">{activeQuiz?.title}</span> have been recorded. Results and scores will be posted once everyone has completed the quiz — stay tuned!</p>
-          {doubleSelections.length > 0 && <p className="text-sm text-gray-500 mt-2">⭐ = doubled question</p>}
+          {Object.keys(tokenAssignments).length > 0 && <p className="text-sm text-gray-500 mt-2">Token icons show your assignments.</p>}
         </div>
         <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
           <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -1567,13 +1907,20 @@ const QuizApp = () => {
           </div>
           {activeQuestions.map((q, i) => {
             const correct = isQuestionCorrect(q, i);
-            const doubled = doubleSelections.includes(i);
+            const assignedToken = tokenAssignments[i];
             const alreadyDisputed = submittedDisputes.includes(i);
             const disputing = disputedQuestions[i] || false;
             return (
               <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
                 <div className="grid grid-cols-12 gap-2 px-4 py-3 items-center">
-                  <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}{doubled && <span className="ml-1 text-yellow-500">⭐</span>}</div>
+                  <div className="col-span-1 text-center text-sm font-medium text-gray-500 flex flex-col items-center gap-1">
+                    {i+1}
+                    {assignedToken && TOKEN_CONFIG[assignedToken] && (
+                      <span title={TOKEN_CONFIG[assignedToken].description}>
+                        {TOKEN_CONFIG[assignedToken].svgIcon(20)}
+                      </span>
+                    )}
+                  </div>
                   <div className="col-span-5 text-sm text-gray-700">{getPromptPreview(q)}</div>
                   <div className={`col-span-2 text-sm font-medium ${correct ? 'text-green-700' : 'text-red-600'}`}>{getAnswerDisplay(q, i)}</div>
                   <div className="col-span-2 text-sm text-gray-600">{correct ? '✓' : getCorrectAnswerDisplay(q)}</div>
@@ -1812,12 +2159,17 @@ const QuizApp = () => {
                       >
                         <option value="none">None</option>
                         <option value="doubler">Doubler</option>
+                        <option value="insurance">Insurance</option>
+                        <option value="parasite">Parasite</option>
+                        <option value="sniper">Sniper</option>
                       </select>
                     </div>
                   ))}
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
-                  {newQuizTokenSlots.filter(t => t === 'doubler').length} doubler{newQuizTokenSlots.filter(t => t === 'doubler').length !== 1 ? 's' : ''} assigned
+                  {Object.entries(
+                    newQuizTokenSlots.filter(t => t !== 'none').reduce((acc, t) => { acc[t] = (acc[t]||0)+1; return acc; }, {})
+                  ).map(([t, count]) => `${count} ${t}${count !== 1 ? 's' : ''}`).join(', ') || 'No tokens assigned'}
                 </p>
               </div>
             </div>
