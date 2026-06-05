@@ -575,6 +575,8 @@ const QuizApp = () => {
   const [combNewQType, setCombNewQType] = useState('MC');
   const [combOrAnswerInput, setCombOrAnswerInput] = useState('');
   const [showQuestionSummary, setShowQuestionSummary] = useState(false);
+  const DEFAULT_TOKEN_SLOTS = ['doubler','doubler','doubler','none','none','none'];
+  const [newQuizTokenSlots, setNewQuizTokenSlots] = useState([...DEFAULT_TOKEN_SLOTS]);
   const [combDraft, setCombDraft] = useState(null);
   const [userAttempts, setUserAttempts] = useState({});
   const [displayName, setDisplayName] = useState('');
@@ -642,7 +644,7 @@ const QuizApp = () => {
   };
   const goToQuestion = (delta) => { const t = activeQuestions.length; setCurrentQuestionIndex((currentQuestionIndex + t + delta) % t); };
   const [doubleSelections, setDoubleSelections] = useState([]);
-  const DOUBLES_ALLOWED = 3;
+  const DOUBLES_ALLOWED = (activeQuiz?.tokenSlots || ['doubler','doubler','doubler']).filter(t => t === 'doubler').length;
   const [disputedQuestions, setDisputedQuestions] = useState({});
   const [disputeReasons, setDisputeReasons] = useState({});
   const [submittedDisputes, setSubmittedDisputes] = useState([]);
@@ -870,6 +872,7 @@ const QuizApp = () => {
     setEditingKey(null); setNewQuizTitle(''); setNewQuizKey(''); setNewQuizCategory('');
     setNewCategoryInput(''); setShowNewCategoryInput(false); setNewQuizStatus('Active'); setNewQuizAuthorNote('');
     setNewQuizType('fillintheblank'); setNewSentenceInput(''); setNewQuizSentences([]);
+    setNewQuizTokenSlots([...DEFAULT_TOKEN_SLOTS]);
     setExtraWords([]); setMcQuestions([emptyMCQuestion()]); setMcCurrentIndex(0); setMcRandomizeQuestions(false);
     setOrQuestions([emptyORQuestion()]); setOrCurrentIndex(0); setOrRandomizeQuestions(false); setOrAnswerInput('');
     setCombQuestions([]); setCombCurrentIndex(null); setCombNewQType('MC'); setCombDraft(null);
@@ -891,6 +894,7 @@ const QuizApp = () => {
     const quiz = allQuizData[key]; if (!quiz) return;
     setEditingKey(key); setNewQuizTitle(quiz.title); setNewQuizKey(key);
     setNewQuizCategory(quiz.category || ''); setNewQuizStatus(quiz.status || 'Active'); setNewQuizAuthorNote(quiz.authorNote || '');
+    setNewQuizTokenSlots(quiz.tokenSlots || [...DEFAULT_TOKEN_SLOTS]);
     setNewQuizType(quiz.type || 'fillintheblank');
     setShowNewCategoryInput(false); setNewCategoryInput('');
     if (quiz.type === 'MC') {
@@ -999,7 +1003,7 @@ const QuizApp = () => {
 
   const buildQuizJSON = () => {
     const category = getEffectiveCategory();
-    const base = { title: newQuizTitle, category, status: newQuizStatus, type: newQuizType, authorNote: newQuizAuthorNote.trim() };
+    const base = { title: newQuizTitle, category, status: newQuizStatus, type: newQuizType, authorNote: newQuizAuthorNote.trim(), tokenSlots: newQuizTokenSlots };
     if (newQuizType==='fillintheblank') {
       const aw = extractAnswerWords(newQuizSentences.map(t=>({text:t})));
       return { ...base, wordBank: Array.from(new Set([...aw,...extraWords])), sentences: newQuizSentences.map(t=>({text:t,answer:parseSentence(t).answer})) };
@@ -1762,6 +1766,27 @@ const QuizApp = () => {
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-600 mb-1">Author's Note <span className="text-xs text-gray-400">(optional — shown to users before they begin the quiz)</span></label>
                 <textarea value={newQuizAuthorNote} onChange={e=>setNewQuizAuthorNote(e.target.value)} placeholder="Special instructions, context, or notes for quiz-takers..." rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none text-sm"/>
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-600 mb-2">Token Slots <span className="text-xs text-gray-400">(6 slots — assign token types players receive)</span></label>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                  {newQuizTokenSlots.map((slot, i) => (
+                    <div key={i} className="flex flex-col items-center gap-1">
+                      <span className="text-xs text-gray-400 font-medium">{i + 1}</span>
+                      <select
+                        value={slot}
+                        onChange={e => { const updated = [...newQuizTokenSlots]; updated[i] = e.target.value; setNewQuizTokenSlots(updated); }}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                      >
+                        <option value="none">None</option>
+                        <option value="doubler">Doubler</option>
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  {newQuizTokenSlots.filter(t => t === 'doubler').length} doubler{newQuizTokenSlots.filter(t => t === 'doubler').length !== 1 ? 's' : ''} assigned
+                </p>
               </div>
             </div>
 
