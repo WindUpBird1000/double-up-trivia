@@ -1132,7 +1132,7 @@ const QuizApp = () => {
   const validateQuizBuilder = () => {
     if (!newQuizTitle) { alert('Please enter a quiz title.'); return false; }
     if (!newQuizKey) { alert('Please enter a quiz filename key.'); return false; }
-    if (!getEffectiveCategory()) { alert('Please select or enter a category.'); return false; }
+    if (!getEffectiveCategory()) { alert('Please select or enter a season.'); return false; }
     if (newQuizType==='fillintheblank') { if(newQuizSentences.length===0){alert('Please add at least one sentence.');return false;} }
     else if (newQuizType==='MC') {
       if (!mcQuestions[0]?.prompt.trim()) { alert('Please add at least one question.'); return false; }
@@ -1236,6 +1236,78 @@ const QuizApp = () => {
     return { pointValues, userScores, correctnessByUser, correctCounts };
   };
 
+  // Compute and store season standings for a given season name.
+  // Called after any quiz in that season is scored (skips "Offseason").
+  const updateSeasonStandings = async (seasonName) => {
+    if (!seasonName || seasonName.trim().toLowerCase() === 'offseason') return;
+
+    // Fetch all scored quizzes in this season
+    const { data: seasonQuizRows } = await supabase
+      .from('quizzes')
+      .select('quiz_key')
+      .eq('category', seasonName)
+      .eq('status', 'Scored');
+
+    if (!seasonQuizRows || seasonQuizRows.length === 0) return;
+    const seasonKeys = seasonQuizRows.map(r => r.quiz_key);
+
+    // Fetch results for all those quizzes
+    const { data: results } = await supabase
+      .from('quiz_results')
+      .select('quiz_key, scores')
+      .in('quiz_key', seasonKeys);
+
+    if (!results || results.length === 0) return;
+
+    // Accumulate season points per user across all quizzes in the season.
+    // For each quiz: rank users by score, award X points to 1st (X = # participants),
+    // X-1 to 2nd, ..., 1 to last. Ties share averaged points.
+    const seasonTotals = {}; // user_id -> { display_name, seasonPoints }
+
+    results.forEach(({ scores }) => {
+      const userScores = scores?.userScores || [];
+      if (userScores.length === 0) return;
+
+      // Sort descending by quiz score
+      const sorted = [...userScores].sort((a, b) => b.score - a.score);
+      const n = sorted.length;
+
+      // Assign position points with tie-averaging
+      let i = 0;
+      while (i < n) {
+        let j = i;
+        // find the end of this tie group
+        while (j < n - 1 && sorted[j + 1].score === sorted[j].score) j++;
+        // positions i..j are tied; they each get the average of ranks (n-i) down to (n-j)
+        // e.g. 5 players, tied for 1st/2nd: (5+4)/2 = 4.5 each
+        let sum = 0;
+        for (let k = i; k <= j; k++) sum += (n - k);
+        const avg = Math.round((sum / (j - i + 1)) * 10) / 10;
+        for (let k = i; k <= j; k++) {
+          const u = sorted[k];
+          if (!seasonTotals[u.user_id]) {
+            seasonTotals[u.user_id] = { display_name: u.display_name, seasonPoints: 0 };
+          }
+          seasonTotals[u.user_id].seasonPoints =
+            Math.round((seasonTotals[u.user_id].seasonPoints + avg) * 10) / 10;
+        }
+        i = j + 1;
+      }
+    });
+
+    // Build the standings array sorted by season points descending
+    const standings = Object.entries(seasonTotals)
+      .map(([user_id, data]) => ({ user_id, ...data }))
+      .sort((a, b) => b.seasonPoints - a.seasonPoints);
+
+    // Upsert into season_standings table
+    await supabase.from('season_standings').upsert({
+      season: seasonName,
+      updated_at: new Date().toISOString(),
+      standings,
+    }, { onConflict: 'season' });
+  };
+
   const saveQuizLocally = async () => {
     if (!validateQuizBuilder()) return;
     const quizData = buildQuizJSON();
@@ -1276,6 +1348,9 @@ const QuizApp = () => {
           posted_at: new Date().toISOString(),
           scores: { pointValues, userScores, correctnessByUser, correctCounts },
         }, { onConflict: 'quiz_key' });
+
+        // Update season standings (no-op for Offseason quizzes)
+        await updateSeasonStandings(quizData.category);
       }
     }
 
@@ -1479,9 +1554,9 @@ const QuizApp = () => {
       ) : (
         <>
           <div className="bg-white rounded-xl shadow-md p-8 mb-4">
-            <h2 className="text-lg font-semibold text-gray-700 mb-4">Step 1: Select a Category</h2>
+            <h2 className="text-lg font-semibold text-gray-700 mb-4">Step 1: Select a Season</h2>
             <select value={selectedCategory} onChange={e=>handleCategoryChange(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-800 bg-white focus:ring-2 focus:ring-blue-500 text-base">
-              <option value="">— Select a category —</option>
+              <option value="">— Select a season —</option>
               {allCategories.map(cat=><option key={cat} value={cat}>{cat}</option>)}
             </select>
           </div>
@@ -2056,9 +2131,9 @@ const QuizApp = () => {
               </div>
               <div className="flex gap-3 items-end mb-3">
                 <div style={{flex:'0 1 160px',minWidth:0}}>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Category <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Season <span className="text-red-500">*</span></label>
                   <select value={showNewCategoryInput?'__new__':newQuizCategory} onChange={e=>{if(e.target.value==='__new__'){setShowNewCategoryInput(true);setNewQuizCategory('');}else{setShowNewCategoryInput(false);setNewQuizCategory(e.target.value);}}} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
-                    <option value="">— Category —</option>
+                    <option value="">— Season —</option>
                     {allCategoriesAdmin.map(cat=><option key={cat} value={cat}>{cat}</option>)}
                     <option value="__new__">+ New…</option>
                   </select>
@@ -2081,7 +2156,7 @@ const QuizApp = () => {
                   />
                 </div>
               </div>
-              {showNewCategoryInput&&<div className="mb-3"><input type="text" value={newCategoryInput} onChange={e=>setNewCategoryInput(e.target.value)} placeholder="New category name" autoFocus className="w-full px-3 py-2 border border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500"/></div>}
+              {showNewCategoryInput&&<div className="mb-3"><input type="text" value={newCategoryInput} onChange={e=>setNewCategoryInput(e.target.value)} placeholder="New season name" autoFocus className="w-full px-3 py-2 border border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500"/></div>}
               {effectiveCategory&&<p className="text-xs text-gray-400">Category: <span className="font-semibold text-gray-600">{effectiveCategory}</span></p>}
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-600 mb-1">Author's Note <span className="text-xs text-gray-400">(optional — shown to users before they begin the quiz)</span></label>
