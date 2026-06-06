@@ -1398,7 +1398,6 @@ const QuizApp = () => {
 
   const validateQuizBuilder = () => {
     if (!newQuizTitle) { alert('Please enter a quiz title.'); return false; }
-    if (!newQuizKey) { alert('Please enter a quiz filename key.'); return false; }
     if (!getEffectiveCategory()) { alert('Please select or enter a season.'); return false; }
     if (newQuizType==='fillintheblank') { if(newQuizSentences.length===0){alert('Please add at least one sentence.');return false;} }
     else if (newQuizType==='MC') {
@@ -1434,7 +1433,7 @@ const QuizApp = () => {
     }
   };
 
-  const exportQuiz = () => { if(!validateQuizBuilder()) return; setExportContent(JSON.stringify(buildQuizJSON(),null,2)); setExportFilename(newQuizKey+'.json'); setShowExportModal(true); };
+  const exportQuiz = () => { if(!validateQuizBuilder()) return; setExportContent(JSON.stringify(buildQuizJSON(),null,2)); setExportFilename((newQuizTitle||'quiz').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,50)+'.json'); setShowExportModal(true); };
   const copyToClipboard = () => { navigator.clipboard.writeText(exportContent).then(()=>{setShowExportModal(false);alert('Copied to clipboard!');}).catch(()=>{alert('Could not copy automatically. Please select all and copy manually (Ctrl+A, Ctrl+C).');}); };
   const scoreAttempt = (quiz, answers) => {
     const questions = quiz.type === 'fillintheblank' ? quiz.sentences : quiz.questions;
@@ -1718,7 +1717,25 @@ const QuizApp = () => {
     const saveQuizLocally = async () => {
     if (!validateQuizBuilder()) return;
     const quizData = buildQuizJSON();
-    const key = newQuizKey;
+
+    // For new quizzes, auto-generate a unique slug from the title.
+    // For edits, keep the existing key unchanged forever.
+    let key = editingKey;
+    if (!key) {
+      const base = quizData.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 50) || 'quiz';
+      const { data: existing } = await supabase
+        .from('quizzes')
+        .select('quiz_key')
+        .like('quiz_key', `${base}%`);
+      const usedKeys = new Set((existing || []).map(r => r.quiz_key));
+      key = base;
+      let suffix = 2;
+      while (usedKeys.has(key)) { key = `${base}-${suffix}`; suffix++; }
+    }
 
     // Save to Supabase
     const { error } = await supabase.from('quizzes').upsert({
@@ -2538,20 +2555,14 @@ const QuizApp = () => {
             {editingKey&&<div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-3 text-blue-700 font-medium text-sm">Editing: <span className="font-bold">{allQuizData[editingKey]?.title}</span><span className="ml-3 inline-block bg-blue-200 text-blue-800 px-2 py-0.5 rounded text-xs">{typeLabel(newQuizType)}</span></div>}
             <div className="bg-white rounded-xl shadow-md p-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-4">Quiz Details</h2>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Quiz Title <span className="text-red-500">*</span></label>
-                  <input type="text" value={newQuizTitle} onChange={e=>setNewQuizTitle(e.target.value)} placeholder="e.g. Chapter 5 Review" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Quiz Key (filename) <span className="text-red-500">*</span></label>
-                  <input type="text" value={newQuizKey} onChange={e=>setNewQuizKey(e.target.value.replace(/\s+/g,'_').toLowerCase())} placeholder="e.g. chapter5review" disabled={!!editingKey}
-                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm ${editingKey?'bg-gray-100 text-gray-400':''}`}/>
-                  <p className="text-xs text-gray-400 mt-1">Lowercase, underscores only. No extension needed.</p>
-                </div>
+              {/* Row 1: Title (full width) */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-600 mb-1">Quiz Title <span className="text-red-500">*</span></label>
+                <input type="text" value={newQuizTitle} onChange={e=>setNewQuizTitle(e.target.value)} placeholder="e.g. Chapter 5 Review" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/>
               </div>
+              {/* Row 2: Season (wider) + Status + Closing Date */}
               <div className="flex gap-3 items-end mb-3">
-                <div style={{flex:'0 1 160px',minWidth:0}}>
+                <div style={{flex:'1 1 0',minWidth:0}}>
                   <label className="block text-sm font-medium text-gray-600 mb-1">Season <span className="text-red-500">*</span></label>
                   <select value={showNewCategoryInput?'__new__':newQuizCategory} onChange={e=>{if(e.target.value==='__new__'){setShowNewCategoryInput(true);setNewQuizCategory('');}else{setShowNewCategoryInput(false);setNewQuizCategory(e.target.value);}}} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                     <option value="">— Season —</option>
