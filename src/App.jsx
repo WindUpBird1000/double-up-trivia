@@ -2357,7 +2357,7 @@ const QuizApp = () => {
         </div>
 
         {/* Spacer so content doesn't hide behind the fixed bin */}
-        <div style={{height: '180px'}}/>
+        <div style={{height: '260px'}}/>
 
         {/* Token bin + Final Submission — fixed to bottom of viewport */}
         <div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:40}}>
