@@ -1104,7 +1104,7 @@ const QuizApp = () => {
   const getPromptPreview = (q) => {
     const raw = q.prompt || q.text || '';
     const cleaned = raw.replace(/\{\{[^}]+\}\}/g, '').replace(/\[[^\]]+\]/g, '____').trim();
-    return cleaned.length > 60 ? cleaned.slice(0, 60) + '…' : cleaned;
+    return cleaned.length > 90 ? cleaned.slice(0, 90) + '…' : cleaned;
   };
 
   const submitQuiz = () => { setMode('summary'); };
@@ -2320,8 +2320,8 @@ const QuizApp = () => {
         <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
           <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
             <div className="col-span-1 text-center">#</div>
-            <div className="col-span-6">Question</div>
-            <div className="col-span-3">Your Answer</div>
+            <div className="col-span-7">Question</div>
+            <div className="col-span-2 text-center">Your Answer</div>
             <div className="col-span-2 text-center">Token</div>
           </div>
           {activeQuestions.map((q, i) => {
@@ -2337,8 +2337,8 @@ const QuizApp = () => {
                   ${tapSelected && !assigned ? 'cursor-pointer' : ''}`}
               >
                 <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}</div>
-                <div className="col-span-6 text-sm text-gray-700">{getPromptPreview(q)}</div>
-                <div className="col-span-3 text-sm text-blue-700 font-medium">{getAnswerDisplay(q, i)}</div>
+                <div className="col-span-7 text-sm text-gray-700 pr-3">{getPromptPreview(q)}</div>
+                <div className="col-span-2 text-sm text-blue-700 font-medium text-center">{getAnswerDisplay(q, i)}</div>
                 <div className="col-span-2 flex justify-center items-center min-h-[40px]">
                   {assigned && cfg ? (
                     <TokenChip
