@@ -162,9 +162,10 @@ const ordinal = (n) => {
   return n + (s[(v-20)%10] || s[v] || s[0]);
 };
 
-const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelectQuiz, onQuizzes, onLogout }) => {
+const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelectQuiz, onSelectSeason, onQuizzes, onLogout }) => {
   const [allResults, setAllResults] = React.useState([]);
   const [myAttempts, setMyAttempts] = React.useState({});
+  const [seasonNames, setSeasonNames] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [openYears, setOpenYears] = React.useState({});
   const [openMonths, setOpenMonths] = React.useState({});
@@ -174,12 +175,14 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
     const fetchAttempts = currentUser
       ? supabase.from('quiz_attempts').select('quiz_key, status').eq('user_id', currentUser.id)
       : Promise.resolve({ data: [] });
-    Promise.all([fetchResults, fetchAttempts]).then(([{ data: results }, { data: attempts }]) => {
+    const fetchSeasons = supabase.from('season_standings').select('season').order('season');
+    Promise.all([fetchResults, fetchAttempts, fetchSeasons]).then(([{ data: results }, { data: attempts }, { data: seasons }]) => {
       const scoredResults = (results || []).filter(r => allQuizData[r.quiz_key]?.status === 'Scored');
       setAllResults(scoredResults);
       const map = {};
       (attempts || []).forEach(a => { map[a.quiz_key] = a; });
       setMyAttempts(map);
+      setSeasonNames((seasons || []).map(s => s.season));
       setLoading(false);
     });
   }, []);
@@ -257,6 +260,25 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
               {recent.map((r, idx) => <QuizResultCard key={r.quiz_key} result={r} index={idx}/>)}
             </div>
           </div>
+
+          {/* Season Scoreboards */}
+          {seasonNames.length > 0 && (
+            <div className="bg-white rounded-xl shadow-md p-5 mb-6">
+              <h2 className="text-lg font-bold text-gray-700 mb-3">Season Scoreboards</h2>
+              <div className="rounded-lg overflow-hidden">
+                {seasonNames.map((name, idx) => (
+                  <div
+                    key={name}
+                    onClick={() => onSelectSeason(name)}
+                    className={`cursor-pointer hover:bg-purple-50 rounded-lg px-3 py-3 transition-colors border border-transparent hover:border-purple-200 flex items-center justify-between ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                  >
+                    <span className="font-bold text-gray-800">{name}</span>
+                    <span className="text-xs text-purple-600 font-medium">View Standings →</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* All quizzes by year/month */}
           <div className="bg-white rounded-xl shadow-md p-5">
@@ -613,6 +635,173 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
   );
 };
 
+const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizData, onBack, onQuizzes, onLogout }) => {
+  const [standings, setStandings] = React.useState(null);
+  const [quizBreakdown, setQuizBreakdown] = React.useState([]); // per-quiz info for the current user
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchStandings = supabase
+      .from('season_standings')
+      .select('standings')
+      .eq('season', seasonName)
+      .single();
+
+    // Also fetch all scored quizzes in this season + their results for the per-quiz breakdown
+    const fetchSeasonQuizzes = supabase
+      .from('quizzes')
+      .select('quiz_key, title')
+      .eq('category', seasonName)
+      .eq('status', 'Scored');
+
+    Promise.all([fetchStandings, fetchSeasonQuizzes]).then(async ([{ data: sData }, { data: quizRows }]) => {
+      setStandings(sData?.standings || []);
+
+      if (currentUser && quizRows && quizRows.length > 0) {
+        const keys = quizRows.map(r => r.quiz_key);
+        const { data: results } = await supabase
+          .from('quiz_results')
+          .select('quiz_key, scores')
+          .in('quiz_key', keys);
+
+        const breakdown = (results || []).map(r => {
+          const quizTitle = quizRows.find(q => q.quiz_key === r.quiz_key)?.title || r.quiz_key;
+          const userScores = r.scores?.userScores || [];
+          const n = userScores.length;
+          if (n === 0) return null;
+
+          // Sort to find this user's rank and season points earned from this quiz
+          const sorted = [...userScores].sort((a, b) => b.score - a.score);
+          let seasonPts = null;
+          let position = null;
+
+          // Recompute position points the same way updateSeasonStandings does
+          let i = 0;
+          while (i < sorted.length) {
+            let j = i;
+            while (j < sorted.length - 1 && sorted[j + 1].score === sorted[j].score) j++;
+            let sum = 0;
+            for (let k = i; k <= j; k++) sum += (n - k);
+            const avg = Math.round((sum / (j - i + 1)) * 10) / 10;
+            for (let k = i; k <= j; k++) {
+              if (sorted[k].user_id === currentUser.id) {
+                seasonPts = avg;
+                // Position: tied players all share the same display rank (lowest index in tie + 1)
+                position = i + 1;
+              }
+            }
+            i = j + 1;
+          }
+
+          if (seasonPts === null) return null; // user didn't take this quiz
+
+          return { quiz_key: r.quiz_key, quizTitle, position, totalParticipants: n, seasonPts };
+        }).filter(Boolean);
+
+        // Sort breakdown by quiz title for a consistent order
+        breakdown.sort((a, b) => a.quizTitle.localeCompare(b.quizTitle));
+        setQuizBreakdown(breakdown);
+      }
+
+      setLoading(false);
+    });
+  }, [seasonName]);
+
+  if (loading) return (
+    <div className="max-w-3xl mx-auto p-6 flex items-center justify-center min-h-screen">
+      <p className="text-gray-500">Loading season scoreboard...</p>
+    </div>
+  );
+
+  // Build ranked standings with ties
+  const ranked = [];
+  let rank = 1;
+  (standings || []).forEach((u, i) => {
+    if (i > 0 && standings[i].seasonPoints === standings[i - 1].seasonPoints) {
+      ranked.push({ ...u, rank: ranked[i - 1].rank });
+    } else {
+      ranked.push({ ...u, rank });
+    }
+    rank = i + 2;
+  });
+
+  return (
+    <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="mb-6">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+          <span className="text-sm text-gray-500">{displayName || ''}</span>
+          <div className="flex gap-2">
+            <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"><Star size={16}/> Scoreboards</button>
+            <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+            {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+          </div>
+        </div>
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">{seasonName}</h1>
+          <p className="text-gray-500 mt-1">Season Standings</p>
+        </div>
+      </div>
+
+      {/* Leaderboard */}
+      {ranked.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500 mb-6">No scored quizzes in this season yet.</div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+          <div className="px-5 py-3 bg-gray-100 border-b">
+            <h2 className="font-bold text-gray-700">Leaderboard</h2>
+          </div>
+          <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
+            <div className="col-span-1">#</div>
+            <div className="col-span-9">Player</div>
+            <div className="col-span-2 text-right">Points</div>
+          </div>
+          {ranked.map((u, i) => {
+            const isMe = u.user_id === currentUser?.id;
+            const isFirst = u.rank === 1;
+            return (
+              <div key={i} className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center ${isMe ? 'bg-green-50' : 'bg-white'}`}>
+                <div className={`col-span-1 text-sm ${isFirst ? 'font-bold' : 'text-gray-500'}`}>{u.rank}</div>
+                <div className={`col-span-9 text-sm ${isFirst ? 'font-bold' : ''} ${isMe ? 'text-green-800' : 'text-gray-800'}`}>
+                  {u.display_name}{isMe ? ' (you)' : ''}
+                </div>
+                <div className={`col-span-2 text-right text-sm ${isFirst ? 'font-bold' : 'text-gray-600'}`}>{u.seasonPoints}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Per-quiz breakdown for the current user */}
+      {currentUser && quizBreakdown.length > 0 && (
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="px-5 py-3 bg-gray-100 border-b">
+            <h2 className="font-bold text-gray-700">Your Results</h2>
+          </div>
+          <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
+            <div className="col-span-6">Quiz</div>
+            <div className="col-span-4 text-center">Your Finish</div>
+            <div className="col-span-2 text-right">Season Pts</div>
+          </div>
+          {quizBreakdown.map((item, i) => (
+            <div key={item.quiz_key} className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+              <div className="col-span-6 text-sm text-gray-800 font-medium">{item.quizTitle}</div>
+              <div className="col-span-4 text-center text-sm text-gray-600">{ordinal(item.position)} of {item.totalParticipants}</div>
+              <div className="col-span-2 text-right text-sm font-semibold text-green-700">{item.seasonPts} pts</div>
+            </div>
+          ))}
+          <div className="grid grid-cols-12 px-4 py-3 bg-gray-100 border-t items-center">
+            <div className="col-span-10 text-sm font-semibold text-gray-700">Total Season Points</div>
+            <div className="col-span-2 text-right text-sm font-bold text-green-700">
+              {Math.round(quizBreakdown.reduce((s, item) => s + item.seasonPts, 0) * 10) / 10} pts
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const QuizApp = () => {
   const [mode, setMode] = useState('login');
   const [currentUser, setCurrentUser] = useState(null);
@@ -687,6 +876,7 @@ const QuizApp = () => {
   const [exportFilename, setExportFilename] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [viewScoringKey, setViewScoringKey] = useState(null);
+  const [viewSeasonName, setViewSeasonName] = useState(null);
   const [confirmDeleteKey, setConfirmDeleteKey] = useState(null);
   const [adminStatusFilter, setAdminStatusFilter] = useState('All');
   const [newSentenceInput, setNewSentenceInput] = useState('');
@@ -1688,7 +1878,9 @@ const QuizApp = () => {
     );
   }
 
-  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout}/>;
+  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onSelectSeason={(name)=>{setViewSeasonName(name);setMode('season-scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout}/>;
+
+  if (mode==='season-scoreboard' && viewSeasonName) return <SeasonScoreboardScreen seasonName={viewSeasonName} currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onBack={()=>setMode('scoreboards')} onQuizzes={()=>setMode('setup')} onLogout={handleLogout}/>;
 
 
   if (mode==='scoreboard' && viewScoringKey) {
