@@ -162,7 +162,7 @@ const ordinal = (n) => {
   return n + (s[(v-20)%10] || s[v] || s[0]);
 };
 
-const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelectQuiz, onSelectSeason, onQuizzes, onLogout }) => {
+const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelectQuiz, onSelectSeason, onQuizzes, onLogout, isAdminView, onAdminDashboard }) => {
   const [allResults, setAllResults] = React.useState([]);
   const [myAttempts, setMyAttempts] = React.useState({});
   const [seasonNames, setSeasonNames] = React.useState([]);
@@ -218,9 +218,9 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
     return (
       <div onClick={() => onSelectQuiz(result.quiz_key)} className={`cursor-pointer hover:bg-blue-50 rounded-lg p-3 transition-colors border border-transparent hover:border-blue-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
         <p className="font-bold text-gray-800">{result.quiz_title || quiz?.title || result.quiz_key} <span className="text-xs font-normal text-gray-500">({quiz?.category || ''})</span> <span className="text-xs font-normal text-gray-500">— Taken by {totalUsers} user{totalUsers !== 1 ? 's' : ''}.</span></p>
-        {tookQuiz
+        {!isAdminView && (tookQuiz
           ? <p className="text-xs text-blue-600 font-medium mt-0.5">{placement ? `You finished in ${ordinal(placement)} place.` : 'You took this quiz.'}</p>
-          : <p className="text-xs text-gray-400 italic mt-0.5">You didn't take this quiz.</p>}
+          : <p className="text-xs text-gray-400 italic mt-0.5">You didn't take this quiz.</p>)}
       </div>
     );
   };
@@ -246,8 +246,17 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
         <span className="text-sm text-gray-500">{displayName || ''}</span>
         <div className="flex gap-2">
-          <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
-          {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+          {isAdminView ? (
+            <>
+              <button onClick={onAdminDashboard} className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm"><Settings size={16}/> Admin Dashboard</button>
+              {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+            </>
+          ) : (
+            <>
+              <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+              {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+            </>
+          )}
         </div>
       </div>
       <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
@@ -640,10 +649,12 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
   );
 };
 
-const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizData, onBack, onQuizzes, onLogout }) => {
+const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizData, onBack, onQuizzes, onLogout, isAdminView, onAdminDashboard }) => {
   const [standings, setStandings] = React.useState(null);
-  const [quizBreakdown, setQuizBreakdown] = React.useState([]); // per-quiz info for the current user
+  const [quizBreakdown, setQuizBreakdown] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const [selectedUserId, setSelectedUserId] = React.useState(null);
+  const [allBreakdowns, setAllBreakdowns] = React.useState({}); // user_id -> breakdown array (admin)
 
   React.useEffect(() => {
     const fetchStandings = supabase
@@ -652,7 +663,6 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
       .eq('season', seasonName)
       .single();
 
-    // Also fetch all scored quizzes in this season + their results for the per-quiz breakdown
     const fetchSeasonQuizzes = supabase
       .from('quizzes')
       .select('quiz_key, title')
@@ -662,50 +672,49 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
     Promise.all([fetchStandings, fetchSeasonQuizzes]).then(async ([{ data: sData }, { data: quizRows }]) => {
       setStandings(sData?.standings || []);
 
-      if (currentUser && quizRows && quizRows.length > 0) {
+      if (quizRows && quizRows.length > 0) {
         const keys = quizRows.map(r => r.quiz_key);
         const { data: results } = await supabase
           .from('quiz_results')
           .select('quiz_key, scores')
           .in('quiz_key', keys);
 
-        const breakdown = (results || []).map(r => {
-          const quizTitle = quizRows.find(q => q.quiz_key === r.quiz_key)?.title || r.quiz_key;
-          const userScores = r.scores?.userScores || [];
-          const n = userScores.length;
-          if (n === 0) return null;
-
-          // Sort to find this user's rank and season points earned from this quiz
-          const sorted = [...userScores].sort((a, b) => b.score - a.score);
-          let seasonPts = null;
-          let position = null;
-
-          // Recompute position points the same way updateSeasonStandings does
-          let i = 0;
-          while (i < sorted.length) {
-            let j = i;
-            while (j < sorted.length - 1 && sorted[j + 1].score === sorted[j].score) j++;
-            let sum = 0;
-            for (let k = i; k <= j; k++) sum += (n - k);
-            const avg = Math.round((sum / (j - i + 1)) * 10) / 10;
-            for (let k = i; k <= j; k++) {
-              if (sorted[k].user_id === currentUser.id) {
-                seasonPts = avg;
-                // Position: tied players all share the same display rank (lowest index in tie + 1)
-                position = i + 1;
+        // Helper: build breakdown for a given user_id
+        const buildBreakdown = (userId) => {
+          return (results || []).map(r => {
+            const quizTitle = quizRows.find(q => q.quiz_key === r.quiz_key)?.title || r.quiz_key;
+            const userScores = r.scores?.userScores || [];
+            const n = userScores.length;
+            if (n === 0) return null;
+            const sorted = [...userScores].sort((a, b) => b.score - a.score);
+            let seasonPts = null;
+            let position = null;
+            let i = 0;
+            while (i < sorted.length) {
+              let j = i;
+              while (j < sorted.length - 1 && sorted[j + 1].score === sorted[j].score) j++;
+              let sum = 0;
+              for (let k = i; k <= j; k++) sum += (n - k);
+              const avg = Math.round((sum / (j - i + 1)) * 10) / 10;
+              for (let k = i; k <= j; k++) {
+                if (sorted[k].user_id === userId) { seasonPts = avg; position = i + 1; }
               }
+              i = j + 1;
             }
-            i = j + 1;
-          }
+            if (seasonPts === null) return null;
+            return { quiz_key: r.quiz_key, quizTitle, position, totalParticipants: n, seasonPts };
+          }).filter(Boolean).sort((a, b) => a.quizTitle.localeCompare(b.quizTitle));
+        };
 
-          if (seasonPts === null) return null; // user didn't take this quiz
-
-          return { quiz_key: r.quiz_key, quizTitle, position, totalParticipants: n, seasonPts };
-        }).filter(Boolean);
-
-        // Sort breakdown by quiz title for a consistent order
-        breakdown.sort((a, b) => a.quizTitle.localeCompare(b.quizTitle));
-        setQuizBreakdown(breakdown);
+        if (isAdminView) {
+          // Pre-build breakdowns for all users in standings
+          const allUsers = sData?.standings || [];
+          const breakdowns = {};
+          allUsers.forEach(u => { breakdowns[u.user_id] = buildBreakdown(u.user_id); });
+          setAllBreakdowns(breakdowns);
+        } else if (currentUser) {
+          setQuizBreakdown(buildBreakdown(currentUser.id));
+        }
       }
 
       setLoading(false);
@@ -730,6 +739,9 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
     rank = i + 2;
   });
 
+  const selectedUserName = selectedUserId ? (ranked.find(u => u.user_id === selectedUserId)?.display_name || selectedUserId) : null;
+  const selectedBreakdown = isAdminView && selectedUserId ? (allBreakdowns[selectedUserId] || []) : [];
+
   return (
     <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
       {/* Header */}
@@ -737,9 +749,18 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <span className="text-sm text-gray-500">{displayName || ''}</span>
           <div className="flex gap-2">
-            <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"><Star size={16}/> Scoreboards</button>
-            <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
-            {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+            {isAdminView ? (
+              <>
+                <button onClick={onAdminDashboard} className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm"><Settings size={16}/> Admin Dashboard</button>
+                {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+              </>
+            ) : (
+              <>
+                <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"><Star size={16}/> Scoreboards</button>
+                <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+                {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+              </>
+            )}
           </div>
         </div>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -755,6 +776,7 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
         <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
           <div className="px-5 py-3 bg-gray-100 border-b">
             <h2 className="font-bold text-gray-700">Leaderboard</h2>
+            {isAdminView && <p className="text-xs text-gray-500 mt-0.5">Click any row to view that player's quiz breakdown.</p>}
           </div>
           <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
             <div className="col-span-1">#</div>
@@ -762,12 +784,19 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
             <div className="col-span-2 text-right">Points</div>
           </div>
           {ranked.map((u, i) => {
-            const isMe = u.user_id === currentUser?.id;
+            const isMe = !isAdminView && u.user_id === currentUser?.id;
+            const isSelected = isAdminView && u.user_id === selectedUserId;
             const isFirst = u.rank === 1;
             return (
-              <div key={i} className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center ${isMe ? 'bg-green-50' : 'bg-white'}`}>
+              <div
+                key={i}
+                onClick={isAdminView ? () => setSelectedUserId(prev => prev === u.user_id ? null : u.user_id) : undefined}
+                className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center
+                  ${isAdminView ? 'cursor-pointer hover:bg-blue-50' : ''}
+                  ${isSelected ? 'bg-blue-100' : isMe ? 'bg-green-50' : 'bg-white'}`}
+              >
                 <div className={`col-span-1 text-sm ${isFirst ? 'font-bold' : 'text-gray-500'}`}>{u.rank}</div>
-                <div className={`col-span-9 text-sm ${isFirst ? 'font-bold' : ''} ${isMe ? 'text-green-800' : 'text-gray-800'}`}>
+                <div className={`col-span-9 text-sm ${isFirst ? 'font-bold' : ''} ${isMe ? 'text-green-800' : isSelected ? 'text-blue-800' : 'text-gray-800'}`}>
                   {u.display_name}{isMe ? ' (you)' : ''}
                 </div>
                 <div className={`col-span-2 text-right text-sm ${isFirst ? 'font-bold' : 'text-gray-600'}`}>{u.seasonPoints}</div>
@@ -777,8 +806,42 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
         </div>
       )}
 
-      {/* Per-quiz breakdown for the current user */}
-      {currentUser && quizBreakdown.length > 0 && (
+      {/* Admin: selected user's quiz breakdown */}
+      {isAdminView && selectedUserId && (
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+          <div className="px-5 py-3 bg-gray-100 border-b flex justify-between items-center">
+            <h2 className="font-bold text-gray-700">{selectedUserName}'s Season Breakdown</h2>
+            <button onClick={() => setSelectedUserId(null)} className="text-gray-400 hover:text-gray-600 text-xs font-medium">Close ✕</button>
+          </div>
+          {selectedBreakdown.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-gray-500 italic">No quiz data found for this user.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
+                <div className="col-span-6">Quiz</div>
+                <div className="col-span-4 text-center">Finish</div>
+                <div className="col-span-2 text-right">Season Pts</div>
+              </div>
+              {selectedBreakdown.map((item, i) => (
+                <div key={item.quiz_key} className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                  <div className="col-span-6 text-sm text-gray-800 font-medium">{item.quizTitle}</div>
+                  <div className="col-span-4 text-center text-sm text-gray-600">{ordinal(item.position)} of {item.totalParticipants}</div>
+                  <div className="col-span-2 text-right text-sm font-semibold text-green-700">{item.seasonPts} pts</div>
+                </div>
+              ))}
+              <div className="grid grid-cols-12 px-4 py-3 bg-gray-100 border-t items-center">
+                <div className="col-span-10 text-sm font-semibold text-gray-700">Total Season Points</div>
+                <div className="col-span-2 text-right text-sm font-bold text-green-700">
+                  {Math.round(selectedBreakdown.reduce((s, item) => s + item.seasonPts, 0) * 10) / 10} pts
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* User: per-quiz breakdown */}
+      {!isAdminView && currentUser && quizBreakdown.length > 0 && (
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
           <div className="px-5 py-3 bg-gray-100 border-b">
             <h2 className="font-bold text-gray-700">Your Results</h2>
@@ -1888,9 +1951,9 @@ const QuizApp = () => {
     );
   }
 
-  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onSelectSeason={(name)=>{setViewSeasonName(name);setMode('season-scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout}/>;
+  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onSelectSeason={(name)=>{setViewSeasonName(name);setMode('season-scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')}/>;
 
-  if (mode==='season-scoreboard' && viewSeasonName) return <SeasonScoreboardScreen seasonName={viewSeasonName} currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onBack={()=>setMode('scoreboards')} onQuizzes={()=>setMode('setup')} onLogout={handleLogout}/>;
+  if (mode==='season-scoreboard' && viewSeasonName) return <SeasonScoreboardScreen seasonName={viewSeasonName} currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onBack={()=>setMode('scoreboards')} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')}/>;
 
 
   if (mode==='scoreboard' && viewScoringKey) {
@@ -2250,6 +2313,7 @@ const QuizApp = () => {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
           <div className="flex gap-2">
+            <button onClick={()=>setMode('scoreboards')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"><Star size={18}/> Scoreboards</button>
             <button onClick={()=>setAdminSection('users')} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Manage Users</button>
             <button onClick={adminLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"><LogOut size={18}/> Log Out</button>
           </div>
