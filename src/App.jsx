@@ -919,7 +919,11 @@ const QuizApp = () => {
   const [othersPopupQuestion, setOthersPopupQuestion] = useState(null);
   const [showNewQuizConfirm, setShowNewQuizConfirm] = useState(false);
   const [adminSection, setAdminSection] = useState('list');
-  const [auditQuizKey, setAuditQuizKey] = useState('')
+  const [auditQuizKey, setAuditQuizKey] = useState('');
+  const [auditSeason, setAuditSeason] = useState('');
+  const [auditExpandedUser, setAuditExpandedUser] = useState(null);
+  const [auditData, setAuditData] = useState(null);
+  const [auditLoading, setAuditLoading] = useState(false);
   const [auditData, setAuditData] = useState(null);
   const [auditLoading, setAuditLoading] = useState(false);
   const [newQuizTypeSelector, setNewQuizTypeSelector] = useState('openresponse');
@@ -1634,7 +1638,7 @@ const QuizApp = () => {
       rank -= tieCount;
       j = k + 1;
     }
-    rankingRows.sort((a, b) => a.qIndex - b.qIndex);
+    rankingRows.sort((a, b) => a.correctCount - b.correctCount || b.assignedPoints - a.assignedPoints);
 
     // ── Per-user per-question cell detail ──────────────────────────────────
     const userRows = attempts.map(attempt => {
@@ -2934,20 +2938,41 @@ const QuizApp = () => {
 
         {adminSection==='audit'&&(
           <div className="space-y-6">
-            {/* Quiz selector */}
+            {/* Quiz selector — two dropdowns: season then quiz */}
             <div className="bg-white rounded-xl shadow-md p-5">
               <h2 className="text-lg font-bold text-gray-800 mb-3">🔍 Score Auditor</h2>
-              <p className="text-sm text-gray-500 mb-4">Select any scored quiz to see a full breakdown of every calculation — difficulty ranking, token effects, per-user scores, and season points.</p>
+              <p className="text-sm text-gray-500 mb-4">Select a season and quiz to see a full breakdown of every calculation — difficulty ranking, token effects, per-user scores, and season points.</p>
               <div className="flex items-center gap-3 flex-wrap">
-                <select value={auditQuizKey} onChange={e=>setAuditQuizKey(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-64">
-                  <option value="">— Select a scored quiz —</option>
-                  {Object.entries(allQuizData).filter(([,q])=>q.status==='Scored').sort((a,b)=>(a[1].title||a[0]).localeCompare(b[1].title||b[0])).map(([key,q])=>(
-                    <option key={key} value={key}>{q.title||key} ({q.category||'—'})</option>
-                  ))}
-                </select>
-                <button onClick={()=>runAudit(auditQuizKey)} disabled={!auditQuizKey||auditLoading} className="px-5 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 font-medium text-sm disabled:opacity-40">
-                  {auditLoading ? 'Loading…' : 'Run Audit'}
-                </button>
+                {/* Step 1: season */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Season</label>
+                  <select value={auditSeason} onChange={e=>{setAuditSeason(e.target.value);setAuditQuizKey('');setAuditData(null);setAuditExpandedUser(null);}} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-40">
+                    <option value="">— Select —</option>
+                    <option value="Offseason">Offseason</option>
+                    {Array.from(new Set(Object.values(allQuizData).map(q=>q.category).filter(c=>c&&c.trim().toLowerCase()!=='offseason'))).sort((a,b)=>a.localeCompare(b)).map(s=>(
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Step 2: quiz within that season */}
+                {auditSeason && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Quiz</label>
+                    <select value={auditQuizKey} onChange={e=>{setAuditQuizKey(e.target.value);setAuditData(null);setAuditExpandedUser(null);}} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-64">
+                      <option value="">— Select a quiz —</option>
+                      {Object.entries(allQuizData).filter(([,q])=>q.status==='Scored'&&q.category===auditSeason).sort((a,b)=>(a[1].title||a[0]).localeCompare(b[1].title||b[0])).map(([key,q])=>(
+                        <option key={key} value={key}>{q.title||key}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {auditQuizKey && (
+                  <div className="mt-4 self-end">
+                    <button onClick={()=>runAudit(auditQuizKey)} disabled={auditLoading} className="px-5 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 font-medium text-sm disabled:opacity-40">
+                      {auditLoading ? 'Loading…' : 'Run Audit'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -2962,7 +2987,7 @@ const QuizApp = () => {
                   <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     <div className="px-5 py-3 bg-gray-100 border-b">
                       <h2 className="font-bold text-gray-700">1. Difficulty Ranking & Point Values</h2>
-                      <p className="text-xs text-gray-500 mt-0.5">Questions sorted by how many people answered correctly. Fewest correct = hardest = most points. Ties are averaged.</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Sorted hardest → easiest (fewest correct = hardest = most points). Ties are averaged.</p>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -2994,45 +3019,81 @@ const QuizApp = () => {
                     </div>
                   </div>
 
-                  {/* ── Section 2: Per-user score grid ── */}
+                  {/* ── Section 2: Per-user accordion ── */}
                   <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     <div className="px-5 py-3 bg-gray-100 border-b">
                       <h2 className="font-bold text-gray-700">2. Per-User Score Breakdown</h2>
-                      <p className="text-xs text-gray-500 mt-0.5">Each cell shows ✓/✗, the token used, points earned, and the formula. The final column compares the recomputed total to the stored score — a ✅ means they match.</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Click a player to expand their full question-by-question breakdown. ✅ = recomputed total matches stored score; ❌ = mismatch.</p>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm border-collapse">
-                        <thead>
-                          <tr className="bg-gray-50 border-b text-xs text-gray-500 uppercase">
-                            <th className="px-3 py-2 text-left font-semibold sticky left-0 bg-gray-50 z-10 min-w-28">Player</th>
-                            {questions.map((_, i) => (
-                              <th key={i} className="px-2 py-2 text-center font-semibold min-w-24">Q{i+1}<br/><span className="text-gray-400 font-normal normal-case">{rankingRows.find(r=>r.qIndex===i)?.assignedPoints} pts base</span></th>
-                            ))}
-                            <th className="px-3 py-2 text-center font-semibold min-w-28">Total<br/><span className="font-normal text-gray-400">Stored / Calc</span></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {userRows.map((row, ri) => (
-                            <tr key={row.user_id} className={ri % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                              <td className="px-3 py-2 font-medium text-gray-700 sticky left-0 bg-inherit z-10 border-r border-gray-100">{row.displayName}</td>
-                              {row.cells.map((cell, i) => (
-                                <td key={i} className="px-2 py-1.5 text-center border-r border-gray-100 align-top" style={{backgroundColor: cell.token ? tokenBg(cell.token) : 'inherit'}}>
-                                  <div className={`text-base leading-none ${cell.correct ? 'text-green-600' : 'text-red-500'}`}>{cell.correct ? '✓' : '✗'}</div>
-                                  {cell.token && <div className="text-xs text-gray-500 mt-0.5" style={{fontSize:10}}>{tokenLabel(cell.token)}</div>}
-                                  <div className="font-semibold text-gray-800 mt-0.5">{cell.earned} pts</div>
-                                  <div className="text-gray-400 mt-0.5" style={{fontSize:10}}>{cell.formula}</div>
-                                </td>
-                              ))}
-                              <td className="px-3 py-2 text-center align-middle">
-                                <div className="font-bold text-gray-800">{row.recomputedTotal} pts</div>
-                                <div className={`text-xs mt-0.5 ${row.matches ? 'text-green-600' : 'text-red-600 font-bold'}`}>
-                                  {row.matches ? `✅ matches stored` : `❌ stored: ${row.storedScore}`}
+                    {/* Collapsed header row */}
+                    <div className="divide-y divide-gray-100">
+                      {userRows.map((row, ri) => {
+                        const isOpen = auditExpandedUser === row.user_id;
+                        const ptsByQIndex = {};
+                        rankingRows.forEach(r => { ptsByQIndex[r.qIndex] = r.assignedPoints; });
+                        return (
+                          <div key={row.user_id}>
+                            {/* Clickable summary row */}
+                            <div
+                              onClick={() => setAuditExpandedUser(isOpen ? null : row.user_id)}
+                              className="flex items-center justify-between px-5 py-3 cursor-pointer hover:bg-gray-50 select-none"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm font-medium text-gray-800 w-40">{row.displayName}</span>
+                                {/* Mini ✓/✗ strip */}
+                                <div className="flex gap-0.5">
+                                  {row.cells.map((cell, i) => (
+                                    <span key={i} title={`Q${i+1}`} className={`text-xs font-bold px-1 rounded ${cell.correct ? 'text-green-600 bg-green-50' : 'text-red-500 bg-red-50'}`}>{cell.correct ? '✓' : '✗'}</span>
+                                  ))}
                                 </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="font-bold text-gray-800 text-sm">{row.recomputedTotal} pts</span>
+                                <span className={`text-xs ${row.matches ? 'text-green-600' : 'text-red-600 font-bold'}`}>{row.matches ? '✅' : `❌ stored: ${row.storedScore}`}</span>
+                                <span className="text-gray-400 text-xs">{isOpen ? '▲' : '▼'}</span>
+                              </div>
+                            </div>
+                            {/* Expanded detail */}
+                            {isOpen && (
+                              <div className="bg-gray-50 border-t border-gray-100 px-5 py-3">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="text-xs text-gray-500 uppercase border-b border-gray-200">
+                                      <th className="py-1.5 text-left font-semibold w-12">Q#</th>
+                                      <th className="py-1.5 text-center font-semibold w-12">Result</th>
+                                      <th className="py-1.5 text-left font-semibold w-28">Token</th>
+                                      <th className="py-1.5 text-right font-semibold w-20">Base Pts</th>
+                                      <th className="py-1.5 text-right font-semibold w-20">Earned</th>
+                                      <th className="py-1.5 text-left font-semibold pl-4">Formula</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-100">
+                                    {row.cells.map((cell, i) => (
+                                      <tr key={i} className={cell.token ? '' : ''} style={{backgroundColor: cell.token ? tokenBg(cell.token) : 'transparent'}}>
+                                        <td className="py-1.5 text-gray-500 font-medium">Q{i+1}</td>
+                                        <td className={`py-1.5 text-center font-bold text-base ${cell.correct ? 'text-green-600' : 'text-red-500'}`}>{cell.correct ? '✓' : '✗'}</td>
+                                        <td className="py-1.5 text-xs text-gray-600">{cell.token ? tokenLabel(cell.token) : <span className="text-gray-300">—</span>}</td>
+                                        <td className="py-1.5 text-right text-gray-500">{ptsByQIndex[i]} pts</td>
+                                        <td className="py-1.5 text-right font-semibold text-gray-800">{cell.earned} pts</td>
+                                        <td className="py-1.5 text-xs text-gray-500 pl-4">{cell.formula}</td>
+                                      </tr>
+                                    ))}
+                                    <tr className="border-t-2 border-gray-300 bg-gray-100">
+                                      <td colSpan={4} className="py-2 text-sm font-semibold text-gray-700 text-right pr-2">Total</td>
+                                      <td className="py-2 text-right font-bold text-gray-900">{row.recomputedTotal} pts</td>
+                                      <td className="py-2 pl-4">
+                                        <span className={`text-xs font-semibold ${row.matches ? 'text-green-600' : 'text-red-600'}`}>
+                                          {row.matches ? '✅ matches stored score' : `❌ stored score was ${row.storedScore} pts`}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
