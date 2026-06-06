@@ -2356,8 +2356,13 @@ const QuizApp = () => {
           })}
         </div>
 
-        {/* Token bin */}
-        <div className="bg-white rounded-xl shadow-md p-5 mb-4 text-center" onClick={handleTapBin}>
+        {/* Spacer so content doesn't hide behind the fixed bin */}
+        <div style={{height: '180px'}}/>
+
+        {/* Token bin + Final Submission — fixed to bottom of viewport */}
+        <div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:40}}>
+        <div style={{maxWidth:'48rem',margin:'0 auto'}}>
+        <div className="bg-white border-t border-gray-200 shadow-lg px-5 pt-4 pb-4 text-center" onClick={handleTapBin}>
           <p className="text-sm font-semibold text-gray-700 mb-1">Your tokens — tap to select, then tap a question to assign</p>
           <p className="text-xs text-gray-400 mb-3">Hover over a token to see what it does. Tap an assigned token to pick it back up.</p>
           {binTokensList.length > 0 ? (
@@ -2377,20 +2382,21 @@ const QuizApp = () => {
           ) : (
             <p className="text-sm text-gray-400 italic">All tokens assigned ✓</p>
           )}
-          <p className={`text-sm font-medium mt-3 ${allAssigned ? 'text-green-700' : 'text-gray-500'}`}>
+          <p className={`text-sm font-medium mt-2 ${allAssigned ? 'text-green-700' : 'text-gray-500'}`}>
             {allAssigned
               ? `✓ All ${totalTokens} token${totalTokens !== 1 ? 's' : ''} assigned.`
               : `${assignedCount} of ${totalTokens} token${totalTokens !== 1 ? 's' : ''} assigned.`}
           </p>
+          <button
+            onClick={e => { e.stopPropagation(); handleFinalSubmission(); }}
+            disabled={!allAssigned}
+            className="mt-3 w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            <Check size={20}/> Final Submission
+          </button>
         </div>
-
-        <button
-          onClick={handleFinalSubmission}
-          disabled={!allAssigned}
-          className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-        >
-          <Check size={20}/> Final Submission
-        </button>
+        </div>
+        </div>
       </div></>
     );
   }
