@@ -162,7 +162,7 @@ const ordinal = (n) => {
   return n + (s[(v-20)%10] || s[v] || s[0]);
 };
 
-const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelectQuiz, onSelectSeason, onQuizzes, onLogout, isAdminView, onAdminDashboard }) => {
+const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelectQuiz, onSelectSeason, onQuizzes, onLogout, isAdminView, onAdminDashboard, onHelp }) => {
   const [allResults, setAllResults] = React.useState([]);
   const [myAttempts, setMyAttempts] = React.useState({});
   const [seasonNames, setSeasonNames] = React.useState([]);
@@ -253,6 +253,7 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
             </>
           ) : (
             <>
+              <button onClick={()=>onHelp&&onHelp()} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm">?  Help</button>
               <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
               {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
             </>
@@ -474,7 +475,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               </>
             ) : (
               <>
-                <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"><Star size={16}/> Scoreboards</button>
+                <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">Scoreboards</button>
                 <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
                 {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
               </>
@@ -756,7 +757,7 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
               </>
             ) : (
               <>
-                <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"><Star size={16}/> Scoreboards</button>
+                <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">Scoreboards</button>
                 <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
                 {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
               </>
@@ -877,6 +878,7 @@ const QuizApp = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [showForgotModal, setShowForgotModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(null); // 'setup' | 'scoreboards' | 'summary' | null
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotSending, setForgotSending] = useState(false);
@@ -1789,12 +1791,7 @@ const QuizApp = () => {
       {rightSlot}
     </div>
   );
-  const ContactLine = () => (
-    <div className="mt-4 text-center">
-      <p className="text-sm text-gray-600">Questions? Suggestions? Errors? Please contact me at{' '}
-        <a href="mailto:eltigre1000@gmail.com" className="text-blue-600 hover:text-blue-800 underline">eltigre1000@gmail.com</a>.</p>
-    </div>
-  );
+
   const ExitModal = () => showResetModal ? (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl">
@@ -1907,7 +1904,42 @@ const QuizApp = () => {
     );
   };
 
-  const ForgotModal = () => showForgotModal ? (
+  const HELP_CONTENT = {
+    setup: {
+      title: 'Available Quizzes — Help',
+      body: 'Available Quizzes FAQ placeholder text. Replace this with instructions for how to select and start a quiz, what the status labels mean, and anything else users should know.',
+    },
+    scoreboards: {
+      title: 'Scoreboards — Help',
+      body: 'Scoreboards FAQ placeholder text. Replace this with instructions for how to read the leaderboards, what season standings are, and how scoring works.',
+    },
+    summary: {
+      title: 'Token Assignment — Help',
+      body: 'Token Assignment FAQ placeholder text. Replace this with instructions for how to assign tokens, what each token does, and how to submit your final answers.',
+    },
+  };
+  const HelpModal = () => {
+    if (!showHelpModal) return null;
+    const info = HELP_CONTENT[showHelpModal] || { title: 'Help', body: 'Placeholder help text.' };
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
+          <div className="flex justify-between items-center p-5 border-b">
+            <h2 className="text-lg font-bold text-gray-800">{info.title}</h2>
+            <button onClick={()=>setShowHelpModal(null)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button>
+          </div>
+          <div className="p-5">
+            <p className="text-sm text-gray-700 leading-relaxed">{info.body}</p>
+          </div>
+          <div className="px-5 pb-5">
+            <button onClick={()=>setShowHelpModal(null)} className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+    const ForgotModal = () => showForgotModal ? (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
         <h2 className="text-lg font-bold text-gray-800 mb-2">Request Login Info</h2>
@@ -1961,12 +1993,13 @@ const QuizApp = () => {
 
   if (isLoading) return <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center"><div className="text-xl text-gray-500">Loading quizzes...</div></div>;
   if (mode==='setup') return (
+    <><HelpModal/>
     <div className="max-w-2xl mx-auto bg-gray-50 min-h-screen" style={{padding:"1.5rem"}}>
       <div style={{position:"relative"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
           <span className="text-sm text-gray-500">{displayName || currentUser?.email || ''}</span>
           <div className="flex gap-2">
-            <button onClick={()=>setMode('scoreboards')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm"><Star size={16}/> Scoreboards</button>
+            <button onClick={()=>setMode('scoreboards')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">Scoreboards</button>
             <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
           </div>
         </div>
@@ -1980,7 +2013,7 @@ const QuizApp = () => {
         </div>
       ) : allCategories.length===0 ? (
         <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-8 text-center">
-          <p className="text-yellow-800 font-medium">There are no active quizzes at this time.</p>
+          <p className="text-yellow-800 font-medium">There are currently no active quizzes for you to complete. Check back later!</p>
         </div>
       ) : (
         <>
@@ -2015,7 +2048,7 @@ const QuizApp = () => {
           </div>
         </>
       )}
-    </div>
+    </div></>
   );
   if (mode==='assessment' && activeQuiz?.type==='fillintheblank') {
     const sentence=activeQuestions[currentQuestionIndex]; const {display}=parseSentence(sentence.text);
@@ -2040,7 +2073,7 @@ const QuizApp = () => {
         </div>
         <NavBar current={currentQuestionIndex} total={total} label="Sentence"/>
         <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
-        <ContactLine/><ExitModal/>
+        <ExitModal/>
       </div>
     );
   }
@@ -2062,7 +2095,7 @@ const QuizApp = () => {
         </div>
         <NavBar current={currentQuestionIndex} total={total} label="Question"/>
         <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
-        <ContactLine/><ExitModal/>
+        <ExitModal/>
       </div>
     );
   }
@@ -2082,7 +2115,7 @@ const QuizApp = () => {
         </div>
         <NavBar current={currentQuestionIndex} total={total} label="Question"/>
         <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
-        <ContactLine/><ExitModal/>
+        <ExitModal/>
       </div>
     );
   }
@@ -2114,12 +2147,12 @@ const QuizApp = () => {
         {q.questionType==='OR' && (<div className="bg-white rounded-xl shadow-md p-8 mb-6"><div className="text-xl text-gray-800 font-semibold mb-6">{renderPrompt(q.prompt)}</div><input type="text" value={studentAnswers[currentQuestionIndex]||''} onChange={e=>setStudentAnswers(p=>({...p,[currentQuestionIndex]:e.target.value}))} placeholder="Type your answer here..." className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-800 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/></div>)}
         <NavBar current={currentQuestionIndex} total={total} label="Question"/>
         <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
-        <ContactLine/><ExitModal/>
+        <ExitModal/>
       </div>
     );
   }
 
-  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onSelectSeason={(name)=>{setViewSeasonName(name);setMode('season-scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')}/>;
+  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onSelectSeason={(name)=>{setViewSeasonName(name);setMode('season-scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')} onHelp={()=>setShowHelpModal('scoreboards')}/>;
 
   if (mode==='season-scoreboard' && viewSeasonName) return <SeasonScoreboardScreen seasonName={viewSeasonName} currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onBack={()=>setMode('scoreboards')} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')}/>;
 
@@ -2252,11 +2285,16 @@ const QuizApp = () => {
     };
 
     return (
+      <><HelpModal/>
       <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">{activeQuiz?.title}</h1>
-          <button onClick={()=>{setCurrentQuestionIndex(0);setMode('assessment');}} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">← Back to Questions</button>
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-sm text-gray-500">{displayName || currentUser?.email || ''}</span>
+          <div className="flex gap-2">
+            <button onClick={()=>setShowHelpModal('summary')} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm">?  Help</button>
+            <button onClick={()=>{setCurrentQuestionIndex(0);setMode('assessment');}} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">← Back to Questions</button>
+          </div>
         </div>
+        <h1 className="text-2xl font-bold text-gray-800 text-center mb-4">{activeQuiz?.title}</h1>
 
         {/* Question table */}
         <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
@@ -2299,11 +2337,11 @@ const QuizApp = () => {
         </div>
 
         {/* Token bin */}
-        <div className="bg-white rounded-xl shadow-md p-5 mb-4" onClick={handleTapBin}>
+        <div className="bg-white rounded-xl shadow-md p-5 mb-4 text-center" onClick={handleTapBin}>
           <p className="text-sm font-semibold text-gray-700 mb-1">Your tokens — tap to select, then tap a question to assign</p>
           <p className="text-xs text-gray-400 mb-3">Hover over a token to see what it does. Tap an assigned token to pick it back up.</p>
           {binTokensList.length > 0 ? (
-            <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex flex-wrap gap-3 items-center justify-center">
               {binTokensList.map((tok) => (
                 <div key={tok.instanceId} className="flex flex-col items-center gap-1">
                   <TokenChip
@@ -2333,7 +2371,7 @@ const QuizApp = () => {
         >
           <Check size={20}/> Final Submission
         </button>
-      </div>
+      </div></>
     );
   }
 
@@ -2481,7 +2519,7 @@ const QuizApp = () => {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
           <div className="flex gap-2">
-            <button onClick={()=>setMode('scoreboards')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"><Star size={18}/> Scoreboards</button>
+            <button onClick={()=>setMode('scoreboards')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">Scoreboards</button>
             <button onClick={()=>setAdminSection('users')} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Manage Users</button>
             <button onClick={adminLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"><LogOut size={18}/> Log Out</button>
           </div>
@@ -2779,7 +2817,7 @@ const QuizApp = () => {
                               {(combDraft.acceptedAnswers||[]).length>1&&(
                                 <div className="flex items-center gap-2 mt-2">
                                   <input type="checkbox" checked={combDraft.showOthersCount||false} onChange={e=>updateCombDraft('showOthersCount',e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600"/>
-                                  <span className="text-sm text-gray-700">Show "and [#] others" in student results</span>
+                                  <span className="text-sm text-gray-700">Show +X in quiz results</span>
                                 </div>
                               )}
                             </div>
@@ -2874,7 +2912,7 @@ const QuizApp = () => {
                 {orQ.acceptedAnswers.length>1&&(
                   <div className="flex items-center gap-2">
                     <input type="checkbox" checked={orQ.showOthersCount||false} onChange={e=>updateORQuestion('showOthersCount',e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600"/>
-                    <label className="text-sm text-gray-700">Show "and [#] others" in student results{orQ.showOthersCount&&orQ.acceptedAnswers.length>1&&<span className="ml-2 text-xs text-gray-400">(will display: "{orQ.acceptedAnswers[orQ.primaryAnswerIndex]||orQ.acceptedAnswers[0]} and {orQ.acceptedAnswers.length-1} other{orQ.acceptedAnswers.length-1>1?'s':''}")</span>}</label>
+                    <label className="text-sm text-gray-700">Show +X in quiz results{orQ.showOthersCount&&orQ.acceptedAnswers.length>1&&<span className="ml-2 text-xs text-gray-400"></span>}</label>
                   </div>
                 )}
               </div>
