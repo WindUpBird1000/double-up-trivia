@@ -967,6 +967,8 @@ const QuizApp = () => {
   const DEFAULT_TOKEN_SLOTS = ['doubler','doubler','doubler','none','none','none'];
   const [newQuizTokenSlots, setNewQuizTokenSlots] = useState([...DEFAULT_TOKEN_SLOTS]);
   const [newQuizClosingDate, setNewQuizClosingDate] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerMonth, setDatePickerMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
   const [combDraft, setCombDraft] = useState(null);
   const [userAttempts, setUserAttempts] = useState({});
   const [displayName, setDisplayName] = useState('');
@@ -1276,7 +1278,7 @@ const QuizApp = () => {
     setEditingKey(null); setNewQuizTitle(''); setNewQuizKey(''); setNewQuizCategory('');
     setNewCategoryInput(''); setShowNewCategoryInput(false); setNewQuizStatus('Active'); setNewQuizAuthorNote('');
     setNewQuizType('fillintheblank'); setNewSentenceInput(''); setNewQuizSentences([]);
-    setNewQuizTokenSlots([...DEFAULT_TOKEN_SLOTS]); setNewQuizClosingDate('');
+    setNewQuizTokenSlots([...DEFAULT_TOKEN_SLOTS]); setNewQuizClosingDate(''); setShowDatePicker(false); setDatePickerMonth({ year: new Date().getFullYear(), month: new Date().getMonth() });
     setExtraWords([]); setMcQuestions([emptyMCQuestion()]); setMcCurrentIndex(0); setMcRandomizeQuestions(false);
     setOrQuestions([emptyORQuestion()]); setOrCurrentIndex(0); setOrRandomizeQuestions(false); setOrAnswerInput('');
     setCombQuestions([]); setCombCurrentIndex(null); setCombNewQType('MC'); setCombDraft(null);
@@ -1299,7 +1301,8 @@ const QuizApp = () => {
     setEditingKey(key); setNewQuizTitle(quiz.title); setNewQuizKey(key);
     setNewQuizCategory(quiz.category || ''); setNewQuizStatus(quiz.status || 'Active'); setNewQuizAuthorNote(quiz.authorNote || '');
     setNewQuizTokenSlots(quiz.tokenSlots || [...DEFAULT_TOKEN_SLOTS]);
-    setNewQuizClosingDate(quiz.closingDate || '');
+    setNewQuizClosingDate(quiz.closingDate || ''); setShowDatePicker(false);
+    if (quiz.closingDate) { const p = quiz.closingDate.split('/'); if (p.length === 3) setDatePickerMonth({ year: parseInt(p[2]), month: parseInt(p[0]) - 1 }); }
     setNewQuizType(quiz.type || 'fillintheblank');
     setShowNewCategoryInput(false); setNewCategoryInput('');
     if (quiz.type === 'MC') {
@@ -2422,14 +2425,72 @@ const QuizApp = () => {
                 </div>
                 <div style={{flexShrink:0}}>
                   <label className="block text-sm font-medium text-gray-600 mb-1">Closing Date</label>
-                  <input
-                    type="text"
-                    value={newQuizClosingDate}
-                    onChange={e => setNewQuizClosingDate(e.target.value)}
-                    placeholder="MM/DD/YYYY"
-                    maxLength={10}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm w-32"
-                  />
+                  <div style={{position:'relative'}}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!showDatePicker && !newQuizClosingDate) {
+                          const d = new Date();
+                          setDatePickerMonth({ year: d.getFullYear(), month: d.getMonth() });
+                        }
+                        setShowDatePicker(p => !p);
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-36 text-left bg-white hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {newQuizClosingDate || <span className="text-gray-400">Pick a date…</span>}
+                    </button>
+                    {newQuizClosingDate && (
+                      <button type="button" onClick={() => { setNewQuizClosingDate(''); setShowDatePicker(false); }} className="ml-1 text-gray-400 hover:text-gray-600 text-xs align-middle">✕</button>
+                    )}
+                    {showDatePicker && (() => {
+                      const { year, month } = datePickerMonth;
+                      const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                      const firstDay = new Date(year, month, 1).getDay();
+                      const daysInMonth = new Date(year, month + 1, 0).getDate();
+                      const selectedParts = newQuizClosingDate ? newQuizClosingDate.split('/') : [];
+                      const selY = selectedParts.length === 3 ? parseInt(selectedParts[2]) : null;
+                      const selM = selectedParts.length === 3 ? parseInt(selectedParts[0]) - 1 : null;
+                      const selD = selectedParts.length === 3 ? parseInt(selectedParts[1]) : null;
+                      const cells = [];
+                      for (let i = 0; i < firstDay; i++) cells.push(null);
+                      for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+                      while (cells.length % 7 !== 0) cells.push(null);
+                      return (
+                        <div style={{position:'absolute',top:'100%',left:0,zIndex:50,marginTop:4,background:'white',border:'1px solid #d1d5db',borderRadius:8,boxShadow:'0 4px 16px rgba(0,0,0,0.12)',padding:10,width:240}}>
+                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                            <button type="button" onClick={()=>setDatePickerMonth(p=>{ const d=new Date(p.year,p.month-1,1); return {year:d.getFullYear(),month:d.getMonth()}; })} className="px-2 py-0.5 rounded hover:bg-gray-100 text-gray-600 font-bold">‹</button>
+                            <span className="text-sm font-semibold text-gray-700">{monthNames[month]} {year}</span>
+                            <button type="button" onClick={()=>setDatePickerMonth(p=>{ const d=new Date(p.year,p.month+1,1); return {year:d.getFullYear(),month:d.getMonth()}; })} className="px-2 py-0.5 rounded hover:bg-gray-100 text-gray-600 font-bold">›</button>
+                          </div>
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,marginBottom:4}}>
+                            {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d=><div key={d} style={{textAlign:'center',fontSize:11,fontWeight:600,color:'#9ca3af',paddingBottom:2}}>{d}</div>)}
+                          </div>
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2}}>
+                            {cells.map((d, i) => {
+                              const isSelected = d && selY === year && selM === month && selD === d;
+                              return (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  disabled={!d}
+                                  onClick={() => { if (d) { setNewQuizClosingDate(`${month+1}/${d}/${year}`); setShowDatePicker(false); } }}
+                                  style={{
+                                    textAlign:'center', fontSize:12, padding:'3px 0', borderRadius:4,
+                                    background: isSelected ? '#2563eb' : 'transparent',
+                                    color: isSelected ? 'white' : d ? '#374151' : 'transparent',
+                                    fontWeight: isSelected ? 700 : 400,
+                                    cursor: d ? 'pointer' : 'default',
+                                    border: 'none',
+                                  }}
+                                  className={d && !isSelected ? 'hover:bg-blue-50' : ''}
+                                >{d || ''}</button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
               {showNewCategoryInput&&<div className="mb-3"><input type="text" value={newCategoryInput} onChange={e=>setNewCategoryInput(e.target.value)} placeholder="New season name" autoFocus className="w-full px-3 py-2 border border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500"/></div>}
