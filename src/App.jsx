@@ -169,6 +169,7 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
   const [loading, setLoading] = React.useState(true);
   const [openYears, setOpenYears] = React.useState({});
   const [openMonths, setOpenMonths] = React.useState({});
+  const [showHelp, setShowHelp] = React.useState(false);
 
   React.useEffect(() => {
     const fetchResults = supabase.from('quiz_results').select('*').order('posted_at', { ascending: false });
@@ -242,6 +243,23 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
   const years = Object.keys(grouped).map(Number).sort((a, b) => b - a);
 
   return (
+    <>
+      {showHelp && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
+            <div className="flex justify-between items-center p-5 border-b">
+              <h2 className="text-lg font-bold text-gray-800">Scoreboards — Help</h2>
+              <button onClick={()=>setShowHelp(false)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button>
+            </div>
+            <div className="p-5">
+              <p className="text-sm text-gray-700 leading-relaxed">Scoreboards FAQ placeholder text. Replace this with instructions for how to read the leaderboards, what season standings are, and how scoring works.</p>
+            </div>
+            <div className="px-5 pb-5">
+              <button onClick={()=>setShowHelp(false)} className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen">
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
         <span className="text-sm text-gray-500">{displayName || ''}</span>
@@ -253,7 +271,7 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
             </>
           ) : (
             <>
-              <button onClick={()=>onHelp&&onHelp()} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm">?  Help</button>
+              <button onClick={()=>setShowHelp(true)} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm">?</button>
               <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
               {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
             </>
@@ -327,6 +345,7 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
         </>
       )}
     </div>
+    </>
   );
 };
 
@@ -1999,7 +2018,8 @@ const QuizApp = () => {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
           <span className="text-sm text-gray-500">{displayName || currentUser?.email || ''}</span>
           <div className="flex gap-2">
-            <button onClick={()=>setMode('scoreboards')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">Scoreboards</button>
+            <button onClick={()=>setShowHelpModal('setup')} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm">?</button>
+            <button onClick={()=>setMode('scoreboards')} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">Scoreboards</button>
             <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
           </div>
         </div>
@@ -2290,7 +2310,7 @@ const QuizApp = () => {
         <div className="flex justify-between items-center mb-4">
           <span className="text-sm text-gray-500">{displayName || currentUser?.email || ''}</span>
           <div className="flex gap-2">
-            <button onClick={()=>setShowHelpModal('summary')} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm">?  Help</button>
+            <button onClick={()=>setShowHelpModal('summary')} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm">?</button>
             <button onClick={()=>{setCurrentQuestionIndex(0);setMode('assessment');}} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">← Back to Questions</button>
           </div>
         </div>
