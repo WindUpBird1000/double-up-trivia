@@ -924,8 +924,6 @@ const QuizApp = () => {
   const [auditExpandedUser, setAuditExpandedUser] = useState(null);
   const [auditData, setAuditData] = useState(null);
   const [auditLoading, setAuditLoading] = useState(false);
-  const [auditData, setAuditData] = useState(null);
-  const [auditLoading, setAuditLoading] = useState(false);
   const [newQuizTypeSelector, setNewQuizTypeSelector] = useState('openresponse');
   const [editingKey, setEditingKey] = useState(null);
   const [newQuizTitle, setNewQuizTitle] = useState('');
