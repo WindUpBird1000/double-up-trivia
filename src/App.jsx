@@ -175,14 +175,19 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
     const fetchAttempts = currentUser
       ? supabase.from('quiz_attempts').select('quiz_key, status').eq('user_id', currentUser.id)
       : Promise.resolve({ data: [] });
-    const fetchSeasons = supabase.from('season_standings').select('season').order('season');
-    Promise.all([fetchResults, fetchAttempts, fetchSeasons]).then(([{ data: results }, { data: attempts }, { data: seasons }]) => {
+    Promise.all([fetchResults, fetchAttempts]).then(([{ data: results }, { data: attempts }]) => {
       const scoredResults = (results || []).filter(r => allQuizData[r.quiz_key]?.status === 'Scored');
       setAllResults(scoredResults);
       const map = {};
       (attempts || []).forEach(a => { map[a.quiz_key] = a; });
       setMyAttempts(map);
-      setSeasonNames((seasons || []).map(s => s.season));
+      // Derive seasons directly from allQuizData — any scored, non-Offseason category
+      const seasons = Array.from(new Set(
+        Object.values(allQuizData)
+          .filter(q => q.status === 'Scored' && q.category && q.category.trim().toLowerCase() !== 'offseason')
+          .map(q => q.category)
+      )).sort((a, b) => a.localeCompare(b));
+      setSeasonNames(seasons);
       setLoading(false);
     });
   }, []);
@@ -1428,10 +1433,9 @@ const QuizApp = () => {
 
   // Compute and store season standings for a given season name.
   // Called after any quiz in that season is scored (skips "Offseason").
-  const updateSeasonStandings = async (seasonName) => {
+  const updateSeasonStandings = async (seasonName, freshQuizKey, freshUserScores) => {
     if (!seasonName || seasonName.trim().toLowerCase() === 'offseason') return;
 
-    // Fetch all scored quizzes in this season
     const { data: seasonQuizRows } = await supabase
       .from('quizzes')
       .select('quiz_key')
@@ -1439,13 +1443,18 @@ const QuizApp = () => {
       .eq('status', 'Scored');
 
     if (!seasonQuizRows || seasonQuizRows.length === 0) return;
-    const seasonKeys = seasonQuizRows.map(r => r.quiz_key);
 
-    // Fetch results for all those quizzes
-    const { data: results } = await supabase
-      .from('quiz_results')
-      .select('quiz_key, scores')
-      .in('quiz_key', seasonKeys);
+    // Fetch DB results for every quiz in the season EXCEPT the one just saved —
+    // use the freshly computed scores for that one to avoid read-after-write timing issues.
+    const otherKeys = seasonQuizRows.map(r => r.quiz_key).filter(k => k !== freshQuizKey);
+    const otherResults = otherKeys.length > 0
+      ? (await supabase.from('quiz_results').select('quiz_key, scores').in('quiz_key', otherKeys)).data || []
+      : [];
+
+    const results = [
+      ...otherResults,
+      { quiz_key: freshQuizKey, scores: { userScores: freshUserScores } },
+    ];
 
     if (!results || results.length === 0) return;
 
@@ -1540,7 +1549,7 @@ const QuizApp = () => {
         }, { onConflict: 'quiz_key' });
 
         // Update season standings (no-op for Offseason quizzes)
-        await updateSeasonStandings(quizData.category);
+        await updateSeasonStandings(quizData.category, key, userScores);
       }
     }
 
