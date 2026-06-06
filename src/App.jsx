@@ -1824,28 +1824,33 @@ const QuizApp = () => {
       <button onClick={()=>goToQuestion(1)} className="flex items-center gap-1 px-5 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Next <ChevronRight size={20}/></button>
     </div>
   );
-  const OthersPopup = () => othersPopupQuestion ? (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
-        <div className="flex justify-between items-center p-5 border-b">
-          <h2 className="text-lg font-bold text-gray-800">All Correct Answers</h2>
-          <button onClick={()=>setOthersPopupQuestion(null)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button>
+  const OthersPopup = () => {
+    if (!othersPopupQuestion) return null;
+    const answers = othersPopupQuestion.acceptedAnswers || [];
+    // Build prose list: "A and B" for 2, "A, B, and C" for 3+
+    const prose = answers.length === 1
+      ? answers[0]
+      : answers.length === 2
+        ? `${answers[0]} and ${answers[1]}`
+        : answers.slice(0,-1).join(', ') + `, and ${answers[answers.length-1]}`;
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
+          <div className="flex justify-between items-center p-5 border-b">
+            <h2 className="text-lg font-bold text-gray-800">All Correct Answers</h2>
+            <button onClick={()=>setOthersPopupQuestion(null)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button>
+          </div>
+          <div className="p-5">
+            <p className="text-sm text-gray-500 mb-3 italic">{othersPopupQuestion.prompt}</p>
+            <p className="text-sm text-gray-700">
+              The full set of correct answers is: <span className="font-semibold text-gray-800">{prose}</span>
+            </p>
+          </div>
+          <div className="px-5 pb-5"><button onClick={()=>setOthersPopupQuestion(null)} className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button></div>
         </div>
-        <div className="p-5">
-          <p className="text-sm text-gray-500 mb-3 italic">{othersPopupQuestion.prompt}</p>
-          <ul className="space-y-2">
-            {othersPopupQuestion.acceptedAnswers.map((ans,i)=>(
-              <li key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${i===othersPopupQuestion.primaryAnswerIndex?'bg-yellow-50 font-semibold text-gray-800':'text-gray-700'}`}>
-                {i===othersPopupQuestion.primaryAnswerIndex && <Star size={13} className="text-yellow-500 fill-yellow-500 flex-shrink-0"/>}
-                {ans}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="px-5 pb-5"><button onClick={()=>setOthersPopupQuestion(null)} className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button></div>
       </div>
-    </div>
-  ) : null;
+    );
+  };
 
   const renderResultRow = (q, i, quizType, qNum) => {
     const qtype = quizType==='combination' ? q.questionType : quizType;
@@ -1869,7 +1874,7 @@ const QuizApp = () => {
     }
     if (qtype==='OR'||qtype==='openresponse') {
       const sa=studentAnswers[i]||''; const ok=sa.trim()!==''&&q.acceptedAnswers.some(a=>normalizeAnswer(a)===normalizeAnswer(sa));
-      const primary=q.acceptedAnswers[q.primaryAnswerIndex]||q.acceptedAnswers[0]||'';
+      const primary=q.acceptedAnswers[q.primaryAnswerIndex??0]||q.acceptedAnswers[0]||'';
       const othersCount=q.acceptedAnswers.length-1; const showOthers=q.showOthersCount&&othersCount>0;
       return (
         <div key={i} className={`p-5 border-b last:border-b-0 ${ok?'bg-white':'bg-red-50'}`}>
@@ -1879,8 +1884,10 @@ const QuizApp = () => {
               {qNum&&<span className="text-xs text-gray-400 mb-1 block">Q{qNum}</span>}
               <div className="font-semibold text-gray-800 mb-1">{renderPrompt(q.prompt)}</div>
               <p className="text-gray-700 mb-1">Your answer: <span className={`font-semibold ${ok?'text-green-700':'text-red-600'}`}>{sa||(ok?'':'(no answer)')}</span></p>
-              {!ok && <div className="text-sm text-gray-500 mt-1">Correct answer: <span className="font-semibold text-green-700">{primary}</span>{showOthers&&<> — <button onClick={()=>setOthersPopupQuestion(q)} className="font-semibold text-green-700 underline hover:text-green-900">there {othersCount===1?'is':'are'} {othersCount} other correct answer{othersCount>1?'s':''}</button></>}</div>}
-              {ok && showOthers && <div className="text-sm text-gray-500 mt-1"><button onClick={()=>setOthersPopupQuestion(q)} className="text-green-700 underline hover:text-green-900">There {othersCount===1?'is':'are'} {othersCount} other correct answer{othersCount>1?'s':''}</button></div>}
+              <div className="text-sm text-gray-500 mt-1">
+                Correct answer: <span className="font-semibold text-green-700">{primary}</span>
+                {showOthers && <button onClick={()=>setOthersPopupQuestion(q)} className="ml-1 font-semibold text-green-700 underline underline-offset-2 hover:text-green-900">+{othersCount}</button>}
+              </div>
             </div>
           </div>
         </div>
