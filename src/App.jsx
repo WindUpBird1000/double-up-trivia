@@ -919,6 +919,9 @@ const QuizApp = () => {
   const [othersPopupQuestion, setOthersPopupQuestion] = useState(null);
   const [showNewQuizConfirm, setShowNewQuizConfirm] = useState(false);
   const [adminSection, setAdminSection] = useState('list');
+  const [auditQuizKey, setAuditQuizKey] = useState('')
+  const [auditData, setAuditData] = useState(null);
+  const [auditLoading, setAuditLoading] = useState(false);
   const [newQuizTypeSelector, setNewQuizTypeSelector] = useState('openresponse');
   const [editingKey, setEditingKey] = useState(null);
   const [newQuizTitle, setNewQuizTitle] = useState('');
@@ -1574,7 +1577,143 @@ const QuizApp = () => {
     }, { onConflict: 'season' });
   };
 
-  const saveQuizLocally = async () => {
+  const runAudit = async (quizKey) => {
+    if (!quizKey) return;
+    setAuditLoading(true);
+    setAuditData(null);
+
+    // Fetch quiz definition, results, and attempts in parallel
+    const [{ data: quizRow }, { data: resultRow }, { data: attempts }] = await Promise.all([
+      supabase.from('quizzes').select('data, title, category').eq('quiz_key', quizKey).single(),
+      supabase.from('quiz_results').select('scores').eq('quiz_key', quizKey).single(),
+      supabase.from('quiz_attempts').select('user_id, answers, token_assignments, doubles, status').eq('quiz_key', quizKey).eq('status', 'submitted'),
+    ]);
+
+    if (!quizRow || !resultRow || !attempts) { setAuditLoading(false); return; }
+
+    const quiz = quizRow.data;
+    const season = quizRow.category;
+    const questions = quiz.type === 'fillintheblank' ? quiz.sentences : quiz.questions;
+    const { pointValues, userScores, correctnessByUser, correctCounts } = resultRow.scores;
+    const totalAttempts = attempts.length;
+    const n = questions.length;
+
+    // Fetch display names
+    const userIds = attempts.map(a => a.user_id);
+    const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
+    const nameMap = {};
+    (profiles || []).forEach(p => { nameMap[p.user_id] = p.display_name; });
+
+    // ── Difficulty ranking explanation ──────────────────────────────────────
+    // Group questions by their correct count, then rank hardest→easiest
+    const sorted = [...correctCounts.map((c, i) => ({ i, c }))]
+      .sort((a, b) => a.c - b.c || a.i - b.i);
+    const rankingRows = [];
+    let rank = n;
+    let j = 0;
+    while (j < sorted.length) {
+      let k = j;
+      while (k < sorted.length - 1 && sorted[k + 1].c === sorted[k].c) k++;
+      const tieCount = k - j + 1;
+      const rawRanks = [];
+      for (let m = 0; m < tieCount; m++) rawRanks.push(rank - m);
+      const avg = Math.round((rawRanks.reduce((s, v) => s + v, 0) / tieCount) * 10) / 10;
+      const isTie = tieCount > 1;
+      for (let m = j; m <= k; m++) {
+        const qi = sorted[m].i;
+        rankingRows.push({
+          qIndex: qi,
+          correctCount: correctCounts[qi],
+          totalAttempts,
+          assignedPoints: pointValues[qi],
+          isTie,
+          tieWith: isTie ? sorted.slice(j, k + 1).map(x => x.i).filter(x => x !== qi) : [],
+          tieFormula: isTie ? `(${rawRanks.join(' + ')}) ÷ ${tieCount} = ${avg}` : null,
+        });
+      }
+      rank -= tieCount;
+      j = k + 1;
+    }
+    rankingRows.sort((a, b) => a.qIndex - b.qIndex);
+
+    // ── Per-user per-question cell detail ──────────────────────────────────
+    const userRows = attempts.map(attempt => {
+      const displayName = nameMap[attempt.user_id] || attempt.user_id;
+      const tokenMap = attempt.token_assignments || {};
+      const doublesArr = attempt.doubles || [];
+      const correctness = correctnessByUser[attempt.user_id] || [];
+      const cells = questions.map((_, i) => {
+        const correct = correctness[i] || false;
+        const pts = pointValues[i];
+        const token = tokenMap[i] || (doublesArr.includes(i) ? 'doubler' : null);
+        let earned = 0;
+        let formula = '';
+        if (token === 'doubler') {
+          earned = correct ? Math.round(pts * 2 * 10) / 10 : 0;
+          formula = correct ? `${pts} × 2 = ${earned}` : `✗ + Doubler → 0`;
+        } else if (token === 'insurance') {
+          earned = correct ? pts : Math.round((pts / 2) * 10) / 10;
+          formula = correct ? `${pts} (insurance, correct)` : `${pts} ÷ 2 = ${earned} (insurance)`;
+        } else if (token === 'sniper') {
+          earned = correct ? SNIPER_POINTS : 0;
+          formula = correct ? `Sniper flat = ${SNIPER_POINTS}` : `✗ + Sniper → 0`;
+        } else if (token === 'parasite') {
+          earned = totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0;
+          formula = `${correctCounts[i]} × ${pts} ÷ ${totalAttempts} = ${earned} (parasite)`;
+        } else {
+          earned = correct ? pts : 0;
+          formula = correct ? `${pts}` : `✗ → 0`;
+        }
+        return { correct, token, earned, formula };
+      });
+      const storedScore = (userScores.find(u => u.user_id === attempt.user_id) || {}).score;
+      const recomputedTotal = Math.round(cells.reduce((s, c) => s + c.earned, 0) * 10) / 10;
+      const matches = storedScore === recomputedTotal;
+      return { user_id: attempt.user_id, displayName, cells, recomputedTotal, storedScore, matches };
+    });
+    userRows.sort((a, b) => b.recomputedTotal - a.recomputedTotal);
+
+    // ── Season points breakdown ─────────────────────────────────────────────
+    let seasonRows = null;
+    if (season && season.trim().toLowerCase() !== 'offseason') {
+      const sortedByScore = [...userScores].sort((a, b) => b.score - a.score);
+      const np = sortedByScore.length;
+      seasonRows = [];
+      let si = 0;
+      while (si < np) {
+        let sj = si;
+        while (sj < np - 1 && sortedByScore[sj + 1].score === sortedByScore[sj].score) sj++;
+        const tieCount = sj - si + 1;
+        let sum = 0;
+        for (let k = si; k <= sj; k++) sum += (np - k);
+        const avg = Math.round((sum / tieCount) * 10) / 10;
+        const rawRanks = [];
+        for (let k = si; k <= sj; k++) rawRanks.push(np - k);
+        const isTie = tieCount > 1;
+        for (let k = si; k <= sj; k++) {
+          const u = sortedByScore[k];
+          seasonRows.push({
+            user_id: u.user_id,
+            displayName: nameMap[u.user_id] || u.display_name,
+            quizScore: u.score,
+            position: si + 1,
+            totalPlayers: np,
+            seasonPts: avg,
+            isTie,
+            formula: isTie
+              ? `(${rawRanks.join(' + ')}) ÷ ${tieCount} = ${avg} season pts`
+              : `${ordinal(si + 1)} of ${np} → ${avg} season pts`,
+          });
+        }
+        si = sj + 1;
+      }
+    }
+
+    setAuditData({ quizKey, quizTitle: quiz.title || quizKey, season, questions, rankingRows, userRows, seasonRows, n, totalAttempts });
+    setAuditLoading(false);
+  };
+
+    const saveQuizLocally = async () => {
     if (!validateQuizBuilder()) return;
     const quizData = buildQuizJSON();
     const key = newQuizKey;
@@ -2333,6 +2472,7 @@ const QuizApp = () => {
             </select>
             <button onClick={startCreateQuiz} className="px-3 py-1 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">Create</button>
           </div>
+          <button onClick={()=>setAdminSection('audit')} className={`px-5 py-2 rounded-lg font-medium ${adminSection==='audit'?'bg-gray-800 text-white':'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}>🔍 Score Auditor</button>
         </div>}
 
         {adminSection==='list'&&(
@@ -2792,7 +2932,153 @@ const QuizApp = () => {
           </div>
         )}
 
-        {showPreview&&(()=>{
+        {adminSection==='audit'&&(
+          <div className="space-y-6">
+            {/* Quiz selector */}
+            <div className="bg-white rounded-xl shadow-md p-5">
+              <h2 className="text-lg font-bold text-gray-800 mb-3">🔍 Score Auditor</h2>
+              <p className="text-sm text-gray-500 mb-4">Select any scored quiz to see a full breakdown of every calculation — difficulty ranking, token effects, per-user scores, and season points.</p>
+              <div className="flex items-center gap-3 flex-wrap">
+                <select value={auditQuizKey} onChange={e=>setAuditQuizKey(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-64">
+                  <option value="">— Select a scored quiz —</option>
+                  {Object.entries(allQuizData).filter(([,q])=>q.status==='Scored').sort((a,b)=>(a[1].title||a[0]).localeCompare(b[1].title||b[0])).map(([key,q])=>(
+                    <option key={key} value={key}>{q.title||key} ({q.category||'—'})</option>
+                  ))}
+                </select>
+                <button onClick={()=>runAudit(auditQuizKey)} disabled={!auditQuizKey||auditLoading} className="px-5 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 font-medium text-sm disabled:opacity-40">
+                  {auditLoading ? 'Loading…' : 'Run Audit'}
+                </button>
+              </div>
+            </div>
+
+            {auditData && (() => {
+              const { quizTitle, season, questions, rankingRows, userRows, seasonRows, n, totalAttempts } = auditData;
+              const tokenLabel = (token) => token ? ({ doubler:'×2 Doubler', insurance:'INS Insurance', sniper:'🎯 Sniper', parasite:'PAR Parasite' }[token] || token) : '—';
+              const tokenBg = (token) => token ? ({ doubler:'#fef9c3', insurance:'#eff6ff', sniper:'#fef2f2', parasite:'#f0fdf4' }[token] || '#f9fafb') : 'transparent';
+
+              return (
+                <>
+                  {/* ── Section 1: Difficulty Ranking ── */}
+                  <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div className="px-5 py-3 bg-gray-100 border-b">
+                      <h2 className="font-bold text-gray-700">1. Difficulty Ranking & Point Values</h2>
+                      <p className="text-xs text-gray-500 mt-0.5">Questions sorted by how many people answered correctly. Fewest correct = hardest = most points. Ties are averaged.</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-gray-50 border-b text-xs text-gray-500 uppercase">
+                            <th className="px-4 py-2 text-left font-semibold">Q#</th>
+                            <th className="px-4 py-2 text-left font-semibold">Correct / Total</th>
+                            <th className="px-4 py-2 text-left font-semibold">% Correct</th>
+                            <th className="px-4 py-2 text-left font-semibold">Point Value</th>
+                            <th className="px-4 py-2 text-left font-semibold">How Calculated</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rankingRows.map((row, idx) => (
+                            <tr key={row.qIndex} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                              <td className="px-4 py-2 font-medium text-gray-700">Q{row.qIndex + 1}</td>
+                              <td className="px-4 py-2 text-gray-600">{row.correctCount} / {row.totalAttempts}</td>
+                              <td className="px-4 py-2 text-gray-600">{row.totalAttempts > 0 ? Math.round(row.correctCount / row.totalAttempts * 1000) / 10 : 0}%</td>
+                              <td className="px-4 py-2 font-bold text-gray-800">{row.assignedPoints} pts</td>
+                              <td className="px-4 py-2 text-gray-500 text-xs">
+                                {row.isTie
+                                  ? <span className="text-amber-700">Tied with Q{row.tieWith.map(i=>i+1).join(', Q')} → {row.tieFormula}</span>
+                                  : <span>Rank {row.assignedPoints} of {n}</span>}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* ── Section 2: Per-user score grid ── */}
+                  <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div className="px-5 py-3 bg-gray-100 border-b">
+                      <h2 className="font-bold text-gray-700">2. Per-User Score Breakdown</h2>
+                      <p className="text-xs text-gray-500 mt-0.5">Each cell shows ✓/✗, the token used, points earned, and the formula. The final column compares the recomputed total to the stored score — a ✅ means they match.</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <tr className="bg-gray-50 border-b text-xs text-gray-500 uppercase">
+                            <th className="px-3 py-2 text-left font-semibold sticky left-0 bg-gray-50 z-10 min-w-28">Player</th>
+                            {questions.map((_, i) => (
+                              <th key={i} className="px-2 py-2 text-center font-semibold min-w-24">Q{i+1}<br/><span className="text-gray-400 font-normal normal-case">{rankingRows.find(r=>r.qIndex===i)?.assignedPoints} pts base</span></th>
+                            ))}
+                            <th className="px-3 py-2 text-center font-semibold min-w-28">Total<br/><span className="font-normal text-gray-400">Stored / Calc</span></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {userRows.map((row, ri) => (
+                            <tr key={row.user_id} className={ri % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                              <td className="px-3 py-2 font-medium text-gray-700 sticky left-0 bg-inherit z-10 border-r border-gray-100">{row.displayName}</td>
+                              {row.cells.map((cell, i) => (
+                                <td key={i} className="px-2 py-1.5 text-center border-r border-gray-100 align-top" style={{backgroundColor: cell.token ? tokenBg(cell.token) : 'inherit'}}>
+                                  <div className={`text-base leading-none ${cell.correct ? 'text-green-600' : 'text-red-500'}`}>{cell.correct ? '✓' : '✗'}</div>
+                                  {cell.token && <div className="text-xs text-gray-500 mt-0.5" style={{fontSize:10}}>{tokenLabel(cell.token)}</div>}
+                                  <div className="font-semibold text-gray-800 mt-0.5">{cell.earned} pts</div>
+                                  <div className="text-gray-400 mt-0.5" style={{fontSize:10}}>{cell.formula}</div>
+                                </td>
+                              ))}
+                              <td className="px-3 py-2 text-center align-middle">
+                                <div className="font-bold text-gray-800">{row.recomputedTotal} pts</div>
+                                <div className={`text-xs mt-0.5 ${row.matches ? 'text-green-600' : 'text-red-600 font-bold'}`}>
+                                  {row.matches ? `✅ matches stored` : `❌ stored: ${row.storedScore}`}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* ── Section 3: Season points ── */}
+                  {seasonRows ? (
+                    <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                      <div className="px-5 py-3 bg-gray-100 border-b">
+                        <h2 className="font-bold text-gray-700">3. Season Points — {season}</h2>
+                        <p className="text-xs text-gray-500 mt-0.5">Points awarded toward season standings based on finishing position on this quiz. 1st place earns {totalAttempts} pts, last place earns 1 pt. Ties average the available positions.</p>
+                      </div>
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-gray-50 border-b text-xs text-gray-500 uppercase">
+                            <th className="px-4 py-2 text-left font-semibold">Player</th>
+                            <th className="px-4 py-2 text-right font-semibold">Quiz Score</th>
+                            <th className="px-4 py-2 text-center font-semibold">Finish</th>
+                            <th className="px-4 py-2 text-right font-semibold">Season Pts</th>
+                            <th className="px-4 py-2 text-left font-semibold">Formula</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {seasonRows.map((row, i) => (
+                            <tr key={row.user_id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                              <td className="px-4 py-2 font-medium text-gray-700">{row.displayName}</td>
+                              <td className="px-4 py-2 text-right text-gray-600">{row.quizScore}</td>
+                              <td className="px-4 py-2 text-center text-gray-600">{ordinal(row.position)} of {row.totalPlayers}</td>
+                              <td className="px-4 py-2 text-right font-bold text-green-700">{row.seasonPts}</td>
+                              <td className="px-4 py-2 text-xs text-gray-500">{row.formula}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-xl shadow-md p-5">
+                      <h2 className="font-bold text-gray-700 mb-1">3. Season Points</h2>
+                      <p className="text-sm text-gray-400 italic">This quiz is in the Offseason category — it does not contribute to any season standings.</p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        )}
+
+                {showPreview&&(()=>{
           const previewQ = newQuizType==='MC' ? mcQ : newQuizType==='openresponse' ? orQ : null;
           const previewType = newQuizType;
           return (
