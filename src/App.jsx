@@ -144,8 +144,8 @@ const ImageHelper = () => {
   return (
     <div className="flex items-center gap-2 mt-2 mb-1">
       <span className="text-xs text-gray-400 whitespace-nowrap">Image:</span>
-      <input type="text" value={imgFilename} onChange={e=>setImgFilename(e.target.value)} placeholder="filename.jpg" className="flex-1 px-2 py-1 border border-[#253a50]" style={{borderColor:"#253a50" rounded text-xs focus:ring-1 focus:ring-blue-400" style={{minWidth:0}}/>
-      <button onClick={handleCopy} disabled={!imgFilename.trim()} className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${copied?'bg-green-500 text-white':'bg-[#0C1821]" style="background:#0C1821 text-gray-600 hover:bg-gray-200 disabled:opacity-40'}`}>
+      <input type="text" value={imgFilename} onChange={e=>setImgFilename(e.target.value)} placeholder="filename.jpg" className="flex-1 px-2 py-1 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-blue-400" style={{minWidth:0}}/>
+      <button onClick={handleCopy} disabled={!imgFilename.trim()} className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${copied?'bg-green-500 text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40'}`}>
         {copied ? '✓ Copied!' : 'Copy tag'}
       </button>
       <span className="text-xs text-gray-300 hidden sm:block">→ paste into prompt</span>
@@ -217,16 +217,16 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
     const placement = getUserPlacement(result);
     const tookQuiz = myAttempts[result.quiz_key]?.status === 'submitted';
     return (
-      <div onClick={() => onSelectQuiz(result.quiz_key)} className={`cursor-pointer hover:bg-blue-50 rounded-lg p-3 transition-colors border border-transparent hover:border-blue-200 ${index % 2 === 0 ? "" style={{background:"#1B2A41"}} : "" style={{background:"#152030"}}}`}>
-        <p className="font-bold" style={{color:"#FFFFFF"}}>{result.quiz_title || quiz?.title || result.quiz_key} <span className="text-xs font-normal text-gray-500">({quiz?.category || ''})</span> <span className="text-xs font-normal text-gray-500">— Taken by {totalUsers} user{totalUsers !== 1 ? 's' : ''}.</span></p>
+      <div onClick={() => onSelectQuiz(result.quiz_key)} className={`cursor-pointer hover:bg-blue-50 rounded-lg p-3 transition-colors border border-transparent hover:border-blue-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+        <p className="font-bold text-gray-800">{result.quiz_title || quiz?.title || result.quiz_key} <span className="text-xs font-normal text-gray-500">({quiz?.category || ''})</span> <span className="text-xs font-normal text-gray-500">— Taken by {totalUsers} user{totalUsers !== 1 ? 's' : ''}.</span></p>
         {!isAdminView && (tookQuiz
-          ? <p className="text-xs text-blue-300" style="color:#7eb8e8 font-medium mt-0.5">{placement ? `You finished in ${ordinal(placement)} place.` : 'You took this quiz.'}</p>
+          ? <p className="text-xs text-blue-600 font-medium mt-0.5">{placement ? `You finished in ${ordinal(placement)} place.` : 'You took this quiz.'}</p>
           : <p className="text-xs text-gray-400 italic mt-0.5">You didn't take this quiz.</p>)}
       </div>
     );
   };
 
-  if (loading) return <div className="max-w-2xl mx-auto p-6 min-h-screen flex items-center justify-center"><p className="" style={{color:"#8899aa"}}>Loading scoreboards...</p></div>;
+  if (loading) return <div className="max-w-2xl mx-auto p-6 min-h-screen flex items-center justify-center"><p className="text-gray-500">Loading scoreboards...</p></div>;
 
   const recent = allResults.slice(0, 5);
 
@@ -248,38 +248,38 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
             <div className="flex justify-between items-center p-5 border-b">
-              <h2 className="text-lg font-bold" style={{color:"#FFFFFF"}}>Scoreboards — Help</h2>
+              <h2 className="text-lg font-bold text-gray-800">Scoreboards — Help</h2>
               <button onClick={()=>setShowHelp(false)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button>
             </div>
             <div className="p-5">
-              <p className="text-sm text-[#CCC9DC]" style="color:#CCC9DC leading-relaxed">Scoreboards FAQ placeholder text. Replace this with instructions for how to read the leaderboards, what season standings are, and how scoring works.</p>
+              <p className="text-sm text-gray-700 leading-relaxed">Scoreboards FAQ placeholder text. Replace this with instructions for how to read the leaderboards, what season standings are, and how scoring works.</p>
             </div>
             <div className="px-5 pb-5">
-              <button onClick={()=>setShowHelp(false)} className="w-full px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium">Close</button>
+              <button onClick={()=>setShowHelp(false)} className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button>
             </div>
           </div>
         </div>
       )}
-    <div className="max-w-2xl mx-auto p-6 bg-[#152030]" style="background:#152030 min-h-screen">
+    <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen">
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
-        <span className="text-sm" style={{color:"#8899aa"}}>{displayName || ''}</span>
+        <span className="text-sm text-gray-500">{displayName || ''}</span>
         <div className="flex gap-2">
           {isAdminView ? (
             <>
-              <button onClick={onAdminDashboard} className="flex items-center gap-2 px-4 py-2 text-white rounded-lg" style={{background:"#253a50",border:"1px solid #CCC9DC"}} font-medium text-sm"><Settings size={16}/> Admin Dashboard</button>
-              {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+              <button onClick={onAdminDashboard} className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm"><Settings size={16}/> Admin Dashboard</button>
+              {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
             </>
           ) : (
             <>
               <button onClick={()=>setShowHelp(true)} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm">?</button>
-              <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-medium text-sm">Quizzes</button>
-              {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+              <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+              {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
             </>
           )}
         </div>
       </div>
       <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
-        <h1 className="text-3xl font-bold tracking-tight" style="color:#FFFFFF">Scoreboards</h1>
+        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Scoreboards</h1>
       </div>
 
       {allResults.length === 0 ? (
@@ -287,8 +287,8 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
       ) : (
         <>
           {/* Recent */}
-          <div className="rounded-xl shadow-md p-5 mb-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-            <h2 className="text-lg font-bold text-[#CCC9DC]" style="color:#CCC9DC mb-3">Five Most Recently Scored Quizzes</h2>
+          <div className="bg-white rounded-xl shadow-md p-5 mb-6">
+            <h2 className="text-lg font-bold text-gray-700 mb-3">Five Most Recently Scored Quizzes</h2>
             <div className="rounded-lg overflow-hidden">
               {recent.map((r, idx) => <QuizResultCard key={r.quiz_key} result={r} index={idx}/>)}
             </div>
@@ -296,17 +296,17 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
 
           {/* Season Scoreboards */}
           {seasonNames.length > 0 && (
-            <div className="rounded-xl shadow-md p-5 mb-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-              <h2 className="text-lg font-bold text-[#CCC9DC]" style="color:#CCC9DC mb-3">Season Scoreboards</h2>
+            <div className="bg-white rounded-xl shadow-md p-5 mb-6">
+              <h2 className="text-lg font-bold text-gray-700 mb-3">Season Scoreboards</h2>
               <div className="rounded-lg overflow-hidden">
                 {seasonNames.map((name, idx) => (
                   <div
                     key={name}
                     onClick={() => onSelectSeason(name)}
-                    className={`cursor-pointer hover:bg-purple-50 rounded-lg px-3 py-3 transition-colors border border-transparent hover:border-purple-200 flex items-center justify-between ${idx % 2 === 0 ? "" style={{background:"#1B2A41"}} : "" style={{background:"#152030"}}}`}
+                    className={`cursor-pointer hover:bg-purple-50 rounded-lg px-3 py-3 transition-colors border border-transparent hover:border-purple-200 flex items-center justify-between ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                   >
-                    <span className="font-bold" style={{color:"#FFFFFF"}}>{name}</span>
-                    <span className="text-xs font-medium" style={{color:"#CCC9DC"}}>View Standings →</span>
+                    <span className="font-bold text-gray-800">{name}</span>
+                    <span className="text-xs text-purple-600 font-medium">View Standings →</span>
                   </div>
                 ))}
               </div>
@@ -314,11 +314,11 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
           )}
 
           {/* All quizzes by year/month */}
-          <div className="rounded-xl shadow-md p-5" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-            <h2 className="text-lg font-bold text-[#CCC9DC]" style="color:#CCC9DC mb-3">All Quizzes</h2>
+          <div className="bg-white rounded-xl shadow-md p-5">
+            <h2 className="text-lg font-bold text-gray-700 mb-3">All Quizzes</h2>
             {years.map(y => (
               <div key={y} className="mb-2">
-                <button onClick={()=>setOpenYears(p=>({...p,[y]:!p[y]}))} className="flex items-center gap-2 w-full text-left py-2 px-1 hover:bg-[#152030]" style="background:#152030 rounded font-semibold text-[#CCC9DC]" style="color:#CCC9DC">
+                <button onClick={()=>setOpenYears(p=>({...p,[y]:!p[y]}))} className="flex items-center gap-2 w-full text-left py-2 px-1 hover:bg-gray-50 rounded font-semibold text-gray-700">
                   <span className={`transition-transform text-gray-400 ${openYears[y]?'rotate-90':''}`} style={{display:'inline-block'}}>▶</span>
                   {y}
                 </button>
@@ -326,7 +326,7 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
                   <div className="ml-4">
                     {Object.keys(grouped[y]).map(Number).sort((a,b)=>b-a).map(m => (
                       <div key={m} className="mb-1">
-                        <button onClick={()=>setOpenMonths(p=>({...p,[`${y}-${m}`]:!p[`${y}-${m}`]}))} className="flex items-center gap-2 w-full text-left py-1.5 px-1 hover:bg-[#152030]" style="background:#152030 rounded text-gray-600">
+                        <button onClick={()=>setOpenMonths(p=>({...p,[`${y}-${m}`]:!p[`${y}-${m}`]}))} className="flex items-center gap-2 w-full text-left py-1.5 px-1 hover:bg-gray-50 rounded text-gray-600">
                           <span className={`transition-transform text-gray-400 text-xs ${openMonths[`${y}-${m}`]?'rotate-90':''}`} style={{display:'inline-block'}}>▶</span>
                           {MONTH_NAMES[m]}
                         </button>
@@ -374,8 +374,8 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
     });
   }, [quizKey]);
 
-  if (loading) return <div className="max-w-3xl mx-auto p-6 flex items-center justify-center min-h-screen"><p className="" style={{color:"#8899aa"}}>Loading scoreboard...</p></div>;
-  if (!results) return <div className="max-w-3xl mx-auto p-6"><p className="text-red-400" style="color:#f87171">No scoring data found for this quiz.</p></div>;
+  if (loading) return <div className="max-w-3xl mx-auto p-6 flex items-center justify-center min-h-screen"><p className="text-gray-500">Loading scoreboard...</p></div>;
+  if (!results) return <div className="max-w-3xl mx-auto p-6"><p className="text-red-600">No scoring data found for this quiz.</p></div>;
 
   const { pointValues, userScores, correctCounts } = results.scores;
   const questions = quiz.type === 'fillintheblank' ? quiz.sentences : quiz.questions;
@@ -466,7 +466,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
   const selectedUserName = selectedUserId ? (withRanks.find(u => u.user_id === selectedUserId)?.display_name || selectedUserId) : null;
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-[#152030]" style="background:#152030 min-h-screen">
+    <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
       {popupAnswers && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4" onClick={()=>setPopupAnswers(null)}>
           <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full" onClick={e=>e.stopPropagation()}>
@@ -483,26 +483,26 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
       <div className="mb-6">
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
           {isAdminView
-            ? <span className="text-sm" style={{color:"#8899aa"}}></span>
-            : <span className="text-sm" style={{color:"#8899aa"}}>{displayName || ''}</span>
+            ? <span className="text-sm text-gray-500"></span>
+            : <span className="text-sm text-gray-500">{displayName || ''}</span>
           }
           <div className="flex gap-2">
             {isAdminView ? (
               <>
-                <button onClick={onAdminDashboard} className="flex items-center gap-2 px-4 py-2 text-white rounded-lg" style={{background:"#253a50",border:"1px solid #CCC9DC"}} font-medium text-sm"><Settings size={16}/> Admin Dashboard</button>
-                {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+                <button onClick={onAdminDashboard} className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm"><Settings size={16}/> Admin Dashboard</button>
+                {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
               </>
             ) : (
               <>
-                <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 text-white rounded-lg" style={{background:"#1B2A41",border:"1px solid #CCC9DC",color:"#CCC9DC"}} font-medium text-sm">Scoreboards</button>
-                <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-medium text-sm">Quizzes</button>
-                {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+                <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">Scoreboards</button>
+                <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+                {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
               </>
             )}
           </div>
         </div>
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight" style="color:#FFFFFF">{quiz.title}</h1>
+          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">{quiz.title}</h1>
           <p className="text-gray-500 mt-1">
             {quiz.category} · Closed {results.posted_at ? new Date(results.posted_at).toLocaleDateString() : ''} · {totalUsers} participant{totalUsers !== 1 ? 's' : ''}
           </p>
@@ -510,12 +510,12 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
       </div>
 
       {/* Leaderboard */}
-      <div className="rounded-xl shadow-md overflow-hidden mb-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-        <div className="px-5 py-3 border-b" style={{background:"#0C1821",borderColor:"#324A5F"}}>
-          <h2 className="font-bold" style={{color:"#CCC9DC"}}>Leaderboard</h2>
+      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+        <div className="px-5 py-3 bg-gray-100 border-b">
+          <h2 className="font-bold text-gray-700">Leaderboard</h2>
           {isAdminView && <p className="text-xs text-gray-500 mt-0.5">Click any row to view that player's answers.</p>}
         </div>
-        <div className="grid grid-cols-12 px-4 py-2 bg-[#152030]" style="background:#152030 border-b text-xs font-semibold text-gray-500 uppercase">
+        <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
           <div className="col-span-1">#</div>
           <div className="col-span-7">Player</div>
           <div className="col-span-2 text-center">Correct</div>
@@ -531,10 +531,10 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               onClick={isAdminView ? () => setSelectedUserId(prev => prev === u.user_id ? null : u.user_id) : undefined}
               className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center
                 ${isAdminView ? 'cursor-pointer hover:bg-blue-50' : ''}
-                ${isSelected ? "" style={{background:"#1e3a55"}} : isMe ? "" style={{background:"#0d2a1a"}} : "" style={{background:"#1B2A41"}}}`}
+                ${isSelected ? 'bg-blue-100' : isMe ? 'bg-green-50' : 'bg-white'}`}
             >
               <div className={`col-span-1 text-sm ${isFirst ? 'font-bold' : 'text-gray-500'}`}>{u.rank}</div>
-              <div className={`col-span-7 text-sm ${isFirst ? 'font-bold' : ''} ${isMe ? 'text-green-400" style="color:#4ade80' : isSelected ? 'text-blue-300" style="color:#7eb8e8' : 'text-gray-800'}`}>
+              <div className={`col-span-7 text-sm ${isFirst ? 'font-bold' : ''} ${isMe ? 'text-green-800' : isSelected ? 'text-blue-800' : 'text-gray-800'}`}>
                 {u.display_name}{isMe ? ' (you)' : ''}
               </div>
               <div className={`col-span-2 text-center text-sm ${isFirst ? 'font-bold' : 'text-gray-600'}`}>{u.questionsCorrect}</div>
@@ -546,10 +546,10 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
 
       {/* Admin: selected user's answer drill-down */}
       {isAdminView && selectedUserId && (
-        <div className="rounded-xl shadow-md overflow-hidden mb-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-          <div className="px-5 py-3 bg-[#0C1821]" style="background:#0C1821 border-b flex justify-between items-center">
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+          <div className="px-5 py-3 bg-gray-100 border-b flex justify-between items-center">
             <div>
-              <h2 className="font-bold" style={{color:"#CCC9DC"}}>{selectedUserName}'s Answers</h2>
+              <h2 className="font-bold text-gray-700">{selectedUserName}'s Answers</h2>
               {Object.keys(selectedAttempt?.token_assignments || {}).length > 0 && <p className="text-xs text-gray-500 mt-0.5">Token icons show assignments.</p>}
             </div>
             <button onClick={()=>setSelectedUserId(null)} className="text-gray-400 hover:text-gray-600 text-xs font-medium">Close ✕</button>
@@ -585,18 +585,18 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               const answerDisplay = getAnswerDisplayForAnswers(q, i, selectedAnswers);
               const correctDisplay = getCorrectDisplay(q);
               return (
-                <div key={i} className={`border-b last:border-b-0 ${correct ? "" style={{background:"#0d2a1a"}} : "" style={{background:"#2a0d0d"}}}`}>
+                <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
                   <div className="grid grid-cols-3 gap-4 p-4">
                     <div className="col-span-2">
                       <p className="text-xs text-gray-500 mb-1 font-mono flex items-center gap-1">
                         {i+1}. {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(16)}</span>} {rawText}
                       </p>
-                      <p className="text-xs" style={{color:"#CCC9DC"}}><span className="font-semibold">Correct Answer:</span> {correctDisplay}</p>
-                      <p className={`text-xs mt-0.5 ${correct ? 'text-green-400" style="color:#4ade80' : 'text-red-400" style="color:#f87171'}`}><span className="font-semibold">Their Answer:</span> {answerDisplay}</p>
+                      <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {correctDisplay}</p>
+                      <p className={`text-xs mt-0.5 ${correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Their Answer:</span> {answerDisplay}</p>
                     </div>
                     <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
                       <p>Value: <span className="font-semibold">{pts} pts</span></p>
-                      <p className={`font-semibold ${correct || token === 'insurance' ? 'text-green-400" style="color:#4ade80' : 'text-red-400" style="color:#f87171'}`}>
+                      <p className={`font-semibold ${correct || token === 'insurance' ? 'text-green-700' : 'text-red-600'}`}>
                         {earnedPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}
                       </p>
                     </div>
@@ -610,9 +610,9 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
 
       {/* User: per-question breakdown */}
       {!isAdminView && myAttempt && (
-        <div className="rounded-xl shadow-md overflow-hidden" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-          <div className="px-5 py-3 border-b" style={{background:"#0C1821",borderColor:"#324A5F"}}>
-            <h2 className="font-bold" style={{color:"#CCC9DC"}}>Your Results</h2>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="px-5 py-3 bg-gray-100 border-b">
+            <h2 className="font-bold text-gray-700">Your Results</h2>
           </div>
           {questions.map((q, i) => {
             const correct = isCorrect(q, i);
@@ -641,7 +641,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
             const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
             const hasOtherAnswers = (qtype === 'OR' || qtype === 'openresponse') && q.acceptedAnswers?.length > 1;
             return (
-              <div key={i} className={`border-b last:border-b-0 ${correct ? "" style={{background:"#0d2a1a"}} : "" style={{background:"#2a0d0d"}}}`}>
+              <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
                 <div className="grid grid-cols-3 gap-4 p-4">
                   <div className="col-span-2">
                     <p className="text-sm text-gray-800 mb-2 flex items-center gap-1 flex-wrap">
@@ -649,13 +649,13 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                       {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(20)}</span>}
                       <span>{getFullQuestion(q, i, myAnswers)}</span>
                     </p>
-                    <p className="text-xs" style={{color:"#CCC9DC"}}><span className="font-semibold">Correct Answer:</span> {getCorrectDisplay(q)}{hasOtherAnswers && <button onClick={()=>setPopupAnswers(q.acceptedAnswers)} className="ml-2 text-blue-500 underline text-xs">and {q.acceptedAnswers.length - 1} other{q.acceptedAnswers.length > 2 ? 's' : ''}</button>}</p>
-                    <p className={`text-xs mt-1 ${correct ? 'text-green-400" style="color:#4ade80' : 'text-red-400" style="color:#f87171'}`}><span className="font-semibold">Your Answer:</span> {getMyAnswerDisplay(q, i)}</p>
+                    <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {getCorrectDisplay(q)}{hasOtherAnswers && <button onClick={()=>setPopupAnswers(q.acceptedAnswers)} className="ml-2 text-blue-500 underline text-xs">and {q.acceptedAnswers.length - 1} other{q.acceptedAnswers.length > 2 ? 's' : ''}</button>}</p>
+                    <p className={`text-xs mt-1 ${correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Your Answer:</span> {getMyAnswerDisplay(q, i)}</p>
                   </div>
                   <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
                     <p><span className="font-semibold">{correctCounts?.[i] ?? '—'}/{totalUsers}</span> Correct</p>
                     <p>Question Value: <span className="font-semibold">{pts} pts</span></p>
-                    <p className={`font-semibold ${correct || token === 'insurance' ? 'text-green-400" style="color:#4ade80' : 'text-red-400" style="color:#f87171'}`}>
+                    <p className={`font-semibold ${correct || token === 'insurance' ? 'text-green-700' : 'text-red-600'}`}>
                       Your Score: {myPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}
                     </p>
                   </div>
@@ -743,7 +743,7 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
 
   if (loading) return (
     <div className="max-w-3xl mx-auto p-6 flex items-center justify-center min-h-screen">
-      <p className="" style={{color:"#8899aa"}}>Loading season scoreboard...</p>
+      <p className="text-gray-500">Loading season scoreboard...</p>
     </div>
   );
 
@@ -763,28 +763,28 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
   const selectedBreakdown = isAdminView && selectedUserId ? (allBreakdowns[selectedUserId] || []) : [];
 
   return (
-    <div className="max-w-3xl mx-auto p-6 min-h-screen" style={{background:"#0C1821"}}>
+    <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="mb-6">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <span className="text-sm" style={{color:"#8899aa"}}>{displayName || ''}</span>
+          <span className="text-sm text-gray-500">{displayName || ''}</span>
           <div className="flex gap-2">
             {isAdminView ? (
               <>
-                <button onClick={onAdminDashboard} className="flex items-center gap-2 px-4 py-2 text-white rounded-lg" style={{background:"#253a50",border:"1px solid #CCC9DC"}} font-medium text-sm"><Settings size={16}/> Admin Dashboard</button>
-                {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+                <button onClick={onAdminDashboard} className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm"><Settings size={16}/> Admin Dashboard</button>
+                {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
               </>
             ) : (
               <>
-                <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 text-white rounded-lg" style={{background:"#1B2A41",border:"1px solid #CCC9DC",color:"#CCC9DC"}} font-medium text-sm">Scoreboards</button>
-                <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-medium text-sm">Quizzes</button>
-                {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium text-sm"><LogOut size={16}/> Log Out</button>}
+                <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">Scoreboards</button>
+                <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+                {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
               </>
             )}
           </div>
         </div>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 className="text-3xl font-bold tracking-tight" style="color:#FFFFFF">{seasonName}</h1>
+          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">{seasonName}</h1>
           <p className="text-gray-500 mt-1">Season Standings</p>
         </div>
       </div>
@@ -793,12 +793,12 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
       {ranked.length === 0 ? (
         <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500 mb-6">No scored quizzes in this season yet.</div>
       ) : (
-        <div className="rounded-xl shadow-md overflow-hidden mb-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-          <div className="px-5 py-3 border-b" style={{background:"#0C1821",borderColor:"#324A5F"}}>
-            <h2 className="font-bold" style={{color:"#CCC9DC"}}>Leaderboard</h2>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+          <div className="px-5 py-3 bg-gray-100 border-b">
+            <h2 className="font-bold text-gray-700">Leaderboard</h2>
             {isAdminView && <p className="text-xs text-gray-500 mt-0.5">Click any row to view that player's quiz breakdown.</p>}
           </div>
-          <div className="grid grid-cols-12 px-4 py-2 bg-[#152030]" style="background:#152030 border-b text-xs font-semibold text-gray-500 uppercase">
+          <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
             <div className="col-span-1">#</div>
             <div className="col-span-9">Player</div>
             <div className="col-span-2 text-right">Points</div>
@@ -813,10 +813,10 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
                 onClick={isAdminView ? () => setSelectedUserId(prev => prev === u.user_id ? null : u.user_id) : undefined}
                 className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center
                   ${isAdminView ? 'cursor-pointer hover:bg-blue-50' : ''}
-                  ${isSelected ? "" style={{background:"#1e3a55"}} : isMe ? "" style={{background:"#0d2a1a"}} : "" style={{background:"#1B2A41"}}}`}
+                  ${isSelected ? 'bg-blue-100' : isMe ? 'bg-green-50' : 'bg-white'}`}
               >
                 <div className={`col-span-1 text-sm ${isFirst ? 'font-bold' : 'text-gray-500'}`}>{u.rank}</div>
-                <div className={`col-span-9 text-sm ${isFirst ? 'font-bold' : ''} ${isMe ? 'text-green-400" style="color:#4ade80' : isSelected ? 'text-blue-300" style="color:#7eb8e8' : 'text-gray-800'}`}>
+                <div className={`col-span-9 text-sm ${isFirst ? 'font-bold' : ''} ${isMe ? 'text-green-800' : isSelected ? 'text-blue-800' : 'text-gray-800'}`}>
                   {u.display_name}{isMe ? ' (you)' : ''}
                 </div>
                 <div className={`col-span-2 text-right text-sm ${isFirst ? 'font-bold' : 'text-gray-600'}`}>{u.seasonPoints}</div>
@@ -828,30 +828,30 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
 
       {/* Admin: selected user's quiz breakdown */}
       {isAdminView && selectedUserId && (
-        <div className="rounded-xl shadow-md overflow-hidden mb-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-          <div className="px-5 py-3 bg-[#0C1821]" style="background:#0C1821 border-b flex justify-between items-center">
-            <h2 className="font-bold" style={{color:"#CCC9DC"}}>{selectedUserName}'s Season Breakdown</h2>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+          <div className="px-5 py-3 bg-gray-100 border-b flex justify-between items-center">
+            <h2 className="font-bold text-gray-700">{selectedUserName}'s Season Breakdown</h2>
             <button onClick={() => setSelectedUserId(null)} className="text-gray-400 hover:text-gray-600 text-xs font-medium">Close ✕</button>
           </div>
           {selectedBreakdown.length === 0 ? (
             <p className="px-5 py-4 text-sm text-gray-500 italic">No quiz data found for this user.</p>
           ) : (
             <>
-              <div className="grid grid-cols-12 px-4 py-2 bg-[#152030]" style="background:#152030 border-b text-xs font-semibold text-gray-500 uppercase">
+              <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
                 <div className="col-span-6">Quiz</div>
                 <div className="col-span-4 text-center">Finish</div>
                 <div className="col-span-2 text-right">Season Pts</div>
               </div>
               {selectedBreakdown.map((item, i) => (
-                <div key={item.quiz_key} className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center ${i % 2 === 0 ? "" style={{background:"#1B2A41"}} : "" style={{background:"#152030"}}}`}>
+                <div key={item.quiz_key} className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                   <div className="col-span-6 text-sm text-gray-800 font-medium">{item.quizTitle}</div>
                   <div className="col-span-4 text-center text-sm text-gray-600">{ordinal(item.position)} of {item.totalParticipants}</div>
-                  <div className="col-span-2 text-right text-sm font-semibold text-green-400" style="color:#4ade80">{item.seasonPts} pts</div>
+                  <div className="col-span-2 text-right text-sm font-semibold text-green-700">{item.seasonPts} pts</div>
                 </div>
               ))}
-              <div className="grid grid-cols-12 px-4 py-3 border-t" style="background:#0C1821;border-top-color:#324A5F items-center">
-                <div className="col-span-10 text-sm font-semibold text-[#CCC9DC]" style="color:#CCC9DC">Total Season Points</div>
-                <div className="col-span-2 text-right text-sm font-bold text-green-400" style="color:#4ade80">
+              <div className="grid grid-cols-12 px-4 py-3 bg-gray-100 border-t items-center">
+                <div className="col-span-10 text-sm font-semibold text-gray-700">Total Season Points</div>
+                <div className="col-span-2 text-right text-sm font-bold text-green-700">
                   {Math.round(selectedBreakdown.reduce((s, item) => s + item.seasonPts, 0) * 10) / 10} pts
                 </div>
               </div>
@@ -862,25 +862,25 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
 
       {/* User: per-quiz breakdown */}
       {!isAdminView && currentUser && quizBreakdown.length > 0 && (
-        <div className="rounded-xl shadow-md overflow-hidden" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-          <div className="px-5 py-3 border-b" style={{background:"#0C1821",borderColor:"#324A5F"}}>
-            <h2 className="font-bold" style={{color:"#CCC9DC"}}>Your Results</h2>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="px-5 py-3 bg-gray-100 border-b">
+            <h2 className="font-bold text-gray-700">Your Results</h2>
           </div>
-          <div className="grid grid-cols-12 px-4 py-2 bg-[#152030]" style="background:#152030 border-b text-xs font-semibold text-gray-500 uppercase">
+          <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
             <div className="col-span-6">Quiz</div>
             <div className="col-span-4 text-center">Your Finish</div>
             <div className="col-span-2 text-right">Season Pts</div>
           </div>
           {quizBreakdown.map((item, i) => (
-            <div key={item.quiz_key} className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center ${i % 2 === 0 ? "" style={{background:"#1B2A41"}} : "" style={{background:"#152030"}}}`}>
+            <div key={item.quiz_key} className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
               <div className="col-span-6 text-sm text-gray-800 font-medium">{item.quizTitle}</div>
               <div className="col-span-4 text-center text-sm text-gray-600">{ordinal(item.position)} of {item.totalParticipants}</div>
-              <div className="col-span-2 text-right text-sm font-semibold text-green-400" style="color:#4ade80">{item.seasonPts} pts</div>
+              <div className="col-span-2 text-right text-sm font-semibold text-green-700">{item.seasonPts} pts</div>
             </div>
           ))}
-          <div className="grid grid-cols-12 px-4 py-3 border-t" style="background:#0C1821;border-top-color:#324A5F items-center">
-            <div className="col-span-10 text-sm font-semibold text-[#CCC9DC]" style="color:#CCC9DC">Total Season Points</div>
-            <div className="col-span-2 text-right text-sm font-bold text-green-400" style="color:#4ade80">
+          <div className="grid grid-cols-12 px-4 py-3 bg-gray-100 border-t items-center">
+            <div className="col-span-10 text-sm font-semibold text-gray-700">Total Season Points</div>
+            <div className="col-span-2 text-right text-sm font-bold text-green-700">
               {Math.round(quizBreakdown.reduce((s, item) => s + item.seasonPts, 0) * 10) / 10} pts
             </div>
           </div>
@@ -1806,7 +1806,7 @@ const QuizApp = () => {
   };
   const Header = ({ title, rightSlot }) => (
     <div className="flex justify-between items-center mb-8">
-      <h1 className="text-3xl font-bold tracking-tight" style="color:#FFFFFF">{title}</h1>
+      <h1 className="text-3xl font-bold text-gray-800 tracking-tight">{title}</h1>
       {rightSlot}
     </div>
   );
@@ -1817,8 +1817,8 @@ const QuizApp = () => {
         <h2 className="text-xl font-semibold mb-3">Exit Quiz?</h2>
         <p className="text-gray-600 mb-6">Your answers will be saved and you can continue this quiz later.</p>
         <div className="flex gap-3">
-          <button onClick={async()=>{await saveProgress();setShowResetModal(false);setMode('setup');}} className="flex-1 px-4 py-2 text-white rounded-lg" style={{background:"#3a1a1a",border:"1px solid #f87171",color:"#f87171"}} font-medium">Yes, Exit</button>
-          <button onClick={()=>setShowResetModal(false)} className="flex-1 px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium">Cancel</button>
+          <button onClick={async()=>{await saveProgress();setShowResetModal(false);setMode('setup');}} className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium">Yes, Exit</button>
+          <button onClick={()=>setShowResetModal(false)} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
         </div>
       </div>
     </div>
@@ -1827,17 +1827,17 @@ const QuizApp = () => {
     const pct = Math.round((correct/total)*100);
     return (
       <div className={`rounded-xl p-6 mb-6 text-center shadow-md ${pct===100?'bg-green-50 border-2 border-green-400':pct>=70?'bg-yellow-50 border-2 border-yellow-400':'bg-red-50 border-2 border-red-400'}`}>
-        <div className={`text-5xl font-bold mb-1 ${pct===100?'text-green-400" style="color:#4ade80':pct>=70?'text-yellow-200" style="color:#e5e05a':'text-red-400" style="color:#f87171'}`}>{correct}/{total}</div>
-        <div className="text-lg font-medium" style="color:#CCC9DC">{pct}% Correct</div>
-        {pct===100 && <div className="text-green-400" style="color:#4ade80 font-semibold mt-2">🎉 Perfect Score!</div>}
+        <div className={`text-5xl font-bold mb-1 ${pct===100?'text-green-600':pct>=70?'text-yellow-600':'text-red-600'}`}>{correct}/{total}</div>
+        <div className="text-lg text-gray-600 font-medium">{pct}% Correct</div>
+        {pct===100 && <div className="text-green-600 font-semibold mt-2">🎉 Perfect Score!</div>}
       </div>
     );
   };
   const NavBar = ({ current, total, label }) => (
     <div className="flex items-center justify-between mb-6">
-      <button onClick={()=>goToQuestion(-1)} className="flex items-center gap-1 px-5 py-3 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium"><ChevronLeft size={20}/> Back</button>
-      <span className="font-medium" style="color:#CCC9DC">{label} {current+1} of {total}</span>
-      <button onClick={()=>goToQuestion(1)} className="flex items-center gap-1 px-5 py-3 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium">Next <ChevronRight size={20}/></button>
+      <button onClick={()=>goToQuestion(-1)} className="flex items-center gap-1 px-5 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"><ChevronLeft size={20}/> Back</button>
+      <span className="text-gray-600 font-medium">{label} {current+1} of {total}</span>
+      <button onClick={()=>goToQuestion(1)} className="flex items-center gap-1 px-5 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Next <ChevronRight size={20}/></button>
     </div>
   );
   const OthersPopup = () => {
@@ -1853,16 +1853,16 @@ const QuizApp = () => {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
           <div className="flex justify-between items-center p-5 border-b">
-            <h2 className="text-lg font-bold" style={{color:"#FFFFFF"}}>All Correct Answers</h2>
+            <h2 className="text-lg font-bold text-gray-800">All Correct Answers</h2>
             <button onClick={()=>setOthersPopupQuestion(null)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button>
           </div>
           <div className="p-5">
             <p className="text-sm text-gray-500 mb-3 italic">{othersPopupQuestion.prompt}</p>
-            <p className="text-sm" style={{color:"#CCC9DC"}}>
+            <p className="text-sm text-gray-700">
               The full set of correct answers is: <span className="font-semibold text-gray-800">{prose}</span>
             </p>
           </div>
-          <div className="px-5 pb-5"><button onClick={()=>setOthersPopupQuestion(null)} className="w-full px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium">Close</button></div>
+          <div className="px-5 pb-5"><button onClick={()=>setOthersPopupQuestion(null)} className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button></div>
         </div>
       </div>
     );
@@ -1875,13 +1875,13 @@ const QuizApp = () => {
       const sel=studentAnswers[i]||[];
       const ok=sel.length===correctOpts.length&&correctOpts.every(o=>sel.includes(o));
       return (
-        <div key={i} className={`p-5 border-b last:border-b-0 ${ok?"" style={{background:"#1B2A41"}}:"" style={{background:"#2a0d0d"}}}`}>
+        <div key={i} className={`p-5 border-b last:border-b-0 ${ok?'bg-white':'bg-red-50'}`}>
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 mt-1">{ok?<Check size={22} className="text-green-500"/>:<X size={22} className="text-red-400" style="color:#f87171"/>}</div>
+            <div className="flex-shrink-0 mt-1">{ok?<Check size={22} className="text-green-500"/>:<X size={22} className="text-red-500"/>}</div>
             <div className="flex-1">
               {qNum&&<span className="text-xs text-gray-400 mb-1 block">Q{qNum}</span>}
               <div className="font-semibold text-gray-800 mb-2">{renderPrompt(q.prompt)}</div>
-              <div className="space-y-1">{q.displayOptions.map((optObj,j)=>{const chose=sel.includes(optObj.opt);const right=optObj.correct;return <div key={j} className={`flex items-center gap-2 text-sm ${right?'text-green-400" style="color:#4ade80 font-semibold':chose?'text-red-400" style="color:#f87171':'text-gray-500'}`}><span>{chose?'●':'○'}</span><span>{optObj.opt}</span>{right&&<span className="text-xs text-green-400" style="color:#4ade80 ml-1">(correct)</span>}</div>;})}
+              <div className="space-y-1">{q.displayOptions.map((optObj,j)=>{const chose=sel.includes(optObj.opt);const right=optObj.correct;return <div key={j} className={`flex items-center gap-2 text-sm ${right?'text-green-700 font-semibold':chose?'text-red-600':'text-gray-500'}`}><span>{chose?'●':'○'}</span><span>{optObj.opt}</span>{right&&<span className="text-xs text-green-600 ml-1">(correct)</span>}</div>;})}
               </div>
             </div>
           </div>
@@ -1893,16 +1893,16 @@ const QuizApp = () => {
       const primary=q.acceptedAnswers[q.primaryAnswerIndex??0]||q.acceptedAnswers[0]||'';
       const othersCount=q.acceptedAnswers.length-1; const showOthers=q.showOthersCount&&othersCount>0;
       return (
-        <div key={i} className={`p-5 border-b last:border-b-0 ${ok?"" style={{background:"#1B2A41"}}:"" style={{background:"#2a0d0d"}}}`}>
+        <div key={i} className={`p-5 border-b last:border-b-0 ${ok?'bg-white':'bg-red-50'}`}>
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 mt-0.5">{ok?<Check size={22} className="text-green-500"/>:<X size={22} className="text-red-400" style="color:#f87171"/>}</div>
+            <div className="flex-shrink-0 mt-0.5">{ok?<Check size={22} className="text-green-500"/>:<X size={22} className="text-red-500"/>}</div>
             <div className="flex-1">
               {qNum&&<span className="text-xs text-gray-400 mb-1 block">Q{qNum}</span>}
-              <div className="font-semibold mb-1" style={{color:"#FFFFFF"}}>{renderPrompt(q.prompt)}</div>
-              <p className="mb-1" style="color:#CCC9DC">Your answer: <span className={`font-semibold ${ok?'text-green-400" style="color:#4ade80':'text-red-400" style="color:#f87171'}`}>{sa||(ok?'':'(no answer)')}</span></p>
+              <div className="font-semibold text-gray-800 mb-1">{renderPrompt(q.prompt)}</div>
+              <p className="text-gray-700 mb-1">Your answer: <span className={`font-semibold ${ok?'text-green-700':'text-red-600'}`}>{sa||(ok?'':'(no answer)')}</span></p>
               <div className="text-sm text-gray-500 mt-1">
-                Correct answer: <span className="font-semibold text-green-400" style="color:#4ade80">{primary}</span>
-                {showOthers && <button onClick={()=>setOthersPopupQuestion(q)} className="ml-1 font-semibold text-green-400" style="color:#4ade80 underline underline-offset-2 hover:text-green-900">+{othersCount}</button>}
+                Correct answer: <span className="font-semibold text-green-700">{primary}</span>
+                {showOthers && <button onClick={()=>setOthersPopupQuestion(q)} className="ml-1 font-semibold text-green-700 underline underline-offset-2 hover:text-green-900">+{othersCount}</button>}
               </div>
             </div>
           </div>
@@ -1911,12 +1911,12 @@ const QuizApp = () => {
     }
     const {display,answer}=parseSentence(q.text||''); const sa=studentAnswers[i]||'(no answer)'; const ok=sa===answer; const parts=display.split('______');
     return (
-      <div key={i} className={`p-5 border-b last:border-b-0 ${ok?"" style={{background:"#1B2A41"}}:"" style={{background:"#2a0d0d"}}}`}>
+      <div key={i} className={`p-5 border-b last:border-b-0 ${ok?'bg-white':'bg-red-50'}`}>
         <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 mt-0.5">{ok?<Check size={22} className="text-green-500"/>:<X size={22} className="text-red-400" style="color:#f87171"/>}</div>
+          <div className="flex-shrink-0 mt-0.5">{ok?<Check size={22} className="text-green-500"/>:<X size={22} className="text-red-500"/>}</div>
           <div className="flex-1">
-            <p className="mb-2" style="color:#CCC9DC leading-snug text-lg">{parts[0]}<span className={`font-bold ${ok?'text-green-400" style="color:#4ade80':'text-red-400" style="color:#f87171'}`}>{sa}</span>{parts[1]}</p>
-            {!ok&&<p className="text-sm" style={{color:"#8899aa"}}>Correct answer: <span className="font-semibold text-green-400" style="color:#4ade80">{answer}</span></p>}
+            <p className="text-gray-700 mb-2 leading-snug text-lg">{parts[0]}<span className={`font-bold ${ok?'text-green-600':'text-red-500'}`}>{sa}</span>{parts[1]}</p>
+            {!ok&&<p className="text-sm text-gray-500">Correct answer: <span className="font-semibold text-green-700">{answer}</span></p>}
           </div>
         </div>
       </div>
@@ -1944,14 +1944,14 @@ const QuizApp = () => {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
           <div className="flex justify-between items-center p-5 border-b">
-            <h2 className="text-lg font-bold" style={{color:"#FFFFFF"}}>{info.title}</h2>
+            <h2 className="text-lg font-bold text-gray-800">{info.title}</h2>
             <button onClick={()=>setShowHelpModal(null)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button>
           </div>
           <div className="p-5">
-            <p className="text-sm text-[#CCC9DC]" style="color:#CCC9DC leading-relaxed">{info.body}</p>
+            <p className="text-sm text-gray-700 leading-relaxed">{info.body}</p>
           </div>
           <div className="px-5 pb-5">
-            <button onClick={()=>setShowHelpModal(null)} className="w-full px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium">Close</button>
+            <button onClick={()=>setShowHelpModal(null)} className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button>
           </div>
         </div>
       </div>
@@ -1964,16 +1964,16 @@ const QuizApp = () => {
         <h2 className="text-lg font-bold text-gray-800 mb-2">Request Login Info</h2>
         {forgotSent ? (
           <>
-            <p className="text-green-400" style="color:#4ade80 text-sm mb-4">Your request has been sent! You'll receive your login info by email shortly.</p>
-            <button onClick={()=>{setShowForgotModal(false);setForgotSent(false);setForgotEmail('');}} className="w-full px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-medium">Close</button>
+            <p className="text-green-700 text-sm mb-4">Your request has been sent! You'll receive your login info by email shortly.</p>
+            <button onClick={()=>{setShowForgotModal(false);setForgotSent(false);setForgotEmail('');}} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Close</button>
           </>
         ) : (
           <>
             <p className="text-gray-600 text-sm mb-4">Enter your email address and the admin will send you your login info.</p>
-            <input type="email" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="Your email address" className="w-full px-3 py-2 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 text-sm"/>
+            <input type="email" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="Your email address" className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 text-sm"/>
             <div className="flex gap-3">
-              <button onClick={handleForgotSubmit} disabled={!forgotEmail.trim()||forgotSending} className="flex-1 px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-medium disabled:opacity-40">{forgotSending?'Sending...':'Submit'}</button>
-              <button onClick={()=>{setShowForgotModal(false);setForgotEmail('');}} className="flex-1 px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium">Cancel</button>
+              <button onClick={handleForgotSubmit} disabled={!forgotEmail.trim()||forgotSending} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40">{forgotSending?'Sending...':'Submit'}</button>
+              <button onClick={()=>{setShowForgotModal(false);setForgotEmail('');}} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
             </div>
           </>
         )}
@@ -1982,71 +1982,71 @@ const QuizApp = () => {
   ) : null;
 
   if (mode==='login') return (
-    <div className="max-w-md mx-auto p-6 min-h-screen flex flex-col justify-center" style={{background:"#0C1821"}}>
+    <div className="max-w-md mx-auto p-6 bg-gray-50 min-h-screen flex flex-col justify-center">
       <ForgotModal/>
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold tracking-tight" style="color:#FFFFFF mb-2">Double Up Trivia</h1>
-        <p className="" style={{color:"#8899aa"}}>Sign in to play</p>
+        <h1 className="text-4xl font-bold text-gray-800 tracking-tight mb-2">Double Up Trivia</h1>
+        <p className="text-gray-500">Sign in to play</p>
       </div>
-      <div className="rounded-xl shadow-md p-8" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
+      <div className="bg-white rounded-xl shadow-md p-8">
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Email</label>
-          <input type="email" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleLogin()} placeholder="you@example.com" className="w-full px-4 py-3 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg focus:ring-2 focus:ring-blue-500 text-base"/>
+          <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
+          <input type="email" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleLogin()} placeholder="you@example.com" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"/>
         </div>
         <div className="mb-2">
-          <label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Password</label>
-          <input type="password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleLogin()} placeholder="••••••••" className="w-full px-4 py-3 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg focus:ring-2 focus:ring-blue-500 text-base"/>
+          <label className="block text-sm font-medium text-gray-600 mb-1">Password</label>
+          <input type="password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleLogin()} placeholder="••••••••" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"/>
         </div>
-        {loginError && <p className="text-red-400" style="color:#f87171 text-sm mb-3">{loginError}</p>}
-        <button onClick={handleLogin} className="w-full px-6 py-3 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-semibold text-lg mt-4 mb-6">Log In</button>
+        {loginError && <p className="text-red-600 text-sm mb-3">{loginError}</p>}
+        <button onClick={handleLogin} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg mt-4 mb-6">Log In</button>
         <div className="border-t pt-4 text-center">
           <p className="text-sm text-gray-500 mb-2">Forgot your username and/or password?</p>
-          <button onClick={()=>{setShowForgotModal(true);setForgotSent(false);}} className="px-4 py-2 bg-[#0C1821]" style="background:#0C1821 text-gray-600 rounded-lg hover:bg-gray-200 text-sm font-medium">Click Here</button>
+          <button onClick={()=>{setShowForgotModal(true);setForgotSent(false);}} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-sm font-medium">Click Here</button>
         </div>
       </div>
       <div className="text-center mt-6">
-        <button onClick={()=>setMode('admin')} className="flex items-center gap-2 px-4 py-2 text-white rounded-lg" style={{background:"#253a50"}} font-medium mx-auto"><Settings size={18}/> Admin</button>
+        <button onClick={()=>setMode('admin')} className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium mx-auto"><Settings size={18}/> Admin</button>
       </div>
     </div>
   );
 
-  if (isLoading) return <div className="max-w-2xl mx-auto p-6 bg-[#152030]" style="background:#152030 min-h-screen flex items-center justify-center"><div className="text-xl text-gray-500">Loading quizzes...</div></div>;
+  if (isLoading) return <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center"><div className="text-xl text-gray-500">Loading quizzes...</div></div>;
   if (mode==='setup') return (
     <><HelpModal/>
-    <div className="max-w-2xl mx-auto min-h-screen" style={{padding:"1.5rem",background:"#0C1821"}}>
+    <div className="max-w-2xl mx-auto bg-gray-50 min-h-screen" style={{padding:"1.5rem"}}>
       <div style={{position:"relative"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
-          <span className="text-sm" style={{color:"#8899aa"}}>{displayName || currentUser?.email || ''}</span>
+          <span className="text-sm text-gray-500">{displayName || currentUser?.email || ''}</span>
           <div className="flex gap-2">
             <button onClick={()=>setShowHelpModal('setup')} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm">?</button>
-            <button onClick={()=>setMode('scoreboards')} className="px-4 py-2 text-white rounded-lg" style={{background:"#1B2A41",border:"1px solid #CCC9DC",color:"#CCC9DC"}} font-medium text-sm">Scoreboards</button>
-            <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium text-sm"><LogOut size={16}/> Log Out</button>
+            <button onClick={()=>setMode('scoreboards')} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">Scoreboards</button>
+            <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
           </div>
         </div>
         <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
-          <h1 className="text-3xl font-bold tracking-tight" style="color:#FFFFFF">Available Quizzes</h1>
+          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Available Quizzes</h1>
         </div>
       </div>
       {loadError ? (
         <div className="bg-red-50 border-2 border-red-300 rounded-xl p-8 text-center">
-          <p className="text-red-400" style="color:#f87171 font-medium">Could not load quiz data. Please check that your quiz files are in the correct location.</p>
+          <p className="text-red-700 font-medium">Could not load quiz data. Please check that your quiz files are in the correct location.</p>
         </div>
       ) : allCategories.length===0 ? (
         <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-8 text-center">
-          <p className="text-yellow-200" style="color:#e5e05a font-medium">There are currently no active quizzes for you to complete. Check back later!</p>
+          <p className="text-yellow-800 font-medium">There are currently no active quizzes for you to complete. Check back later!</p>
         </div>
       ) : (
         <>
-          <div className="rounded-xl shadow-md p-8 mb-4" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-            <h2 className="text-lg font-semibold mb-4" style={{color:"#CCC9DC"}}>Step 1: Select a Season</h2>
-            <select value={selectedCategory} onChange={e=>handleCategoryChange(e.target.value)} className="w-full px-4 py-3 border rounded-lg text-base focus:outline-none focus:ring-2" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC","--tw-ring-color":"#324A5F"}}">
+          <div className="bg-white rounded-xl shadow-md p-8 mb-4">
+            <h2 className="text-lg font-semibold text-gray-700 mb-4">Step 1: Select a Season</h2>
+            <select value={selectedCategory} onChange={e=>handleCategoryChange(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-800 bg-white focus:ring-2 focus:ring-blue-500 text-base">
               <option value="">— Select a season —</option>
               {allCategories.map(cat=><option key={cat} value={cat}>{cat}</option>)}
             </select>
           </div>
           <div className={`bg-white rounded-xl shadow-md p-8 mb-6 transition-opacity ${selectedCategory?'opacity-100':'opacity-40 pointer-events-none'}`}>
-            <h2 className="text-lg font-semibold mb-4" style={{color:"#CCC9DC"}}>Step 2: Choose a Quiz</h2>
-            <select value={selectedQuizKey} onChange={e=>setSelectedQuizKey(e.target.value)} disabled={!selectedCategory} className="w-full px-4 py-3 border rounded-lg text-base focus:outline-none focus:ring-2" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC","--tw-ring-color":"#324A5F"}} mb-6">
+            <h2 className="text-lg font-semibold text-gray-700 mb-4">Step 2: Choose a Quiz</h2>
+            <select value={selectedQuizKey} onChange={e=>setSelectedQuizKey(e.target.value)} disabled={!selectedCategory} className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-800 bg-white focus:ring-2 focus:ring-blue-500 text-base mb-6">
               <option value="">— Select a quiz —</option>
               {quizzesInCategory.map(key => {
                 const attempt = userAttempts[key];
@@ -2058,10 +2058,10 @@ const QuizApp = () => {
             </select>
             {selectedQuizKey && userAttempts[selectedQuizKey]?.status === 'submitted' ? (
               <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 text-center">
-                <p className="text-yellow-200" style="color:#e5e05a font-medium">You have already completed this quiz. Results and scores have not yet been posted — stay tuned!</p>
+                <p className="text-yellow-800 font-medium">You have already completed this quiz. Results and scores have not yet been posted — stay tuned!</p>
               </div>
             ) : (
-              <button onClick={loadQuiz} disabled={!selectedQuizKey} className="w-full px-6 py-3 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-semibold text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              <button onClick={loadQuiz} disabled={!selectedQuizKey} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                 {selectedQuizKey && userAttempts[selectedQuizKey]?.status === 'in_progress' ? 'Resume Quiz' : 'Load Quiz'}
               </button>
             )}
@@ -2077,22 +2077,22 @@ const QuizApp = () => {
     const sortedWB=[...activeQuiz.wordBank].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
     const parts=display.split('______');
     return (
-      <div className="max-w-3xl mx-auto p-6 min-h-screen" style={{background:"#0C1821"}}>
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-gray-800">{activeQuiz.title}</h1>
-          <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 text-white rounded-lg" style={{background:"#253a50",border:"1px solid #324A5F"}} font-medium text-sm">Exit Quiz</button>
+          <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">Exit Quiz</button>
         </div>
         <div className="bg-white rounded-xl shadow-md p-6 mb-6">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Word Bank</h2>
           <div className="flex flex-wrap gap-2">
-            {sortedWB.map(word=>{const isUsed=usedWords.includes(word);const isCur=currentAnswer===word;return <button key={word} onClick={()=>selectWord(word)} className={`px-4 py-2 rounded-lg font-semibold transition-all border-2 ${isCur?'bg-green-600 text-white border-green-600 ring-2 ring-green-300':isUsed?'bg-gray-200 text-gray-400 border-[#253a50]" style={{borderColor:"#253a50"':'bg-blue-500 text-white border-blue-500 hover:bg-blue-600'}`}>{word}</button>;})}
+            {sortedWB.map(word=>{const isUsed=usedWords.includes(word);const isCur=currentAnswer===word;return <button key={word} onClick={()=>selectWord(word)} className={`px-4 py-2 rounded-lg font-semibold transition-all border-2 ${isCur?'bg-green-600 text-white border-green-600 ring-2 ring-green-300':isUsed?'bg-gray-200 text-gray-400 border-gray-200':'bg-blue-500 text-white border-blue-500 hover:bg-blue-600'}`}>{word}</button>;})}
           </div>
         </div>
         <div className="bg-white rounded-xl shadow-md p-8 mb-6">
-          <p className="text-2xl text-gray-800 leading-relaxed font-medium">{parts[0]}{currentAnswer?<span className="text-blue-300" style="color:#7eb8e8 font-bold">{currentAnswer}</span>:<span className="inline-block border-b-2 border-gray-400 w-28 mx-1 align-bottom"/>}{parts[1]}</p>
+          <p className="text-2xl text-gray-800 leading-relaxed font-medium">{parts[0]}{currentAnswer?<span className="text-blue-600 font-bold">{currentAnswer}</span>:<span className="inline-block border-b-2 border-gray-400 w-28 mx-1 align-bottom"/>}{parts[1]}</p>
         </div>
         <NavBar current={currentQuestionIndex} total={total} label="Sentence"/>
-        <button onClick={submitQuiz} className="w-full px-6 py-3 text-white rounded-lg" style={{background:"#1a3a2a",border:"1px solid #4ade80",color:"#4ade80"}} font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
+        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
         <ExitModal/>
       </div>
     );
@@ -2103,18 +2103,18 @@ const QuizApp = () => {
     const answeredCount=Object.keys(studentAnswers).filter(k=>(studentAnswers[k]||[]).length>0).length;
     const sels=studentAnswers[currentQuestionIndex]||[]; const multi=q.displayOptions.filter(o=>o.correct).length>1;
     return (
-      <div className="max-w-3xl mx-auto p-6 min-h-screen" style={{background:"#0C1821"}}>
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-gray-800">{activeQuiz.title}</h1>
-          <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 text-white rounded-lg" style={{background:"#253a50",border:"1px solid #324A5F"}} font-medium text-sm">Exit Quiz</button>
+          <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">Exit Quiz</button>
         </div>
         <div className="bg-white rounded-xl shadow-md p-8 mb-6">
           <div className="text-xl text-gray-800 font-semibold mb-2">{renderPrompt(q.prompt)}</div>
-          {multi&&<p className="text-sm text-blue-300" style="color:#7eb8e8 mb-4 font-medium">Select all that apply.</p>}
-          <div className="space-y-3 mt-4">{q.displayOptions.map((optObj,i)=><button key={i} onClick={()=>toggleMCAnswer(currentQuestionIndex,optObj.opt)} className={`w-full text-left px-5 py-3 rounded-lg border-2 font-medium transition-all ${sels.includes(optObj.opt)?'bg-green-600 text-white border-green-600':'bg-white text-[#CCC9DC]" style="color:#CCC9DC border-[#324A5F]" style={{borderColor:"#324A5F" hover:border-blue-400 hover:bg-blue-50'}`}>{optObj.opt}</button>)}</div>
+          {multi&&<p className="text-sm text-blue-600 mb-4 font-medium">Select all that apply.</p>}
+          <div className="space-y-3 mt-4">{q.displayOptions.map((optObj,i)=><button key={i} onClick={()=>toggleMCAnswer(currentQuestionIndex,optObj.opt)} className={`w-full text-left px-5 py-3 rounded-lg border-2 font-medium transition-all ${sels.includes(optObj.opt)?'bg-green-600 text-white border-green-600':'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}>{optObj.opt}</button>)}</div>
         </div>
         <NavBar current={currentQuestionIndex} total={total} label="Question"/>
-        <button onClick={submitQuiz} className="w-full px-6 py-3 text-white rounded-lg" style={{background:"#1a3a2a",border:"1px solid #4ade80",color:"#4ade80"}} font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
+        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
         <ExitModal/>
       </div>
     );
@@ -2124,17 +2124,17 @@ const QuizApp = () => {
     const q=activeQuestions[currentQuestionIndex]; const total=activeQuestions.length;
     const answeredCount=Object.keys(studentAnswers).filter(k=>(studentAnswers[k]||'').trim()!=='').length;
     return (
-      <div className="max-w-3xl mx-auto p-6 min-h-screen" style={{background:"#0C1821"}}>
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-gray-800">{activeQuiz.title}</h1>
-          <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 text-white rounded-lg" style={{background:"#253a50",border:"1px solid #324A5F"}} font-medium text-sm">Exit Quiz</button>
+          <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">Exit Quiz</button>
         </div>
         <div className="bg-white rounded-xl shadow-md p-8 mb-6">
           <div className="text-xl text-gray-800 font-semibold mb-6">{renderPrompt(q.prompt)}</div>
-          <input type="text" value={studentAnswers[currentQuestionIndex]||''} onChange={e=>setStudentAnswers(p=>({...p,[currentQuestionIndex]:e.target.value}))} placeholder="Type your answer here..." className="w-full px-4 py-3 border-2 border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg text-gray-800 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
+          <input type="text" value={studentAnswers[currentQuestionIndex]||''} onChange={e=>setStudentAnswers(p=>({...p,[currentQuestionIndex]:e.target.value}))} placeholder="Type your answer here..." className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-800 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
         </div>
         <NavBar current={currentQuestionIndex} total={total} label="Question"/>
-        <button onClick={submitQuiz} className="w-full px-6 py-3 text-white rounded-lg" style={{background:"#1a3a2a",border:"1px solid #4ade80",color:"#4ade80"}} font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
+        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
         <ExitModal/>
       </div>
     );
@@ -2148,25 +2148,25 @@ const QuizApp = () => {
     const sortedWB=[...new Set(fitbAnswers)].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
     const usedFITB=activeQuestions.map((_,i)=>studentAnswers[i]).filter(Boolean);
     return (
-      <div className="max-w-3xl mx-auto p-6 min-h-screen" style={{background:"#0C1821"}}>
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">{activeQuiz.title}</h1>
-          <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 text-white rounded-lg" style={{background:"#253a50",border:"1px solid #324A5F"}} font-medium text-sm">Exit Quiz</button>
+          <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">Exit Quiz</button>
         </div>
         <div className="flex items-center gap-2 mb-4">
-          <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${q.questionType==='MC'?'bg-purple-100 text-purple-700':q.questionType==='OR'?'bg-orange-100 text-orange-300" style="color:#fdba74':'bg-blue-100 text-blue-300" style="color:#7eb8e8'}`}>{shortTypeLabel(q.questionType)}</span>
+          <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${q.questionType==='MC'?'bg-purple-100 text-purple-700':q.questionType==='OR'?'bg-orange-100 text-orange-700':'bg-blue-100 text-blue-700'}`}>{shortTypeLabel(q.questionType)}</span>
         </div>
         {q.questionType==='FITB' && sortedWB.length>0 && (
           <div className="bg-white rounded-xl shadow-md p-6 mb-6">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Word Bank</h2>
-            <div className="flex flex-wrap gap-2">{sortedWB.map(word=>{const isUsed=usedFITB.includes(word);const isCur=studentAnswers[currentQuestionIndex]===word;return <button key={word} onClick={()=>selectWord(word)} className={`px-4 py-2 rounded-lg font-semibold transition-all border-2 ${isCur?'bg-green-600 text-white border-green-600 ring-2 ring-green-300':isUsed?'bg-gray-200 text-gray-400 border-[#253a50]" style={{borderColor:"#253a50"':'bg-blue-500 text-white border-blue-500 hover:bg-blue-600'}`}>{word}</button>;})}</div>
+            <div className="flex flex-wrap gap-2">{sortedWB.map(word=>{const isUsed=usedFITB.includes(word);const isCur=studentAnswers[currentQuestionIndex]===word;return <button key={word} onClick={()=>selectWord(word)} className={`px-4 py-2 rounded-lg font-semibold transition-all border-2 ${isCur?'bg-green-600 text-white border-green-600 ring-2 ring-green-300':isUsed?'bg-gray-200 text-gray-400 border-gray-200':'bg-blue-500 text-white border-blue-500 hover:bg-blue-600'}`}>{word}</button>;})}</div>
           </div>
         )}
-        {q.questionType==='FITB' && (()=>{const{display}=parseSentence(q.text||'');const cur=studentAnswers[currentQuestionIndex];const parts=display.split('______');return(<div className="bg-white rounded-xl shadow-md p-8 mb-6"><p className="text-2xl text-gray-800 leading-relaxed font-medium">{parts[0]}{cur?<span className="text-blue-300" style="color:#7eb8e8 font-bold">{cur}</span>:<span className="inline-block border-b-2 border-gray-400 w-28 mx-1 align-bottom"/>}{parts[1]}</p></div>);})()}
-        {q.questionType==='MC' && (()=>{const sels=studentAnswers[currentQuestionIndex]||[];const multi=qWithDisplay.displayOptions.filter(o=>o.correct).length>1;return(<div className="bg-white rounded-xl shadow-md p-8 mb-6"><div className="text-xl text-gray-800 font-semibold mb-2">{renderPrompt(q.prompt)}</div>{multi&&<p className="text-sm text-blue-300" style="color:#7eb8e8 mb-4 font-medium">Select all that apply.</p>}<div className="space-y-3 mt-4">{qWithDisplay.displayOptions.map((optObj,i)=><button key={i} onClick={()=>toggleMCAnswer(currentQuestionIndex,optObj.opt)} className={`w-full text-left px-5 py-3 rounded-lg border-2 font-medium transition-all ${sels.includes(optObj.opt)?'bg-green-600 text-white border-green-600':'bg-white text-[#CCC9DC]" style="color:#CCC9DC border-[#324A5F]" style={{borderColor:"#324A5F" hover:border-blue-400 hover:bg-blue-50'}`}>{optObj.opt}</button>)}</div></div>);})()}
-        {q.questionType==='OR' && (<div className="bg-white rounded-xl shadow-md p-8 mb-6"><div className="text-xl text-gray-800 font-semibold mb-6">{renderPrompt(q.prompt)}</div><input type="text" value={studentAnswers[currentQuestionIndex]||''} onChange={e=>setStudentAnswers(p=>({...p,[currentQuestionIndex]:e.target.value}))} placeholder="Type your answer here..." className="w-full px-4 py-3 border-2 border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg text-gray-800 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/></div>)}
+        {q.questionType==='FITB' && (()=>{const{display}=parseSentence(q.text||'');const cur=studentAnswers[currentQuestionIndex];const parts=display.split('______');return(<div className="bg-white rounded-xl shadow-md p-8 mb-6"><p className="text-2xl text-gray-800 leading-relaxed font-medium">{parts[0]}{cur?<span className="text-blue-600 font-bold">{cur}</span>:<span className="inline-block border-b-2 border-gray-400 w-28 mx-1 align-bottom"/>}{parts[1]}</p></div>);})()}
+        {q.questionType==='MC' && (()=>{const sels=studentAnswers[currentQuestionIndex]||[];const multi=qWithDisplay.displayOptions.filter(o=>o.correct).length>1;return(<div className="bg-white rounded-xl shadow-md p-8 mb-6"><div className="text-xl text-gray-800 font-semibold mb-2">{renderPrompt(q.prompt)}</div>{multi&&<p className="text-sm text-blue-600 mb-4 font-medium">Select all that apply.</p>}<div className="space-y-3 mt-4">{qWithDisplay.displayOptions.map((optObj,i)=><button key={i} onClick={()=>toggleMCAnswer(currentQuestionIndex,optObj.opt)} className={`w-full text-left px-5 py-3 rounded-lg border-2 font-medium transition-all ${sels.includes(optObj.opt)?'bg-green-600 text-white border-green-600':'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}>{optObj.opt}</button>)}</div></div>);})()}
+        {q.questionType==='OR' && (<div className="bg-white rounded-xl shadow-md p-8 mb-6"><div className="text-xl text-gray-800 font-semibold mb-6">{renderPrompt(q.prompt)}</div><input type="text" value={studentAnswers[currentQuestionIndex]||''} onChange={e=>setStudentAnswers(p=>({...p,[currentQuestionIndex]:e.target.value}))} placeholder="Type your answer here..." className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-800 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/></div>)}
         <NavBar current={currentQuestionIndex} total={total} label="Question"/>
-        <button onClick={submitQuiz} className="w-full px-6 py-3 text-white rounded-lg" style={{background:"#1a3a2a",border:"1px solid #4ade80",color:"#4ade80"}} font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
+        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
         <ExitModal/>
       </div>
     );
@@ -2183,14 +2183,14 @@ const QuizApp = () => {
   }
 
   if (mode==='authornote') return (
-    <div className="max-w-2xl mx-auto p-6 bg-[#152030]" style="background:#152030 min-h-screen">
+    <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen">
       <div className="flex justify-end mb-4">
-        <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 text-white rounded-lg" style={{background:"#253a50",border:"1px solid #324A5F"}} font-medium text-sm">Exit Quiz</button>
+        <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">Exit Quiz</button>
       </div>
-      <div className="rounded-xl shadow-md p-8" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
+      <div className="bg-white rounded-xl shadow-md p-8">
         <h1 className="text-2xl font-bold text-gray-800 mb-6">Author's Note</h1>
-        <p className="text-[#CCC9DC]" style="color:#CCC9DC whitespace-pre-wrap leading-relaxed">{activeQuiz?.authorNote}</p>
-        <button onClick={()=>setMode('assessment')} className="w-full mt-8 px-6 py-3 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-semibold text-lg">Continue to Quiz</button>
+        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{activeQuiz?.authorNote}</p>
+        <button onClick={()=>setMode('assessment')} className="w-full mt-8 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg">Continue to Quiz</button>
       </div>
       {showResetModal&&(
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -2198,8 +2198,8 @@ const QuizApp = () => {
             <h2 className="text-lg font-bold text-gray-800 mb-2">Exit Quiz?</h2>
             <p className="text-gray-600 mb-6">Your answers will be saved and you can continue this quiz later.</p>
             <div className="flex gap-3">
-              <button onClick={async()=>{await saveProgress();setShowResetModal(false);setMode('setup');}} className="flex-1 px-4 py-2 text-white rounded-lg" style={{background:"#3a1a1a",border:"1px solid #f87171",color:"#f87171"}} font-medium">Yes, Exit</button>
-              <button onClick={()=>setShowResetModal(false)} className="flex-1 px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium">Cancel</button>
+              <button onClick={async()=>{await saveProgress();setShowResetModal(false);setMode('setup');}} className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium">Yes, Exit</button>
+              <button onClick={()=>setShowResetModal(false)} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
             </div>
           </div>
         </div>
@@ -2306,19 +2306,19 @@ const QuizApp = () => {
 
     return (
       <><HelpModal/>
-      <div className="max-w-3xl mx-auto p-6 min-h-screen" style={{background:"#0C1821"}}>
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
         <div className="flex justify-between items-center mb-4">
-          <span className="text-sm" style={{color:"#8899aa"}}>{displayName || currentUser?.email || ''}</span>
+          <span className="text-sm text-gray-500">{displayName || currentUser?.email || ''}</span>
           <div className="flex gap-2">
             <button onClick={()=>setShowHelpModal('summary')} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm">?</button>
-            <button onClick={()=>{setCurrentQuestionIndex(0);setMode('assessment');}} className="px-4 py-2 text-white rounded-lg" style={{background:"#253a50",border:"1px solid #324A5F"}} font-medium text-sm">← Back to Questions</button>
+            <button onClick={()=>{setCurrentQuestionIndex(0);setMode('assessment');}} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">← Back to Questions</button>
           </div>
         </div>
-        <h1 className="text-2xl font-bold text-center mb-4" style={{color:"#FFFFFF"}}>{activeQuiz?.title}</h1>
+        <h1 className="text-2xl font-bold text-gray-800 text-center mb-4">{activeQuiz?.title}</h1>
 
         {/* Question table */}
-        <div className="rounded-xl shadow-md overflow-hidden mb-4" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-          <div className="grid grid-cols-12 gap-2 px-4 py-2 border-b text-xs font-semibold uppercase tracking-wider" style={{background:"#0C1821",color:"#8899aa",borderColor:"#324A5F"}}>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
+          <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
             <div className="col-span-1 text-center">#</div>
             <div className="col-span-7">Question</div>
             <div className="col-span-2 text-center">Your Answer</div>
@@ -2333,12 +2333,12 @@ const QuizApp = () => {
                 key={i}
                 onClick={() => handleTapQuestion(i)}
                 className={`grid grid-cols-12 gap-2 px-4 py-3 border-b last:border-b-0 items-center transition-colors
-                  ${assigned && !isBeingMoved ? "" style={{background:"#1a2535"}} : "" style={{background:"#1B2A41"}}}
+                  ${assigned && !isBeingMoved ? 'bg-yellow-50' : 'bg-white'}
                   ${tapSelected && !assigned ? 'cursor-pointer' : ''}`}
               >
                 <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}</div>
-                <div className="col-span-7 text-sm text-[#CCC9DC]" style="color:#CCC9DC pr-3">{getPromptPreview(q)}</div>
-                <div className="col-span-2 text-sm text-blue-300" style="color:#7eb8e8 font-medium text-center">{getAnswerDisplay(q, i)}</div>
+                <div className="col-span-7 text-sm text-gray-700 pr-3">{getPromptPreview(q)}</div>
+                <div className="col-span-2 text-sm text-blue-700 font-medium text-center">{getAnswerDisplay(q, i)}</div>
                 <div className="col-span-2 flex justify-center items-center min-h-[40px]">
                   {assigned && cfg ? (
                     <TokenChip
@@ -2362,8 +2362,8 @@ const QuizApp = () => {
         {/* Token bin + Final Submission — fixed to bottom of viewport */}
         <div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:40}}>
         <div style={{maxWidth:'48rem',margin:'0 auto'}}>
-        <div className="bg-white border-t border-[#253a50]" style={{borderColor:"#253a50" shadow-lg px-5 pt-4 pb-4 text-center" onClick={handleTapBin}>
-          <p className="text-sm font-semibold mb-1" style="color:#CCC9DC">Your tokens — tap to select, then tap a question to assign</p>
+        <div className="bg-white border-t border-gray-200 shadow-lg px-5 pt-4 pb-4 text-center" onClick={handleTapBin}>
+          <p className="text-sm font-semibold text-gray-700 mb-1">Your tokens — tap to select, then tap a question to assign</p>
           <p className="text-xs text-gray-400 mb-3">Hover over a token to see what it does. Tap an assigned token to pick it back up.</p>
           {binTokensList.length > 0 ? (
             <div className="flex flex-wrap gap-3 items-center justify-center">
@@ -2380,9 +2380,9 @@ const QuizApp = () => {
               ))}
             </div>
           ) : (
-            <p className="text-sm italic" style={{color:"#556677"}}>All tokens assigned ✓</p>
+            <p className="text-sm text-gray-400 italic">All tokens assigned ✓</p>
           )}
-          <p className={`text-sm font-medium mt-2 ${allAssigned ? 'text-green-400" style="color:#4ade80' : 'text-gray-500'}`}>
+          <p className={`text-sm font-medium mt-2 ${allAssigned ? 'text-green-700' : 'text-gray-500'}`}>
             {allAssigned
               ? `✓ All ${totalTokens} token${totalTokens !== 1 ? 's' : ''} assigned.`
               : `${assignedCount} of ${totalTokens} token${totalTokens !== 1 ? 's' : ''} assigned.`}
@@ -2390,7 +2390,7 @@ const QuizApp = () => {
           <button
             onClick={e => { e.stopPropagation(); handleFinalSubmission(); }}
             disabled={!allAssigned}
-            className="mt-3 w-full px-6 py-3 text-white rounded-lg" style={{background:"#1a3a2a",border:"1px solid #4ade80",color:"#4ade80"}} font-semibold text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            className="mt-3 w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             <Check size={20}/> Final Submission
           </button>
@@ -2404,14 +2404,14 @@ const QuizApp = () => {
   if (mode==='submitted') {
     const hasDisputes = Object.values(disputedQuestions).some(v=>v);
     return (
-      <div className="max-w-3xl mx-auto p-6 min-h-screen" style={{background:"#0C1821"}}>
-        <div className="rounded-xl shadow-md p-6 mb-4" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-          <h1 className="text-2xl font-bold mb-1" style={{color:"#FFFFFF"}}>Quiz Submitted!</h1>
-          <p className="" style={{color:"#CCC9DC"}}>Your answers for <span className="font-semibold">{activeQuiz?.title}</span> have been recorded. Results and scores will be posted once everyone has completed the quiz — stay tuned!</p>
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <div className="bg-white rounded-xl shadow-md p-6 mb-4">
+          <h1 className="text-2xl font-bold text-gray-800 mb-1">Quiz Submitted!</h1>
+          <p className="text-gray-600">Your answers for <span className="font-semibold">{activeQuiz?.title}</span> have been recorded. Results and scores will be posted once everyone has completed the quiz — stay tuned!</p>
           {Object.keys(tokenAssignments).length > 0 && <p className="text-sm text-gray-500 mt-2">Token icons show your assignments.</p>}
         </div>
-        <div className="rounded-xl shadow-md overflow-hidden mb-4" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-          <div className="grid grid-cols-12 gap-2 px-4 py-2 border-b text-xs font-semibold uppercase tracking-wider" style={{background:"#0C1821",color:"#8899aa",borderColor:"#324A5F"}}>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
+          <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
             <div className="col-span-1 text-center">#</div>
             <div className="col-span-5">Question</div>
             <div className="col-span-2">Your Answer</div>
@@ -2424,7 +2424,7 @@ const QuizApp = () => {
             const alreadyDisputed = submittedDisputes.includes(i);
             const disputing = disputedQuestions[i] || false;
             return (
-              <div key={i} className={`border-b last:border-b-0 ${correct ? "" style={{background:"#0d2a1a"}} : "" style={{background:"#2a0d0d"}}}`}>
+              <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
                 <div className="grid grid-cols-12 gap-2 px-4 py-3 items-center">
                   <div className="col-span-1 text-center text-sm font-medium text-gray-500 flex flex-col items-center gap-1">
                     {i+1}
@@ -2434,8 +2434,8 @@ const QuizApp = () => {
                       </span>
                     )}
                   </div>
-                  <div className="col-span-5 text-sm text-[#CCC9DC]" style="color:#CCC9DC">{getPromptPreview(q)}</div>
-                  <div className={`col-span-2 text-sm font-medium ${correct ? 'text-green-400" style="color:#4ade80' : 'text-red-400" style="color:#f87171'}`}>{getAnswerDisplay(q, i)}</div>
+                  <div className="col-span-5 text-sm text-gray-700">{getPromptPreview(q)}</div>
+                  <div className={`col-span-2 text-sm font-medium ${correct ? 'text-green-700' : 'text-red-600'}`}>{getAnswerDisplay(q, i)}</div>
                   <div className="col-span-2 text-sm text-gray-600">{correct ? '✓' : getCorrectAnswerDisplay(q)}</div>
                   <div className="col-span-2 flex flex-col items-center justify-center">
                     {alreadyDisputed
@@ -2454,7 +2454,7 @@ const QuizApp = () => {
           })}
         </div>
         <div className="flex gap-3">
-          <button onClick={()=>setMode('setup')} className="flex-1 px-6 py-3 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-semibold">Back to Quiz List</button>
+          <button onClick={()=>setMode('setup')} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Back to Quiz List</button>
           <button onClick={handleSendDisputes} disabled={!hasDisputes||disputeSending} className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold disabled:opacity-40 disabled:cursor-not-allowed">{disputeSending?'Sending...':'Send Disputes'}</button>
         </div>
       </div>
@@ -2464,11 +2464,11 @@ const QuizApp = () => {
   if (mode==='results' && activeQuiz?.type==='fillintheblank') {
     const{correct,total}=getScore();
     return (
-      <div className="max-w-3xl mx-auto p-6 min-h-screen" style={{background:"#0C1821"}}>
-        <Header title="Quiz Results" rightSlot={<button onClick={()=>setMode('setup')} className="px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-medium">New Quiz</button>}/>
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <Header title="Quiz Results" rightSlot={<button onClick={()=>setMode('setup')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">New Quiz</button>}/>
         <ScoreBanner correct={correct} total={total}/>
-        <div className="rounded-xl shadow-md overflow-hidden mb-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>{activeQuestions.map((_,i)=>renderResultRow(activeQuestions[i],i,'fillintheblank'))}</div>
-        <button onClick={()=>{setActiveQuestions(shuffleArray(activeQuiz.sentences));setCurrentQuestionIndex(0);setStudentAnswers({});setMode('assessment');}} className="w-full px-6 py-3 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-semibold text-lg">Retry This Quiz</button>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">{activeQuestions.map((_,i)=>renderResultRow(activeQuestions[i],i,'fillintheblank'))}</div>
+        <button onClick={()=>{setActiveQuestions(shuffleArray(activeQuiz.sentences));setCurrentQuestionIndex(0);setStudentAnswers({});setMode('assessment');}} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg">Retry This Quiz</button>
       </div>
     );
   }
@@ -2476,11 +2476,11 @@ const QuizApp = () => {
   if (mode==='results' && activeQuiz?.type==='MC') {
     const{correct,total}=getScore();
     return (
-      <div className="max-w-3xl mx-auto p-6 min-h-screen" style={{background:"#0C1821"}}>
-        <Header title="Quiz Results" rightSlot={<button onClick={()=>setMode('setup')} className="px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-medium">New Quiz</button>}/>
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <Header title="Quiz Results" rightSlot={<button onClick={()=>setMode('setup')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">New Quiz</button>}/>
         <ScoreBanner correct={correct} total={total}/>
-        <div className="rounded-xl shadow-md overflow-hidden mb-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>{activeQuestions.map((_,i)=>renderResultRow(activeQuestions[i],i,'MC'))}</div>
-        <button onClick={()=>{const qs=activeQuiz.randomizeQuestions?shuffleArray(activeQuiz.questions):[...activeQuiz.questions];setActiveQuestions(qs.map(q=>({...q,displayOptions:(q.randomizeOptions?shuffleArray:x=>x)(q.options.map((opt,i)=>({opt,correct:q.correctIndices.includes(i)})).filter(o=>o.opt.trim()!==''))})));setCurrentQuestionIndex(0);setStudentAnswers({});setMode('assessment');}} className="w-full px-6 py-3 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-semibold text-lg">Retry This Quiz</button>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">{activeQuestions.map((_,i)=>renderResultRow(activeQuestions[i],i,'MC'))}</div>
+        <button onClick={()=>{const qs=activeQuiz.randomizeQuestions?shuffleArray(activeQuiz.questions):[...activeQuiz.questions];setActiveQuestions(qs.map(q=>({...q,displayOptions:(q.randomizeOptions?shuffleArray:x=>x)(q.options.map((opt,i)=>({opt,correct:q.correctIndices.includes(i)})).filter(o=>o.opt.trim()!==''))})));setCurrentQuestionIndex(0);setStudentAnswers({});setMode('assessment');}} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg">Retry This Quiz</button>
       </div>
     );
   }
@@ -2488,12 +2488,12 @@ const QuizApp = () => {
   if (mode==='results' && activeQuiz?.type==='openresponse') {
     const{correct,total}=getScore();
     return (
-      <div className="max-w-3xl mx-auto p-6 min-h-screen" style={{background:"#0C1821"}}>
-        <Header title="Quiz Results" rightSlot={<button onClick={()=>setMode('setup')} className="px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-medium">New Quiz</button>}/>
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <Header title="Quiz Results" rightSlot={<button onClick={()=>setMode('setup')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">New Quiz</button>}/>
         <ScoreBanner correct={correct} total={total}/>
-        <div className="rounded-xl shadow-md overflow-hidden mb-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>{activeQuestions.map((_,i)=>renderResultRow(activeQuestions[i],i,'openresponse'))}</div>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">{activeQuestions.map((_,i)=>renderResultRow(activeQuestions[i],i,'openresponse'))}</div>
         <OthersPopup/>
-        <button onClick={()=>{const qs=activeQuiz.randomizeQuestions?shuffleArray(activeQuiz.questions):[...activeQuiz.questions];setActiveQuestions(qs);setCurrentQuestionIndex(0);setStudentAnswers({});setMode('assessment');}} className="w-full px-6 py-3 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-semibold text-lg">Retry This Quiz</button>
+        <button onClick={()=>{const qs=activeQuiz.randomizeQuestions?shuffleArray(activeQuiz.questions):[...activeQuiz.questions];setActiveQuestions(qs);setCurrentQuestionIndex(0);setStudentAnswers({});setMode('assessment');}} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg">Retry This Quiz</button>
       </div>
     );
   }
@@ -2502,27 +2502,27 @@ const QuizApp = () => {
     const{correct,total}=getScore();
     const questionsForDisplay=activeQuestions.map(q=>q.questionType==='MC'?{...q,displayOptions:q.options.map((opt,i)=>({opt,correct:q.correctIndices.includes(i)})).filter(o=>o.opt.trim()!=='')}:q);
     return (
-      <div className="max-w-3xl mx-auto p-6 min-h-screen" style={{background:"#0C1821"}}>
-        <Header title="Quiz Results" rightSlot={<button onClick={()=>setMode('setup')} className="px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-medium">New Quiz</button>}/>
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <Header title="Quiz Results" rightSlot={<button onClick={()=>setMode('setup')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">New Quiz</button>}/>
         <ScoreBanner correct={correct} total={total}/>
-        <div className="rounded-xl shadow-md overflow-hidden mb-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
           {questionsForDisplay.map((q,i)=>renderResultRow(q,i,'combination',i+1))}
         </div>
         <OthersPopup/>
-        <button onClick={()=>{setActiveQuestions([...activeQuiz.questions]);setCurrentQuestionIndex(0);setStudentAnswers({});setMode('assessment');}} className="w-full px-6 py-3 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-semibold text-lg">Retry This Quiz</button>
+        <button onClick={()=>{setActiveQuestions([...activeQuiz.questions]);setCurrentQuestionIndex(0);setStudentAnswers({});setMode('assessment');}} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg">Retry This Quiz</button>
       </div>
     );
   }
   if (mode==='admin' && !isAdminAuthenticated) return (
-    <div className="max-w-md mx-auto p-6 bg-[#152030]" style="background:#152030 min-h-screen">
+    <div className="max-w-md mx-auto p-6 bg-gray-50 min-h-screen">
       <div className="bg-white rounded-xl shadow-md p-8 mt-12">
         <h1 className="text-2xl font-bold text-gray-800 mb-6">Admin Login</h1>
-        {loginError&&<div className="mb-4 p-3 bg-red-100 text-red-400" style="color:#f87171 rounded-lg text-sm">{loginError}</div>}
+        {loginError&&<div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{loginError}</div>}
         <div className="space-y-4">
-          <div><label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Username</label><input type="text" value={adminUsername} onChange={e=>setAdminUsername(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:outline-none" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC"}}"/></div>
-          <div><label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Password</label><input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&adminLogin()} className="w-full px-3 py-2 border rounded-lg focus:outline-none" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC"}}"/></div>
-          <button onClick={adminLogin} className="w-full px-6 py-3 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-semibold">Login</button>
-          <button onClick={()=>setMode('login')} className="w-full px-6 py-3 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium">Back to Main Login Page</button>
+          <div><label className="block text-sm font-medium text-gray-600 mb-1">Username</label><input type="text" value={adminUsername} onChange={e=>setAdminUsername(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/></div>
+          <div><label className="block text-sm font-medium text-gray-600 mb-1">Password</label><input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&adminLogin()} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/></div>
+          <button onClick={adminLogin} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Login</button>
+          <button onClick={()=>setMode('login')} className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Back to Main Login Page</button>
         </div>
       </div>
     </div>
@@ -2541,35 +2541,35 @@ const QuizApp = () => {
 
 
     return (
-      <div className="max-w-4xl mx-auto p-6 bg-[#152030]" style="background:#152030 min-h-screen">
+      <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
           <div className="flex gap-2">
-            <button onClick={()=>setMode('scoreboards')} className="flex items-center gap-2 px-4 py-2 text-white rounded-lg" style={{background:"#1B2A41",border:"1px solid #CCC9DC",color:"#CCC9DC"}} font-medium">Scoreboards</button>
-            <button onClick={()=>setAdminSection('users')} className="flex items-center gap-2 px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-medium">Manage Users</button>
-            <button onClick={adminLogout} className="flex items-center gap-2 px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium"><LogOut size={18}/> Log Out</button>
+            <button onClick={()=>setMode('scoreboards')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">Scoreboards</button>
+            <button onClick={()=>setAdminSection('users')} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Manage Users</button>
+            <button onClick={adminLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"><LogOut size={18}/> Log Out</button>
           </div>
         </div>
         {adminSection!=='users'&&<div className="flex items-center gap-3 mb-6 flex-wrap">
-          <button onClick={()=>{setAdminSection('list');resetQuizBuilder();}} className={`px-5 py-2 rounded-lg font-medium ${adminSection==='list'?'bg-gray-800 text-white':'bg-white text-gray-600 border border-[#324A5F]" style={{borderColor:"#324A5F" hover:bg-[#0C1821]" style="background:#0C1821'}`}>Existing Quizzes</button>
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${adminSection==='create'&&!editingKey?'border-gray-800 bg-[#152030]" style="background:#152030':'border-[#324A5F]" style={{borderColor:"#324A5F" bg-white'}`}>
+          <button onClick={()=>{setAdminSection('list');resetQuizBuilder();}} className={`px-5 py-2 rounded-lg font-medium ${adminSection==='list'?'bg-gray-800 text-white':'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}>Existing Quizzes</button>
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${adminSection==='create'&&!editingKey?'border-gray-800 bg-gray-50':'border-gray-300 bg-white'}`}>
             <span className="text-sm font-medium text-gray-600 whitespace-nowrap">New Quiz:</span>
-            <select value={newQuizTypeSelector} onChange={e=>setNewQuizTypeSelector(e.target.value)} className="px-2 py-1 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded text-sm focus:ring-2 focus:ring-blue-500">
+            <select value={newQuizTypeSelector} onChange={e=>setNewQuizTypeSelector(e.target.value)} className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500">
               <option value="openresponse">Open Response</option>
               <option value="MC">Multiple Choice</option>
               <option value="fillintheblank">Fill-in-the-blank</option>
               <option value="combination">Combination</option>
             </select>
-            <button onClick={startCreateQuiz} className="px-3 py-1 text-white rounded-lg" style={{background:"#253a50",border:"1px solid #CCC9DC"}} text-sm font-medium">Create</button>
+            <button onClick={startCreateQuiz} className="px-3 py-1 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">Create</button>
           </div>
-          <button onClick={()=>setAdminSection('audit')} className={`px-5 py-2 rounded-lg font-medium ${adminSection==='audit'?'bg-gray-800 text-white':'bg-white text-gray-600 border border-[#324A5F]" style={{borderColor:"#324A5F" hover:bg-[#0C1821]" style="background:#0C1821'}`}>🔍 Score Auditor</button>
+          <button onClick={()=>setAdminSection('audit')} className={`px-5 py-2 rounded-lg font-medium ${adminSection==='audit'?'bg-gray-800 text-white':'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}>🔍 Score Auditor</button>
         </div>}
 
         {adminSection==='list'&&(
           <div className="space-y-4">
             <div className="flex items-center gap-3 flex-wrap">
               <label className="text-sm font-medium text-gray-600">Season:</label>
-              <select value={adminSeasonFilter} onChange={e=>setAdminSeasonFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm focus:outline-none" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC"}}">
+              <select value={adminSeasonFilter} onChange={e=>setAdminSeasonFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white">
                 <option value="All">All</option>
                 <option value="Offseason">Offseason</option>
                 {Array.from(new Set(Object.values(allQuizData).map(q=>q.category).filter(c=>c&&c.trim().toLowerCase()!=='offseason'))).sort((a,b)=>a.localeCompare(b)).map(cat=><option key={cat} value={cat}>{cat}</option>)}
@@ -2577,8 +2577,8 @@ const QuizApp = () => {
               <div className="flex items-center gap-4 ml-2">
                 {['Active','Inactive','Scored'].map(status=>(
                   <label key={status} className="flex items-center gap-1.5 cursor-pointer select-none">
-                    <input type="checkbox" checked={adminStatusFilter[status]} onChange={()=>setAdminStatusFilter(p=>({...p,[status]:!p[status]}))} className="w-4 h-4 rounded border-[#324A5F]" style={{borderColor:"#324A5F" text-blue-300" style="color:#7eb8e8"/>
-                    <span className="text-sm" style={{color:"#CCC9DC"}}>{status}</span>
+                    <input type="checkbox" checked={adminStatusFilter[status]} onChange={()=>setAdminStatusFilter(p=>({...p,[status]:!p[status]}))} className="w-4 h-4 rounded border-gray-300 text-blue-600"/>
+                    <span className="text-sm text-gray-600">{status}</span>
                   </label>
                 ))}
               </div>
@@ -2589,29 +2589,29 @@ const QuizApp = () => {
               const itemCount=qType==='fillintheblank'?quiz.sentences?.length:quiz.questions?.length;
               const itemLabel=qType==='fillintheblank'?'sentence':'question';
               return (
-                <div key={key} className="rounded-xl shadow-md p-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
+                <div key={key} className="bg-white rounded-xl shadow-md p-6">
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="text-xl font-bold text-gray-800">{quiz.title}</h3>
                       <p className="text-sm text-gray-500 mt-1 flex items-center gap-2 flex-wrap">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${(quiz.status||'Active')==='Active'?'bg-green-100 text-green-400" style="color:#4ade80':(quiz.status||'Active')==='Scored'?'bg-purple-100 text-purple-700':'bg-gray-200 text-gray-500'}`}>{quiz.status||'Active'}</span>
-                        {quiz.category&&<span className="inline-block bg-[#0C1821]" style="background:#0C1821 text-gray-600 px-2 py-0.5 rounded text-xs font-medium">{quiz.category}</span>}
-                        <span className="inline-block bg-blue-100 text-blue-300" style="color:#7eb8e8 px-2 py-0.5 rounded text-xs font-medium">{typeLabel(qType)}</span>
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${(quiz.status||'Active')==='Active'?'bg-green-100 text-green-700':(quiz.status||'Active')==='Scored'?'bg-purple-100 text-purple-700':'bg-gray-200 text-gray-500'}`}>{quiz.status||'Active'}</span>
+                        {quiz.category&&<span className="inline-block bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-medium">{quiz.category}</span>}
+                        <span className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">{typeLabel(qType)}</span>
                         {itemCount} {itemLabel}{itemCount!==1?'s':''}
                       </p>
                     </div>
                     <div className="flex gap-2">
                       <button onClick={()=>startEditQuiz(key)} className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium"><Edit2 size={16}/> Edit</button>
-                      {(quiz.status||'Active')==='Scored' && <button onClick={()=>{setViewScoringKey(key);setMode('scoreboard');}} className="flex items-center gap-2 px-3 py-2 text-white rounded-lg" style={{background:"#1B2A41",border:"1px solid #CCC9DC",color:"#CCC9DC"}} text-sm font-medium"><Star size={16}/> View Scoring</button>}
-                      <button onClick={()=>setConfirmDeleteKey(key)} className="flex items-center gap-2 px-3 py-2 text-white rounded-lg" style={{background:"#3a1a1a",border:"1px solid #f87171",color:"#f87171"}} text-sm font-medium"><Trash2 size={16}/></button>
+                      {(quiz.status||'Active')==='Scored' && <button onClick={()=>{setViewScoringKey(key);setMode('scoreboard');}} className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium"><Star size={16}/> View Scoring</button>}
+                      <button onClick={()=>setConfirmDeleteKey(key)} className="flex items-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm font-medium"><Trash2 size={16}/></button>
                     </div>
                   </div>
                   <details className="mt-4">
-                    <summary className="text-sm text-blue-300" style="color:#7eb8e8 cursor-pointer hover:text-blue-300" style="color:#7eb8e8 font-medium">View {qType==='fillintheblank'?'sentences':'questions'}</summary>
+                    <summary className="text-sm text-blue-600 cursor-pointer hover:text-blue-800 font-medium">View {qType==='fillintheblank'?'sentences':'questions'}</summary>
                     <ol className="mt-3 space-y-2 list-decimal list-inside">
                       {qType==='fillintheblank'
-                        ?quiz.sentences?.map((s,i)=><li key={i} className="text-sm" style={{color:"#CCC9DC"}}>{s.text}</li>)
-                        :quiz.questions?.map((q,i)=><li key={i} className="text-sm" style={{color:"#CCC9DC"}}>{qType==='combination'?<span><span className={`inline-block mr-2 px-1.5 py-0.5 rounded text-xs font-bold ${q.questionType==='MC'?'bg-purple-100 text-purple-700':q.questionType==='OR'?'bg-orange-100 text-orange-300" style="color:#fdba74':'bg-blue-100 text-blue-300" style="color:#7eb8e8'}`}>{shortTypeLabel(q.questionType)}</span>{q.prompt||q.text}</span>:q.prompt}</li>)
+                        ?quiz.sentences?.map((s,i)=><li key={i} className="text-sm text-gray-700">{s.text}</li>)
+                        :quiz.questions?.map((q,i)=><li key={i} className="text-sm text-gray-700">{qType==='combination'?<span><span className={`inline-block mr-2 px-1.5 py-0.5 rounded text-xs font-bold ${q.questionType==='MC'?'bg-purple-100 text-purple-700':q.questionType==='OR'?'bg-orange-100 text-orange-700':'bg-blue-100 text-blue-700'}`}>{shortTypeLabel(q.questionType)}</span>{q.prompt||q.text}</span>:q.prompt}</li>)
                       }
                     </ol>
                   </details>
@@ -2623,32 +2623,32 @@ const QuizApp = () => {
 
         {adminSection==='create'&&(
           <div className="space-y-6">
-            {editingKey&&<div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-3 text-blue-300" style="color:#7eb8e8 font-medium text-sm">Editing: <span className="font-bold">{allQuizData[editingKey]?.title}</span><span className="ml-3 inline-block bg-blue-200 text-blue-300" style="color:#7eb8e8 px-2 py-0.5 rounded text-xs">{typeLabel(newQuizType)}</span></div>}
-            <div className="rounded-xl shadow-md p-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
+            {editingKey&&<div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-3 text-blue-700 font-medium text-sm">Editing: <span className="font-bold">{allQuizData[editingKey]?.title}</span><span className="ml-3 inline-block bg-blue-200 text-blue-800 px-2 py-0.5 rounded text-xs">{typeLabel(newQuizType)}</span></div>}
+            <div className="bg-white rounded-xl shadow-md p-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-4">Quiz Details</h2>
               {/* Row 1: Title (full width) */}
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Quiz Title <span className="text-red-400" style="color:#f87171">*</span></label>
-                <input type="text" value={newQuizTitle} onChange={e=>setNewQuizTitle(e.target.value)} placeholder="e.g. Chapter 5 Review" className="w-full px-3 py-2 border rounded-lg focus:outline-none" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC"}}"/>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Quiz Title <span className="text-red-500">*</span></label>
+                <input type="text" value={newQuizTitle} onChange={e=>setNewQuizTitle(e.target.value)} placeholder="e.g. Chapter 5 Review" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/>
               </div>
               {/* Row 2: Season (wider) + Status + Closing Date */}
               <div className="flex gap-3 items-end mb-3">
                 <div style={{flex:'1 1 0',minWidth:0}}>
-                  <label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Season <span className="text-red-400" style="color:#f87171">*</span></label>
-                  <select value={showNewCategoryInput?'__new__':newQuizCategory} onChange={e=>{if(e.target.value==='__new__'){setShowNewCategoryInput(true);setNewQuizCategory('');}else{setShowNewCategoryInput(false);setNewQuizCategory(e.target.value);}}} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC"}}">
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Season <span className="text-red-500">*</span></label>
+                  <select value={showNewCategoryInput?'__new__':newQuizCategory} onChange={e=>{if(e.target.value==='__new__'){setShowNewCategoryInput(true);setNewQuizCategory('');}else{setShowNewCategoryInput(false);setNewQuizCategory(e.target.value);}}} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                     <option value="">— Season —</option>
                     {allCategoriesAdmin.map(cat=><option key={cat} value={cat}>{cat}</option>)}
                     <option value="__new__">+ New…</option>
                   </select>
                 </div>
                 <div style={{flexShrink:0}}>
-                  <label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Status <span className="text-red-400" style="color:#f87171">*</span></label>
-                  <select value={newQuizStatus} onChange={e=>setNewQuizStatus(e.target.value)} className="px-3 py-2 border rounded-lg text-sm focus:outline-none" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC"}}">
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Status <span className="text-red-500">*</span></label>
+                  <select value={newQuizStatus} onChange={e=>setNewQuizStatus(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                     <option value="Active">Active</option><option value="Inactive">Inactive</option><option value="Scored">Scored</option>
                   </select>
                 </div>
                 <div style={{flexShrink:0}}>
-                  <label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Closing Date</label>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Closing Date</label>
                   <div style={{position:'relative'}}>
                     <button
                       type="button"
@@ -2659,9 +2659,9 @@ const QuizApp = () => {
                         }
                         setShowDatePicker(p => !p);
                       }}
-                      className="px-3 py-2 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg text-sm w-36 text-left bg-white hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-36 text-left bg-white hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      {newQuizClosingDate || <span className="" style={{color:"#556677"}}>Pick a date…</span>}
+                      {newQuizClosingDate || <span className="text-gray-400">Pick a date…</span>}
                     </button>
                     {newQuizClosingDate && (
                       <button type="button" onClick={() => { setNewQuizClosingDate(''); setShowDatePicker(false); }} className="ml-1 text-gray-400 hover:text-gray-600 text-xs align-middle">✕</button>
@@ -2682,9 +2682,9 @@ const QuizApp = () => {
                       return (
                         <div style={{position:'absolute',top:'100%',left:0,zIndex:50,marginTop:4,background:'white',border:'1px solid #d1d5db',borderRadius:8,boxShadow:'0 4px 16px rgba(0,0,0,0.12)',padding:10,width:240}}>
                           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-                            <button type="button" onClick={()=>setDatePickerMonth(p=>{ const d=new Date(p.year,p.month-1,1); return {year:d.getFullYear(),month:d.getMonth()}; })} className="px-2 py-0.5 rounded hover:bg-[#0C1821]" style="background:#0C1821 text-gray-600 font-bold">‹</button>
-                            <span className="text-sm font-semibold text-[#CCC9DC]" style="color:#CCC9DC">{monthNames[month]} {year}</span>
-                            <button type="button" onClick={()=>setDatePickerMonth(p=>{ const d=new Date(p.year,p.month+1,1); return {year:d.getFullYear(),month:d.getMonth()}; })} className="px-2 py-0.5 rounded hover:bg-[#0C1821]" style="background:#0C1821 text-gray-600 font-bold">›</button>
+                            <button type="button" onClick={()=>setDatePickerMonth(p=>{ const d=new Date(p.year,p.month-1,1); return {year:d.getFullYear(),month:d.getMonth()}; })} className="px-2 py-0.5 rounded hover:bg-gray-100 text-gray-600 font-bold">‹</button>
+                            <span className="text-sm font-semibold text-gray-700">{monthNames[month]} {year}</span>
+                            <button type="button" onClick={()=>setDatePickerMonth(p=>{ const d=new Date(p.year,p.month+1,1); return {year:d.getFullYear(),month:d.getMonth()}; })} className="px-2 py-0.5 rounded hover:bg-gray-100 text-gray-600 font-bold">›</button>
                           </div>
                           <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,marginBottom:4}}>
                             {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d=><div key={d} style={{textAlign:'center',fontSize:11,fontWeight:600,color:'#9ca3af',paddingBottom:2}}>{d}</div>)}
@@ -2718,13 +2718,13 @@ const QuizApp = () => {
                 </div>
               </div>
               {showNewCategoryInput&&<div className="mb-3"><input type="text" value={newCategoryInput} onChange={e=>setNewCategoryInput(e.target.value)} placeholder="New season name" autoFocus className="w-full px-3 py-2 border border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500"/></div>}
-              {effectiveCategory&&<p className="text-xs" style={{color:"#556677"}}>Category: <span className="font-semibold text-gray-600">{effectiveCategory}</span></p>}
+              {effectiveCategory&&<p className="text-xs text-gray-400">Category: <span className="font-semibold text-gray-600">{effectiveCategory}</span></p>}
               <div className="mt-4">
-                <label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Author's Note <span className="text-xs" style={{color:"#556677"}}>(optional — shown to users before they begin the quiz)</span></label>
-                <textarea value={newQuizAuthorNote} onChange={e=>setNewQuizAuthorNote(e.target.value)} placeholder="Special instructions, context, or notes for quiz-takers..." rows={3} className="w-full px-3 py-2 border rounded-lg focus:outline-none" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC"}} resize-none text-sm"/>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Author's Note <span className="text-xs text-gray-400">(optional — shown to users before they begin the quiz)</span></label>
+                <textarea value={newQuizAuthorNote} onChange={e=>setNewQuizAuthorNote(e.target.value)} placeholder="Special instructions, context, or notes for quiz-takers..." rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none text-sm"/>
               </div>
               <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-600 mb-2">Token Slots <span className="text-xs" style={{color:"#556677"}}>(6 slots — assign token types players receive)</span></label>
+                <label className="block text-sm font-medium text-gray-600 mb-2">Token Slots <span className="text-xs text-gray-400">(6 slots — assign token types players receive)</span></label>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                   {newQuizTokenSlots.map((slot, i) => (
                     <div key={i} className="flex flex-col items-center gap-1">
@@ -2732,7 +2732,7 @@ const QuizApp = () => {
                       <select
                         value={slot}
                         onChange={e => { const updated = [...newQuizTokenSlots]; updated[i] = e.target.value; setNewQuizTokenSlots(updated); }}
-                        className="w-full px-2 py-1.5 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white"
                       >
                         <option value="none">None</option>
                         <option value="doubler">Doubler</option>
@@ -2755,19 +2755,19 @@ const QuizApp = () => {
               <>
                 {combQuestions.length>0&&(
                   <div>
-                    <button onClick={()=>setShowQuestionSummary(s=>!s)} className="flex items-center gap-2 px-4 py-2 bg-white border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg hover:bg-[#152030]" style="background:#152030 text-sm font-medium text-[#CCC9DC]" style="color:#CCC9DC w-full justify-between shadow-sm">
+                    <button onClick={()=>setShowQuestionSummary(s=>!s)} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700 w-full justify-between shadow-sm">
                       <span className="flex items-center gap-2"><List size={16}/> {showQuestionSummary?'Close':'Open'} Question Summaries ({combQuestions.length} question{combQuestions.length!==1?'s':''})</span>
-                      <span className="" style={{color:"#556677"}}>{showQuestionSummary?'▲':'▼'}</span>
+                      <span className="text-gray-400">{showQuestionSummary?'▲':'▼'}</span>
                     </button>
                     {showQuestionSummary&&(
-                      <div className="bg-white border border-[#253a50]" style={{borderColor:"#253a50" rounded-xl shadow-sm mt-1 overflow-hidden">
+                      <div className="bg-white border border-gray-200 rounded-xl shadow-sm mt-1 overflow-hidden">
                         {combQuestions.map((q,i)=>(
-                          <div key={i} className={`flex items-center gap-3 px-4 py-3 border-b last:border-b-0 ${combCurrentIndex===i?"" style={{background:"#162840"}}:''}`}>
+                          <div key={i} className={`flex items-center gap-3 px-4 py-3 border-b last:border-b-0 ${combCurrentIndex===i?'bg-blue-50':''}`}>
                             <span className="text-sm text-gray-400 font-medium w-5">{i+1}.</span>
-                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold flex-shrink-0 ${q.questionType==='MC'?'bg-purple-100 text-purple-700':q.questionType==='OR'?'bg-orange-100 text-orange-300" style="color:#fdba74':'bg-blue-100 text-blue-300" style="color:#7eb8e8'}`}>{shortTypeLabel(q.questionType)}</span>
-                            <span className="flex-1 text-sm text-[#CCC9DC]" style="color:#CCC9DC truncate">{promptPreview(q)}</span>
+                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold flex-shrink-0 ${q.questionType==='MC'?'bg-purple-100 text-purple-700':q.questionType==='OR'?'bg-orange-100 text-orange-700':'bg-blue-100 text-blue-700'}`}>{shortTypeLabel(q.questionType)}</span>
+                            <span className="flex-1 text-sm text-gray-700 truncate">{promptPreview(q)}</span>
                             <button onClick={()=>editCombQuestion(i)} className="flex items-center gap-1 px-2 py-1 bg-blue-500 text-white rounded text-xs font-medium hover:bg-blue-600 flex-shrink-0"><Edit2 size={12}/> Edit</button>
-                            <button onClick={()=>deleteCombQuestion(i)} className="p-1 text-red-400 hover:text-red-400" style="color:#f87171 flex-shrink-0"><Trash2 size={14}/></button>
+                            <button onClick={()=>deleteCombQuestion(i)} className="p-1 text-red-400 hover:text-red-600 flex-shrink-0"><Trash2 size={14}/></button>
                           </div>
                         ))}
                       </div>
@@ -2775,14 +2775,14 @@ const QuizApp = () => {
                   </div>
                 )}
                 {!combDraft&&(
-                  <div className="rounded-xl shadow-md p-5" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
+                  <div className="bg-white rounded-xl shadow-md p-5">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium" style={{color:"#CCC9DC"}}>Question Type:</span>
-                      <select value={combNewQType} onChange={e=>setCombNewQType(e.target.value)} className="px-3 py-2 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                      <span className="text-sm font-medium text-gray-700">Question Type:</span>
+                      <select value={combNewQType} onChange={e=>setCombNewQType(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
                         <option value="MC">Multiple Choice</option>
                         <option value="OR">Open Response</option>
                       </select>
-                      <button onClick={startNewCombQuestion} className="flex items-center gap-1 px-4 py-2 text-white rounded-lg" style={{background:"#253a50",border:"1px solid #CCC9DC"}} font-medium text-sm"><Plus size={16}/> Create New Question</button>
+                      <button onClick={startNewCombQuestion} className="flex items-center gap-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm"><Plus size={16}/> Create New Question</button>
                     </div>
                     {combQuestions.length===0&&<p className="text-sm text-gray-400 mt-3">No questions yet. Use the selector above to add your first question.</p>}
                   </div>
@@ -2792,15 +2792,15 @@ const QuizApp = () => {
                   return (
                     <div className="bg-white rounded-xl shadow-md p-6 border-2 border-blue-300">
                       <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-md font-semibold text-[#CCC9DC]" style="color:#CCC9DC">
+                        <h3 className="text-md font-semibold text-gray-700">
                           {isEditing?`Editing Question ${combCurrentIndex+1}`:'New Question'}{' '}
-                          <span className={`ml-2 inline-block px-2 py-0.5 rounded text-xs font-bold ${qt==='MC'?'bg-purple-100 text-purple-700':'bg-orange-100 text-orange-300" style="color:#fdba74'}`}>{shortTypeLabel(qt)}</span>
+                          <span className={`ml-2 inline-block px-2 py-0.5 rounded text-xs font-bold ${qt==='MC'?'bg-purple-100 text-purple-700':'bg-orange-100 text-orange-700'}`}>{shortTypeLabel(qt)}</span>
                         </h3>
 
                       </div>
                       {qt==='MC'&&(
                         <>
-                          <div className="mb-4"><label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Prompt <span className="text-red-400" style="color:#f87171">*</span></label><textarea value={combDraft.prompt||''} onChange={e=>updateCombDraft('prompt',e.target.value)} rows={2} placeholder="Enter the question..." className="w-full px-3 py-2 border rounded-lg focus:outline-none" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC"}} resize-none"/><ImageHelper/></div>
+                          <div className="mb-4"><label className="block text-sm font-medium text-gray-600 mb-1">Prompt <span className="text-red-500">*</span></label><textarea value={combDraft.prompt||''} onChange={e=>updateCombDraft('prompt',e.target.value)} rows={2} placeholder="Enter the question..." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/><ImageHelper/></div>
                           <div className="mb-4">
                             <div className="flex items-center justify-between mb-2">
                               <label className="text-sm font-medium text-gray-600">Options</label>
@@ -2809,8 +2809,8 @@ const QuizApp = () => {
                               <div className="grid grid-cols-12 gap-2 mb-1"><div className="col-span-10 text-xs font-semibold text-gray-400 uppercase pl-1">Option text</div><div className="col-span-2 text-xs font-semibold text-gray-400 uppercase text-center">Correct</div></div>
                               {(combDraft.options||[]).map((opt,i)=>(
                                 <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                                  <input type="text" value={opt} onChange={e=>updateCombDraftOption(i,e.target.value)} placeholder={`Option ${i+1}`} className="col-span-10 px-3 py-2 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg text-sm focus:ring-2 focus:ring-blue-500"/>
-                                  <div className="col-span-2 flex justify-center"><input type="checkbox" checked={(combDraft.correctIndices||[]).includes(i)} onChange={()=>toggleCombDraftCorrect(i)} className="w-5 h-5 rounded border-[#324A5F]" style={{borderColor:"#324A5F" text-green-400" style="color:#4ade80"/></div>
+                                  <input type="text" value={opt} onChange={e=>updateCombDraftOption(i,e.target.value)} placeholder={`Option ${i+1}`} className="col-span-10 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"/>
+                                  <div className="col-span-2 flex justify-center"><input type="checkbox" checked={(combDraft.correctIndices||[]).includes(i)} onChange={()=>toggleCombDraftCorrect(i)} className="w-5 h-5 rounded border-gray-300 text-green-600"/></div>
                                 </div>
                               ))}
                             </div>
@@ -2819,38 +2819,38 @@ const QuizApp = () => {
                       )}
                       {qt==='OR'&&(
                         <>
-                          <div className="mb-4"><label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Prompt <span className="text-red-400" style="color:#f87171">*</span></label><textarea value={combDraft.prompt||''} onChange={e=>updateCombDraft('prompt',e.target.value)} rows={2} placeholder="Enter the question..." className="w-full px-3 py-2 border rounded-lg focus:outline-none" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC"}} resize-none"/><ImageHelper/></div>
+                          <div className="mb-4"><label className="block text-sm font-medium text-gray-600 mb-1">Prompt <span className="text-red-500">*</span></label><textarea value={combDraft.prompt||''} onChange={e=>updateCombDraft('prompt',e.target.value)} rows={2} placeholder="Enter the question..." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/><ImageHelper/></div>
                           <div className="mb-4">
-                            <label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Correct Answer</label>
+                            <label className="block text-sm font-medium text-gray-600 mb-1">Correct Answer</label>
                             <div className="flex gap-2">
-                              <input type="text" value={combOrAnswerInput} onChange={e=>setCombOrAnswerInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addCombDraftORAnswer()} placeholder="Type an accepted answer..." className="flex-1 px-3 py-2 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg focus:ring-2 focus:ring-blue-500"/>
-                              <button onClick={addCombDraftORAnswer} className="flex items-center gap-1 px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-medium"><Plus size={18}/> Include</button>
+                              <input type="text" value={combOrAnswerInput} onChange={e=>setCombOrAnswerInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addCombDraftORAnswer()} placeholder="Type an accepted answer..." className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/>
+                              <button onClick={addCombDraftORAnswer} className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"><Plus size={18}/> Include</button>
                             </div>
                           </div>
                           {(combDraft.acceptedAnswers||[]).length>0&&(
                             <div className="mb-4">
                               <label className="block text-sm font-medium text-gray-600 mb-2">Correct Answers Included <span className="ml-2 text-xs text-gray-400 font-normal">(click to set primary)</span></label>
-                              <div className="bg-[#152030]" style="background:#152030 border border-[#253a50]" style={{borderColor:"#253a50" rounded-lg p-3 space-y-2">
+                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
                                 {(combDraft.acceptedAnswers||[]).map((ans,i)=>{const isPrimary=i===(combDraft.primaryAnswerIndex||0);return(
-                                  <div key={i} onClick={()=>setCombDraftORPrimary(i)} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer border-2 transition-all ${isPrimary?'bg-yellow-50 border-yellow-400':'bg-white border-[#253a50]" style={{borderColor:"#253a50" hover:border-blue-300'}`}>
+                                  <div key={i} onClick={()=>setCombDraftORPrimary(i)} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer border-2 transition-all ${isPrimary?'bg-yellow-50 border-yellow-400':'bg-white border-gray-200 hover:border-blue-300'}`}>
                                     <Star size={14} className={isPrimary?'text-yellow-500 fill-yellow-500':'text-gray-300'}/>
-                                    <span className={`flex-1 text-sm ${isPrimary?'font-semibold text-gray-800':'text-[#CCC9DC]" style="color:#CCC9DC'}`}>{ans}</span>
-                                    {isPrimary&&<span className="text-xs text-yellow-200" style="color:#e5e05a font-medium">Primary</span>}
-                                    <button onClick={e=>{e.stopPropagation();removeCombDraftORAnswer(i);}} className="text-red-400 hover:text-red-400" style="color:#f87171 ml-1"><X size={14}/></button>
+                                    <span className={`flex-1 text-sm ${isPrimary?'font-semibold text-gray-800':'text-gray-700'}`}>{ans}</span>
+                                    {isPrimary&&<span className="text-xs text-yellow-600 font-medium">Primary</span>}
+                                    <button onClick={e=>{e.stopPropagation();removeCombDraftORAnswer(i);}} className="text-red-400 hover:text-red-600 ml-1"><X size={14}/></button>
                                   </div>
                                 );})}
                               </div>
                               {(combDraft.acceptedAnswers||[]).length>1&&(
                                 <div className="flex items-center gap-2 mt-2">
-                                  <input type="checkbox" checked={combDraft.showOthersCount||false} onChange={e=>updateCombDraft('showOthersCount',e.target.checked)} className="w-4 h-4 rounded border-[#324A5F]" style={{borderColor:"#324A5F" text-blue-300" style="color:#7eb8e8"/>
-                                  <span className="text-sm" style={{color:"#CCC9DC"}}>Show +X in quiz results</span>
+                                  <input type="checkbox" checked={combDraft.showOthersCount||false} onChange={e=>updateCombDraft('showOthersCount',e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600"/>
+                                  <span className="text-sm text-gray-700">Show +X in quiz results</span>
                                 </div>
                               )}
                             </div>
                           )}
                         </>
                       )}
-                      <div className="flex gap-3"><button onClick={submitCombQuestion} className="flex-1 px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-semibold">{isEditing?'Update Question':'Submit Question'}</button>{isEditing&&<button onClick={cancelCombEdit} className="px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium">Cancel Edit</button>}</div>
+                      <div className="flex gap-3"><button onClick={submitCombQuestion} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">{isEditing?'Update Question':'Submit Question'}</button>{isEditing&&<button onClick={cancelCombEdit} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel Edit</button>}</div>
                     </div>
                   );
                 })()}
@@ -2859,77 +2859,77 @@ const QuizApp = () => {
 
             {newQuizType==='fillintheblank'&&(
               <>
-                <div className="rounded-xl shadow-md p-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
+                <div className="bg-white rounded-xl shadow-md p-6">
                   <h2 className="text-lg font-semibold text-gray-800 mb-2">Sentences</h2>
-                  <p className="text-sm text-gray-500 mb-4">Wrap the answer word in <code className="bg-[#0C1821]" style="background:#0C1821 px-1 rounded">[square brackets]</code>.</p>
+                  <p className="text-sm text-gray-500 mb-4">Wrap the answer word in <code className="bg-gray-100 px-1 rounded">[square brackets]</code>.</p>
                   <div className="flex gap-2 mb-4">
-                    <textarea value={newSentenceInput} onChange={e=>setNewSentenceInput(e.target.value)} placeholder="Type a sentence with [answer] in brackets..." rows={2} className="flex-1 px-3 py-2 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/>
-                    <button onClick={addSentence} className="flex items-center gap-1 px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-medium self-start"><Plus size={18}/> Add</button>
+                    <textarea value={newSentenceInput} onChange={e=>setNewSentenceInput(e.target.value)} placeholder="Type a sentence with [answer] in brackets..." rows={2} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/>
+                    <button onClick={addSentence} className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium self-start"><Plus size={18}/> Add</button>
                   </div>
-                  {newQuizSentences.length>0&&<ol className="space-y-2">{newQuizSentences.map((sent,i)=><li key={i} className="flex items-start gap-2 bg-[#152030]" style="background:#152030 rounded-lg p-3"><span className="text-gray-400 text-sm font-medium w-6 flex-shrink-0">{i+1}.</span><span className="flex-1 text-sm text-[#CCC9DC]" style="color:#CCC9DC">{sent}</span><button onClick={()=>removeSentence(i)} className="text-red-400 hover:text-red-400" style="color:#f87171 flex-shrink-0"><Trash2 size={16}/></button></li>)}</ol>}
+                  {newQuizSentences.length>0&&<ol className="space-y-2">{newQuizSentences.map((sent,i)=><li key={i} className="flex items-start gap-2 bg-gray-50 rounded-lg p-3"><span className="text-gray-400 text-sm font-medium w-6 flex-shrink-0">{i+1}.</span><span className="flex-1 text-sm text-gray-700">{sent}</span><button onClick={()=>removeSentence(i)} className="text-red-400 hover:text-red-600 flex-shrink-0"><Trash2 size={16}/></button></li>)}</ol>}
                 </div>
-                <div className="rounded-xl shadow-md p-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
+                <div className="bg-white rounded-xl shadow-md p-6">
                   <h2 className="text-lg font-semibold text-gray-800 mb-2">Word Bank</h2>
                   <p className="text-sm text-gray-500 mb-4">Answer words are added automatically. Add extra distractor words below.</p>
-                  {autoWordBank.length>0&&<div className="mb-4"><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">From sentences (automatic)</p><div className="flex flex-wrap gap-2">{autoWordBank.map(w=><span key={w} className="px-3 py-1 bg-blue-100 text-blue-300" style="color:#7eb8e8 rounded-full text-sm font-medium">{w}</span>)}</div></div>}
+                  {autoWordBank.length>0&&<div className="mb-4"><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">From sentences (automatic)</p><div className="flex flex-wrap gap-2">{autoWordBank.map(w=><span key={w} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">{w}</span>)}</div></div>}
                   <div className="flex gap-2 mb-3">
-                    <input type="text" value={extraWordInput} onChange={e=>setExtraWordInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addExtraWord()} placeholder="Add an extra distractor word..." className="flex-1 px-3 py-2 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg focus:ring-2 focus:ring-blue-500"/>
-                    <button onClick={addExtraWord} className="flex items-center gap-1 px-4 py-2 text-white rounded-lg" style={{background:"#253a50"}} font-medium"><Plus size={18}/> Add</button>
+                    <input type="text" value={extraWordInput} onChange={e=>setExtraWordInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addExtraWord()} placeholder="Add an extra distractor word..." className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/>
+                    <button onClick={addExtraWord} className="flex items-center gap-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"><Plus size={18}/> Add</button>
                   </div>
-                  {extraWords.length>0&&<div className="mb-3"><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Extra words</p><div className="flex flex-wrap gap-2">{extraWords.map(w=><span key={w} className="flex items-center gap-1 px-3 py-1 bg-gray-200 text-[#CCC9DC]" style="color:#CCC9DC rounded-full text-sm font-medium">{w}<button onClick={()=>removeExtraWord(w)} className="text-gray-400 hover:text-red-400" style="color:#f87171"><X size={13}/></button></span>)}</div></div>}
+                  {extraWords.length>0&&<div className="mb-3"><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Extra words</p><div className="flex flex-wrap gap-2">{extraWords.map(w=><span key={w} className="flex items-center gap-1 px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-sm font-medium">{w}<button onClick={()=>removeExtraWord(w)} className="text-gray-400 hover:text-red-500"><X size={13}/></button></span>)}</div></div>}
                   {fullWordBank.length>0&&<div className="mt-4 p-3 bg-blue-50 rounded-lg"><p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-2">Full word bank preview</p><div className="flex flex-wrap gap-2">{fullWordBank.map(w=><span key={w} className="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm font-medium">{w}</span>)}</div></div>}
                 </div>
               </>
             )}
 
             {newQuizType==='MC'&&(
-              <div className="rounded-xl shadow-md p-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
+              <div className="bg-white rounded-xl shadow-md p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-800">Question {mcCurrentIndex+1} of {mcQuestions.length}</h2>
                   <div className="flex items-center gap-2">
                     <button onClick={()=>setMcCurrentIndex(i=>Math.max(0,i-1))} disabled={mcCurrentIndex===0} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronLeft size={18}/></button>
                     <button onClick={()=>setMcCurrentIndex(i=>Math.min(mcQuestions.length-1,i+1))} disabled={mcCurrentIndex===mcQuestions.length-1} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronRight size={18}/></button>
-                    <button onClick={()=>removeMCQuestion(mcCurrentIndex)} className="p-1 rounded bg-red-100 text-red-400" style="color:#f87171 hover:bg-red-200 ml-1"><Trash2 size={16}/></button>
+                    <button onClick={()=>removeMCQuestion(mcCurrentIndex)} className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200 ml-1"><Trash2 size={16}/></button>
                   </div>
                 </div>
-                <div className="mb-5"><label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Prompt <span className="text-red-400" style="color:#f87171">*</span></label><textarea value={mcQ.prompt} onChange={e=>updateMCQuestion('prompt',e.target.value)} placeholder="Enter the question..." rows={2} className="w-full px-3 py-2 border rounded-lg focus:outline-none" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC"}} resize-none"/><ImageHelper key={`mc-${mcCurrentIndex}`}/></div>
+                <div className="mb-5"><label className="block text-sm font-medium text-gray-600 mb-1">Prompt <span className="text-red-500">*</span></label><textarea value={mcQ.prompt} onChange={e=>updateMCQuestion('prompt',e.target.value)} placeholder="Enter the question..." rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/><ImageHelper key={`mc-${mcCurrentIndex}`}/></div>
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium text-gray-600">Options</label>
                   </div>
                   <div className="space-y-2">
                     <div className="grid grid-cols-12 gap-2 mb-1"><div className="col-span-10 text-xs font-semibold text-gray-400 uppercase pl-1">Option text</div><div className="col-span-2 text-xs font-semibold text-gray-400 uppercase text-center">Correct</div></div>
-                    {mcQ.options.map((opt,i)=><div key={i} className="grid grid-cols-12 gap-2 items-center"><input type="text" value={opt} onChange={e=>updateMCOption(i,e.target.value)} placeholder={`Option ${i+1}`} className="col-span-10 px-3 py-2 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg text-sm focus:ring-2 focus:ring-blue-500"/><div className="col-span-2 flex justify-center"><input type="checkbox" checked={mcQ.correctIndices.includes(i)} onChange={()=>toggleMCCorrect(i)} className="w-5 h-5 rounded border-[#324A5F]" style={{borderColor:"#324A5F" text-green-400" style="color:#4ade80"/></div></div>)}
+                    {mcQ.options.map((opt,i)=><div key={i} className="grid grid-cols-12 gap-2 items-center"><input type="text" value={opt} onChange={e=>updateMCOption(i,e.target.value)} placeholder={`Option ${i+1}`} className="col-span-10 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"/><div className="col-span-2 flex justify-center"><input type="checkbox" checked={mcQ.correctIndices.includes(i)} onChange={()=>toggleMCCorrect(i)} className="w-5 h-5 rounded border-gray-300 text-green-600"/></div></div>)}
                   </div>
                 </div>
               </div>
             )}
 
             {newQuizType==='openresponse'&&(
-              <div className="rounded-xl shadow-md p-6" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
+              <div className="bg-white rounded-xl shadow-md p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-800">Question {orCurrentIndex+1} of {orQuestions.length}</h2>
                   <div className="flex items-center gap-2">
                     <button onClick={()=>setOrCurrentIndex(i=>Math.max(0,i-1))} disabled={orCurrentIndex===0} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronLeft size={18}/></button>
                     <button onClick={()=>setOrCurrentIndex(i=>Math.min(orQuestions.length-1,i+1))} disabled={orCurrentIndex===orQuestions.length-1} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronRight size={18}/></button>
-                    <button onClick={()=>removeORQuestion(orCurrentIndex)} className="p-1 rounded bg-red-100 text-red-400" style="color:#f87171 hover:bg-red-200 ml-1"><Trash2 size={16}/></button>
+                    <button onClick={()=>removeORQuestion(orCurrentIndex)} className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200 ml-1"><Trash2 size={16}/></button>
                   </div>
                 </div>
-                <div className="mb-5"><label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Prompt <span className="text-red-400" style="color:#f87171">*</span></label><textarea value={orQ.prompt} onChange={e=>updateORQuestion('prompt',e.target.value)} placeholder="Enter the question..." rows={2} className="w-full px-3 py-2 border rounded-lg focus:outline-none" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC"}} resize-none"/><ImageHelper key={`or-${orCurrentIndex}`}/></div>
+                <div className="mb-5"><label className="block text-sm font-medium text-gray-600 mb-1">Prompt <span className="text-red-500">*</span></label><textarea value={orQ.prompt} onChange={e=>updateORQuestion('prompt',e.target.value)} placeholder="Enter the question..." rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/><ImageHelper key={`or-${orCurrentIndex}`}/></div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1" style={{color:"#CCC9DC"}}>Correct Answer</label>
-                  <div className="flex gap-2"><input type="text" value={orAnswerInput} onChange={e=>setOrAnswerInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addORAnswer()} placeholder="Type an accepted answer..." className="flex-1 px-3 py-2 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg focus:ring-2 focus:ring-blue-500"/><button onClick={addORAnswer} className="flex items-center gap-1 px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-medium"><Plus size={18}/> Include</button></div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Correct Answer</label>
+                  <div className="flex gap-2"><input type="text" value={orAnswerInput} onChange={e=>setOrAnswerInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addORAnswer()} placeholder="Type an accepted answer..." className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/><button onClick={addORAnswer} className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"><Plus size={18}/> Include</button></div>
                 </div>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-600 mb-2">Correct Answers Included <span className="ml-2 text-xs text-gray-400 font-normal">(click to set as primary)</span></label>
-                  {orQ.acceptedAnswers.length===0?<div className="bg-[#152030]" style="background:#152030 border border-[#253a50]" style={{borderColor:"#253a50" rounded-lg p-4 text-sm text-gray-400 text-center">No answers added yet.</div>:(
-                    <div className="bg-[#152030]" style="background:#152030 border border-[#253a50]" style={{borderColor:"#253a50" rounded-lg p-3 space-y-2">
+                  {orQ.acceptedAnswers.length===0?<div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-400 text-center">No answers added yet.</div>:(
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
                       {orQ.acceptedAnswers.map((ans,i)=>{const isPrimary=i===orQ.primaryAnswerIndex;return(
-                        <div key={i} onClick={()=>setORPrimary(i)} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer border-2 transition-all ${isPrimary?'bg-yellow-50 border-yellow-400':'bg-white border-[#253a50]" style={{borderColor:"#253a50" hover:border-blue-300'}`}>
+                        <div key={i} onClick={()=>setORPrimary(i)} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer border-2 transition-all ${isPrimary?'bg-yellow-50 border-yellow-400':'bg-white border-gray-200 hover:border-blue-300'}`}>
                           <Star size={15} className={isPrimary?'text-yellow-500 fill-yellow-500':'text-gray-300'}/>
-                          <span className={`flex-1 text-sm ${isPrimary?'font-semibold text-gray-800':'text-[#CCC9DC]" style="color:#CCC9DC'}`}>{ans}</span>
-                          {isPrimary&&<span className="text-xs text-yellow-200" style="color:#e5e05a font-medium">Primary</span>}
-                          <button onClick={e=>{e.stopPropagation();removeORAnswer(i);}} className="text-red-400 hover:text-red-400" style="color:#f87171 ml-1"><X size={14}/></button>
+                          <span className={`flex-1 text-sm ${isPrimary?'font-semibold text-gray-800':'text-gray-700'}`}>{ans}</span>
+                          {isPrimary&&<span className="text-xs text-yellow-600 font-medium">Primary</span>}
+                          <button onClick={e=>{e.stopPropagation();removeORAnswer(i);}} className="text-red-400 hover:text-red-600 ml-1"><X size={14}/></button>
                         </div>
                       );})}
                     </div>
@@ -2937,19 +2937,19 @@ const QuizApp = () => {
                 </div>
                 {orQ.acceptedAnswers.length>1&&(
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" checked={orQ.showOthersCount||false} onChange={e=>updateORQuestion('showOthersCount',e.target.checked)} className="w-4 h-4 rounded border-[#324A5F]" style={{borderColor:"#324A5F" text-blue-300" style="color:#7eb8e8"/>
-                    <label className="text-sm" style={{color:"#CCC9DC"}}>Show +X in quiz results{orQ.showOthersCount&&orQ.acceptedAnswers.length>1&&<span className="ml-2 text-xs text-gray-400"></span>}</label>
+                    <input type="checkbox" checked={orQ.showOthersCount||false} onChange={e=>updateORQuestion('showOthersCount',e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600"/>
+                    <label className="text-sm text-gray-700">Show +X in quiz results{orQ.showOthersCount&&orQ.acceptedAnswers.length>1&&<span className="ml-2 text-xs text-gray-400"></span>}</label>
                   </div>
                 )}
               </div>
             )}
 
             <div className="flex gap-3">
-              {newQuizType==='MC'&&<button onClick={addMCQuestion} className="flex items-center gap-2 px-6 py-3 text-white rounded-lg" style={{background:"#253a50",border:"1px solid #CCC9DC"}} font-semibold"><Plus size={18}/> Add Next Question</button>}
-              {newQuizType==='openresponse'&&<button onClick={addORQuestion} className="flex items-center gap-2 px-6 py-3 text-white rounded-lg" style={{background:"#253a50",border:"1px solid #CCC9DC"}} font-semibold"><Plus size={18}/> Add Next Question</button>}
-              <button onClick={()=>setShowPreview(true)} className="flex items-center gap-2 px-6 py-3 text-white rounded-lg" style={{background:"#1B2A41",border:"1px solid #CCC9DC",color:"#CCC9DC"}} font-semibold"><BookOpen size={20}/> Preview Question</button>
-              <button onClick={saveQuizLocally} className="flex-1 px-6 py-3 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-semibold">{editingKey?'Save Changes':'Save Quiz'}</button>
-              <button onClick={()=>{resetQuizBuilder();setAdminSection('list');}} className="px-6 py-3 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium">Cancel</button>
+              {newQuizType==='MC'&&<button onClick={addMCQuestion} className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-semibold"><Plus size={18}/> Add Next Question</button>}
+              {newQuizType==='openresponse'&&<button onClick={addORQuestion} className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-semibold"><Plus size={18}/> Add Next Question</button>}
+              <button onClick={()=>setShowPreview(true)} className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold"><BookOpen size={20}/> Preview Question</button>
+              <button onClick={saveQuizLocally} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">{editingKey?'Save Changes':'Save Quiz'}</button>
+              <button onClick={()=>{resetQuizBuilder();setAdminSection('list');}} className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
             </div>
           </div>
         )}
@@ -2957,44 +2957,44 @@ const QuizApp = () => {
         {adminSection==='users'&&(
           <div>
             <div className="flex items-center justify-between mb-4">
-              <button onClick={()=>setAdminSection('list')} className="text-sm text-blue-300" style="color:#7eb8e8 hover:underline">← Back to Quizzes</button>
+              <button onClick={()=>setAdminSection('list')} className="text-sm text-blue-600 hover:underline">← Back to Quizzes</button>
               <h2 className="text-xl font-bold text-gray-800">Manage Users</h2>
-              <button onClick={()=>setShowAddUser(true)} className="flex items-center gap-2 px-3 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} text-sm font-medium"><Plus size={16}/> Add User</button>
+              <button onClick={()=>setShowAddUser(true)} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"><Plus size={16}/> Add User</button>
             </div>
-            {userMsg && <div className="mb-3 px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-400" style="color:#4ade80 text-sm font-medium">{userMsg}</div>}
-            <div className="mb-4 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-200" style="color:#e5e05a text-sm">
+            {userMsg && <div className="mb-3 px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium">{userMsg}</div>}
+            <div className="mb-4 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
               <strong>Note:</strong> Editing a user's password here updates the stored record only. To change their actual login password, you must also update it in the <strong>Supabase Auth dashboard</strong> (Authentication → Users → select user → set new password).
             </div>
             {showAddUser && (
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-4">
                 <h3 className="font-bold text-gray-800 mb-3">New User</h3>
                 <div className="grid grid-cols-3 gap-3 mb-3">
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Display Name</label><input type="text" value={newUserDisplayName} onChange={e=>setNewUserDisplayName(e.target.value)} className="w-full px-3 py-2 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg text-sm focus:ring-2 focus:ring-blue-400"/></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" value={newUserEmail} onChange={e=>setNewUserEmail(e.target.value)} className="w-full px-3 py-2 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg text-sm focus:ring-2 focus:ring-blue-400"/></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Password</label><input type="text" value={newUserPassword} onChange={e=>setNewUserPassword(e.target.value)} className="w-full px-3 py-2 border border-[#324A5F]" style={{borderColor:"#324A5F" rounded-lg text-sm focus:ring-2 focus:ring-blue-400"/></div>
+                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Display Name</label><input type="text" value={newUserDisplayName} onChange={e=>setNewUserDisplayName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-400"/></div>
+                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" value={newUserEmail} onChange={e=>setNewUserEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-400"/></div>
+                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Password</label><input type="text" value={newUserPassword} onChange={e=>setNewUserPassword(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-400"/></div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={addUser} disabled={newUserSaving} className="px-4 py-2 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} text-sm font-medium disabled:opacity-40">{newUserSaving ? 'Adding...' : 'Add User'}</button>
-                  <button onClick={()=>{setShowAddUser(false);setNewUserEmail('');setNewUserPassword('');setNewUserDisplayName('');}} className="px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} text-sm font-medium">Cancel</button>
+                  <button onClick={addUser} disabled={newUserSaving} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-40">{newUserSaving ? 'Adding...' : 'Add User'}</button>
+                  <button onClick={()=>{setShowAddUser(false);setNewUserEmail('');setNewUserPassword('');setNewUserDisplayName('');}} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium">Cancel</button>
                 </div>
               </div>
             )}
             {usersLoading ? <p className="text-gray-500 text-sm">Loading users...</p> : (
-              <div className="rounded-xl shadow-md overflow-hidden" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-                <div className="grid grid-cols-12 px-4 py-2 bg-[#0C1821]" style="background:#0C1821 border-b text-xs font-semibold text-gray-500 uppercase">
+              <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                <div className="grid grid-cols-12 px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase">
                   <div className="col-span-3">Display Name</div>
                   <div className="col-span-4">Email</div>
                   <div className="col-span-3">Password</div>
                   <div className="col-span-2">Actions</div>
                 </div>
                 {users.map((u, idx) => (
-                  <div key={u.user_id} className={`grid grid-cols-12 gap-2 px-4 py-3 border-b last:border-0 items-center ${idx%2===0?"" style={{background:"#1B2A41"}}:"" style={{background:"#152030"}}}`}>
-                    <div className="col-span-3"><input type="text" value={u.display_name||''} onChange={e=>setUsers(p=>p.map((x,i)=>i===idx?{...x,display_name:e.target.value}:x))} className="w-full px-2 py-1 border border-[#253a50]" style={{borderColor:"#253a50" rounded text-sm focus:ring-1 focus:ring-blue-400"/></div>
-                    <div className="col-span-4"><input type="text" value={u.email||''} onChange={e=>setUsers(p=>p.map((x,i)=>i===idx?{...x,email:e.target.value}:x))} className="w-full px-2 py-1 border border-[#253a50]" style={{borderColor:"#253a50" rounded text-sm focus:ring-1 focus:ring-blue-400"/></div>
-                    <div className="col-span-3"><input type="text" value={u.password||''} onChange={e=>setUsers(p=>p.map((x,i)=>i===idx?{...x,password:e.target.value}:x))} className="w-full px-2 py-1 border border-[#253a50]" style={{borderColor:"#253a50" rounded text-sm focus:ring-1 focus:ring-blue-400"/></div>
+                  <div key={u.user_id} className={`grid grid-cols-12 gap-2 px-4 py-3 border-b last:border-0 items-center ${idx%2===0?'bg-white':'bg-gray-50'}`}>
+                    <div className="col-span-3"><input type="text" value={u.display_name||''} onChange={e=>setUsers(p=>p.map((x,i)=>i===idx?{...x,display_name:e.target.value}:x))} className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-blue-400"/></div>
+                    <div className="col-span-4"><input type="text" value={u.email||''} onChange={e=>setUsers(p=>p.map((x,i)=>i===idx?{...x,email:e.target.value}:x))} className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-blue-400"/></div>
+                    <div className="col-span-3"><input type="text" value={u.password||''} onChange={e=>setUsers(p=>p.map((x,i)=>i===idx?{...x,password:e.target.value}:x))} className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-blue-400"/></div>
                     <div className="col-span-2 flex gap-2">
-                      <button onClick={()=>saveUser(u)} disabled={userSaving[u.user_id]} className="px-3 py-1 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} text-xs font-medium disabled:opacity-40">{userSaving[u.user_id]?'...':'Save'}</button>
-                      <button onClick={()=>deleteUser(u)} disabled={userDeleting[u.user_id]} className="px-2 py-1 text-white rounded-lg" style={{background:"#3a1a1a",border:"1px solid #f87171",color:"#f87171"}} text-xs disabled:opacity-40"><Trash2 size={14}/></button>
+                      <button onClick={()=>saveUser(u)} disabled={userSaving[u.user_id]} className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium disabled:opacity-40">{userSaving[u.user_id]?'...':'Save'}</button>
+                      <button onClick={()=>deleteUser(u)} disabled={userDeleting[u.user_id]} className="px-2 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 text-xs disabled:opacity-40"><Trash2 size={14}/></button>
                     </div>
                   </div>
                 ))}
@@ -3009,8 +3009,8 @@ const QuizApp = () => {
               <h2 className="text-lg font-bold text-gray-800 mb-2">Start a New Quiz?</h2>
               <p className="text-gray-600 mb-6 text-sm">You have unsaved work on the current quiz. Starting a new one will discard it. Are you sure?</p>
               <div className="flex gap-3">
-                <button onClick={doStartCreateQuiz} className="flex-1 px-4 py-2 text-white rounded-lg" style={{background:"#3a1a1a",border:"1px solid #f87171",color:"#f87171"}} font-medium">Yes, discard it</button>
-                <button onClick={()=>setShowNewQuizConfirm(false)} className="flex-1 px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium">No, keep working</button>
+                <button onClick={doStartCreateQuiz} className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium">Yes, discard it</button>
+                <button onClick={()=>setShowNewQuizConfirm(false)} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">No, keep working</button>
               </div>
             </div>
           </div>
@@ -3019,14 +3019,14 @@ const QuizApp = () => {
         {adminSection==='audit'&&(
           <div className="space-y-6">
             {/* Quiz selector — two dropdowns: season then quiz */}
-            <div className="rounded-xl shadow-md p-5" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-              <h2 className="text-lg font-bold mb-3" style={{color:"#FFFFFF"}}>🔍 Score Auditor</h2>
+            <div className="bg-white rounded-xl shadow-md p-5">
+              <h2 className="text-lg font-bold text-gray-800 mb-3">🔍 Score Auditor</h2>
               <p className="text-sm text-gray-500 mb-4">Select a season and quiz to see a full breakdown of every calculation — difficulty ranking, token effects, per-user scores, and season points.</p>
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Step 1: season */}
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Season</label>
-                  <select value={auditSeason} onChange={e=>{setAuditSeason(e.target.value);setAuditQuizKey('');setAuditData(null);setAuditExpandedUser(null);}} className="px-3 py-2 border rounded-lg text-sm focus:outline-none" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC"}} min-w-40">
+                  <select value={auditSeason} onChange={e=>{setAuditSeason(e.target.value);setAuditQuizKey('');setAuditData(null);setAuditExpandedUser(null);}} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-40">
                     <option value="">— Select —</option>
                     <option value="Offseason">Offseason</option>
                     {Array.from(new Set(Object.values(allQuizData).map(q=>q.category).filter(c=>c&&c.trim().toLowerCase()!=='offseason'))).sort((a,b)=>a.localeCompare(b)).map(s=>(
@@ -3038,7 +3038,7 @@ const QuizApp = () => {
                 {auditSeason && (
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Quiz</label>
-                    <select value={auditQuizKey} onChange={e=>{setAuditQuizKey(e.target.value);setAuditData(null);setAuditExpandedUser(null);}} className="px-3 py-2 border rounded-lg text-sm focus:outline-none" style={{background:"#0C1821",borderColor:"#324A5F",color:"#CCC9DC"}} min-w-64">
+                    <select value={auditQuizKey} onChange={e=>{setAuditQuizKey(e.target.value);setAuditData(null);setAuditExpandedUser(null);}} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-64">
                       <option value="">— Select a quiz —</option>
                       {Object.entries(allQuizData).filter(([,q])=>q.status==='Scored'&&q.category===auditSeason).sort((a,b)=>(a[1].title||a[0]).localeCompare(b[1].title||b[0])).map(([key,q])=>(
                         <option key={key} value={key}>{q.title||key}</option>
@@ -3064,15 +3064,15 @@ const QuizApp = () => {
               return (
                 <>
                   {/* ── Section 1: Difficulty Ranking ── */}
-                  <div className="rounded-xl shadow-md overflow-hidden" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-                    <div className="px-5 py-3 border-b" style={{background:"#0C1821",borderColor:"#324A5F"}}>
-                      <h2 className="font-bold" style={{color:"#CCC9DC"}}>1. Difficulty Ranking & Point Values</h2>
+                  <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div className="px-5 py-3 bg-gray-100 border-b">
+                      <h2 className="font-bold text-gray-700">1. Difficulty Ranking & Point Values</h2>
                       <p className="text-xs text-gray-500 mt-0.5">Sorted hardest → easiest (fewest correct = hardest = most points). Ties are averaged.</p>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="bg-[#152030]" style="background:#152030 border-b text-xs text-gray-500 uppercase">
+                          <tr className="bg-gray-50 border-b text-xs text-gray-500 uppercase">
                             <th className="px-4 py-2 text-left font-semibold">Q#</th>
                             <th className="px-4 py-2 text-left font-semibold">Correct / Total</th>
                             <th className="px-4 py-2 text-left font-semibold">% Correct</th>
@@ -3082,8 +3082,8 @@ const QuizApp = () => {
                         </thead>
                         <tbody>
                           {rankingRows.map((row, idx) => (
-                            <tr key={row.qIndex} className={idx % 2 === 0 ? "" style={{background:"#1B2A41"}} : "" style={{background:"#152030"}}}>
-                              <td className="px-4 py-2 font-medium text-[#CCC9DC]" style="color:#CCC9DC">Q{row.qIndex + 1}</td>
+                            <tr key={row.qIndex} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                              <td className="px-4 py-2 font-medium text-gray-700">Q{row.qIndex + 1}</td>
                               <td className="px-4 py-2 text-gray-600">{row.correctCount} / {row.totalAttempts}</td>
                               <td className="px-4 py-2 text-gray-600">{row.totalAttempts > 0 ? Math.round(row.correctCount / row.totalAttempts * 1000) / 10 : 0}%</td>
                               <td className="px-4 py-2 font-bold text-gray-800">{row.assignedPoints} pts</td>
@@ -3100,13 +3100,13 @@ const QuizApp = () => {
                   </div>
 
                   {/* ── Section 2: Per-user accordion ── */}
-                  <div className="rounded-xl shadow-md overflow-hidden" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-                    <div className="px-5 py-3 border-b" style={{background:"#0C1821",borderColor:"#324A5F"}}>
-                      <h2 className="font-bold" style={{color:"#CCC9DC"}}>2. Per-User Score Breakdown</h2>
+                  <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div className="px-5 py-3 bg-gray-100 border-b">
+                      <h2 className="font-bold text-gray-700">2. Per-User Score Breakdown</h2>
                       <p className="text-xs text-gray-500 mt-0.5">Click a player to expand their full question-by-question breakdown. ✅ = recomputed total matches stored score; ❌ = mismatch.</p>
                     </div>
                     {/* Collapsed header row */}
-                    <div className="divide-y divide-[#1e2e3e]">
+                    <div className="divide-y divide-gray-100">
                       {userRows.map((row, ri) => {
                         const isOpen = auditExpandedUser === row.user_id;
                         const ptsByQIndex = {};
@@ -3116,29 +3116,29 @@ const QuizApp = () => {
                             {/* Clickable summary row */}
                             <div
                               onClick={() => setAuditExpandedUser(isOpen ? null : row.user_id)}
-                              className="flex items-center justify-between px-5 py-3 cursor-pointer hover:bg-[#152030]" style="background:#152030 select-none"
+                              className="flex items-center justify-between px-5 py-3 cursor-pointer hover:bg-gray-50 select-none"
                             >
                               <div className="flex items-center gap-3">
                                 <span className="text-sm font-medium text-gray-800 w-40">{row.displayName}</span>
                                 {/* Mini ✓/✗ strip */}
                                 <div className="flex gap-0.5">
                                   {row.cells.map((cell, i) => (
-                                    <span key={i} title={`Q${i+1}`} className={`text-xs font-bold px-1 rounded ${cell.correct ? 'text-green-400" style="color:#4ade80 bg-green-50' : 'text-red-400" style="color:#f87171 bg-red-50'}`}>{cell.correct ? '✓' : '✗'}</span>
+                                    <span key={i} title={`Q${i+1}`} className={`text-xs font-bold px-1 rounded ${cell.correct ? 'text-green-600 bg-green-50' : 'text-red-500 bg-red-50'}`}>{cell.correct ? '✓' : '✗'}</span>
                                   ))}
                                 </div>
                               </div>
                               <div className="flex items-center gap-3">
                                 <span className="font-bold text-gray-800 text-sm">{row.recomputedTotal} pts</span>
-                                <span className={`text-xs ${row.matches ? 'text-green-400" style="color:#4ade80' : 'text-red-400" style="color:#f87171 font-bold'}`}>{row.matches ? '✅' : `❌ stored: ${row.storedScore}`}</span>
+                                <span className={`text-xs ${row.matches ? 'text-green-600' : 'text-red-600 font-bold'}`}>{row.matches ? '✅' : `❌ stored: ${row.storedScore}`}</span>
                                 <span className="text-gray-400 text-xs">{isOpen ? '▲' : '▼'}</span>
                               </div>
                             </div>
                             {/* Expanded detail */}
                             {isOpen && (
-                              <div className="bg-[#152030]" style="background:#152030 border-t border-[#1e2e3e]" style={{borderColor:"#1e2e3e" px-5 py-3">
+                              <div className="bg-gray-50 border-t border-gray-100 px-5 py-3">
                                 <table className="w-full text-sm">
                                   <thead>
-                                    <tr className="text-xs text-gray-500 uppercase border-b border-[#253a50]" style={{borderColor:"#253a50"">
+                                    <tr className="text-xs text-gray-500 uppercase border-b border-gray-200">
                                       <th className="py-1.5 text-left font-semibold w-12">Q#</th>
                                       <th className="py-1.5 text-center font-semibold w-12">Result</th>
                                       <th className="py-1.5 text-left font-semibold w-28">Token</th>
@@ -3147,22 +3147,22 @@ const QuizApp = () => {
                                       <th className="py-1.5 text-left font-semibold pl-4">Formula</th>
                                     </tr>
                                   </thead>
-                                  <tbody className="divide-y divide-[#1e2e3e]">
+                                  <tbody className="divide-y divide-gray-100">
                                     {row.cells.map((cell, i) => (
                                       <tr key={i} className={cell.token ? '' : ''} style={{backgroundColor: cell.token ? tokenBg(cell.token) : 'transparent'}}>
                                         <td className="py-1.5 text-gray-500 font-medium">Q{i+1}</td>
-                                        <td className={`py-1.5 text-center font-bold text-base ${cell.correct ? 'text-green-400" style="color:#4ade80' : 'text-red-400" style="color:#f87171'}`}>{cell.correct ? '✓' : '✗'}</td>
+                                        <td className={`py-1.5 text-center font-bold text-base ${cell.correct ? 'text-green-600' : 'text-red-500'}`}>{cell.correct ? '✓' : '✗'}</td>
                                         <td className="py-1.5 text-xs text-gray-600">{cell.token ? tokenLabel(cell.token) : <span className="text-gray-300">—</span>}</td>
                                         <td className="py-1.5 text-right text-gray-500">{ptsByQIndex[i]} pts</td>
                                         <td className="py-1.5 text-right font-semibold text-gray-800">{cell.earned} pts</td>
                                         <td className="py-1.5 text-xs text-gray-500 pl-4">{cell.formula}</td>
                                       </tr>
                                     ))}
-                                    <tr className="border-t-2 border-[#324A5F]" style={{borderColor:"#324A5F" bg-[#0C1821]" style="background:#0C1821">
-                                      <td colSpan={4} className="py-2 text-sm font-semibold text-[#CCC9DC]" style="color:#CCC9DC text-right pr-2">Total</td>
+                                    <tr className="border-t-2 border-gray-300 bg-gray-100">
+                                      <td colSpan={4} className="py-2 text-sm font-semibold text-gray-700 text-right pr-2">Total</td>
                                       <td className="py-2 text-right font-bold text-gray-900">{row.recomputedTotal} pts</td>
                                       <td className="py-2 pl-4">
-                                        <span className={`text-xs font-semibold ${row.matches ? 'text-green-400" style="color:#4ade80' : 'text-red-400" style="color:#f87171'}`}>
+                                        <span className={`text-xs font-semibold ${row.matches ? 'text-green-600' : 'text-red-600'}`}>
                                           {row.matches ? '✅ matches stored score' : `❌ stored score was ${row.storedScore} pts`}
                                         </span>
                                       </td>
@@ -3179,14 +3179,14 @@ const QuizApp = () => {
 
                   {/* ── Section 3: Season points ── */}
                   {seasonRows ? (
-                    <div className="rounded-xl shadow-md overflow-hidden" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-                      <div className="px-5 py-3 border-b" style={{background:"#0C1821",borderColor:"#324A5F"}}>
-                        <h2 className="font-bold" style={{color:"#CCC9DC"}}>3. Season Points — {season}</h2>
+                    <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                      <div className="px-5 py-3 bg-gray-100 border-b">
+                        <h2 className="font-bold text-gray-700">3. Season Points — {season}</h2>
                         <p className="text-xs text-gray-500 mt-0.5">Points awarded toward season standings based on finishing position on this quiz. 1st place earns {totalAttempts} pts, last place earns 1 pt. Ties average the available positions.</p>
                       </div>
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="bg-[#152030]" style="background:#152030 border-b text-xs text-gray-500 uppercase">
+                          <tr className="bg-gray-50 border-b text-xs text-gray-500 uppercase">
                             <th className="px-4 py-2 text-left font-semibold">Player</th>
                             <th className="px-4 py-2 text-right font-semibold">Quiz Score</th>
                             <th className="px-4 py-2 text-center font-semibold">Finish</th>
@@ -3196,11 +3196,11 @@ const QuizApp = () => {
                         </thead>
                         <tbody>
                           {seasonRows.map((row, i) => (
-                            <tr key={row.user_id} className={i % 2 === 0 ? "" style={{background:"#1B2A41"}} : "" style={{background:"#152030"}}}>
-                              <td className="px-4 py-2 font-medium text-[#CCC9DC]" style="color:#CCC9DC">{row.displayName}</td>
+                            <tr key={row.user_id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                              <td className="px-4 py-2 font-medium text-gray-700">{row.displayName}</td>
                               <td className="px-4 py-2 text-right text-gray-600">{row.quizScore}</td>
                               <td className="px-4 py-2 text-center text-gray-600">{ordinal(row.position)} of {row.totalPlayers}</td>
-                              <td className="px-4 py-2 text-right font-bold text-green-400" style="color:#4ade80">{row.seasonPts}</td>
+                              <td className="px-4 py-2 text-right font-bold text-green-700">{row.seasonPts}</td>
                               <td className="px-4 py-2 text-xs text-gray-500">{row.formula}</td>
                             </tr>
                           ))}
@@ -3208,9 +3208,9 @@ const QuizApp = () => {
                       </table>
                     </div>
                   ) : (
-                    <div className="rounded-xl shadow-md p-5" style={{background:"#1B2A41",border:"1px solid #324A5F"}}>
-                      <h2 className="font-bold mb-1" style="color:#CCC9DC">3. Season Points</h2>
-                      <p className="text-sm italic" style={{color:"#556677"}}>This quiz is in the Offseason category — it does not contribute to any season standings.</p>
+                    <div className="bg-white rounded-xl shadow-md p-5">
+                      <h2 className="font-bold text-gray-700 mb-1">3. Season Points</h2>
+                      <p className="text-sm text-gray-400 italic">This quiz is in the Offseason category — it does not contribute to any season standings.</p>
                     </div>
                   )}
                 </>
@@ -3226,19 +3226,19 @@ const QuizApp = () => {
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-xl shadow-xl w-full max-w-xl flex flex-col max-h-screen overflow-y-auto">
                 <div className="flex justify-between items-center p-5 border-b">
-                  <h2 className="text-lg font-bold" style={{color:"#FFFFFF"}}>Question Preview</h2>
+                  <h2 className="text-lg font-bold text-gray-800">Question Preview</h2>
                   <button onClick={()=>setShowPreview(false)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button>
                 </div>
                 <div className="p-6">
-                  <div className="bg-white rounded-xl border-2 border-[#1e2e3e]" style={{borderColor:"#1e2e3e" p-6 mb-4">
+                  <div className="bg-white rounded-xl border-2 border-gray-100 p-6 mb-4">
                     {previewType==='MC'&&previewQ&&(
                       <>
                         <div className="text-lg font-semibold text-gray-800 mb-4">{renderPrompt(previewQ.prompt||'')}</div>
                         <div className="space-y-2">
                           {previewQ.options.filter(o=>o.trim()).map((opt,i)=>(
-                            <div key={i} className={`px-4 py-3 rounded-lg border-2 font-medium text-[#CCC9DC]" style="color:#CCC9DC border-[#253a50]" style={{borderColor:"#253a50" bg-[#152030]" style="background:#152030`}>
+                            <div key={i} className={`px-4 py-3 rounded-lg border-2 font-medium text-gray-700 border-gray-200 bg-gray-50`}>
                               {'ABCDEFGHIJ'[i]}. {opt}
-                              {previewQ.correctIndices.includes(i)&&<span className="ml-2 text-xs text-green-400" style="color:#4ade80 font-bold">(correct)</span>}
+                              {previewQ.correctIndices.includes(i)&&<span className="ml-2 text-xs text-green-600 font-bold">(correct)</span>}
                             </div>
                           ))}
                         </div>
@@ -3247,9 +3247,9 @@ const QuizApp = () => {
                     {previewType==='openresponse'&&previewQ&&(
                       <>
                         <div className="text-lg font-semibold text-gray-800 mb-4">{renderPrompt(previewQ.prompt||'')}</div>
-                        <div className="w-full px-4 py-3 border-2 border-[#253a50]" style={{borderColor:"#253a50" rounded-lg text-gray-400 bg-[#152030]" style="background:#152030">Student types answer here...</div>
+                        <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-400 bg-gray-50">Student types answer here...</div>
                         {previewQ.acceptedAnswers?.filter(a=>a.trim()).length>0&&(
-                          <p className="mt-3 text-sm text-green-400" style="color:#4ade80"><span className="font-semibold">Accepted answers:</span> {previewQ.acceptedAnswers.filter(a=>a.trim()).join(', ')}</p>
+                          <p className="mt-3 text-sm text-green-700"><span className="font-semibold">Accepted answers:</span> {previewQ.acceptedAnswers.filter(a=>a.trim()).join(', ')}</p>
                         )}
                       </>
                     )}
@@ -3262,15 +3262,15 @@ const QuizApp = () => {
                         {combDraft.questionType==='MC'&&(
                           <div className="space-y-2">
                             {(combDraft.options||[]).filter(o=>o.trim()).map((opt,i)=>(
-                              <div key={i} className="px-4 py-3 rounded-lg border-2 border-[#253a50]" style={{borderColor:"#253a50" bg-[#152030]" style="background:#152030 font-medium text-[#CCC9DC]" style="color:#CCC9DC">
+                              <div key={i} className="px-4 py-3 rounded-lg border-2 border-gray-200 bg-gray-50 font-medium text-gray-700">
                                 {'ABCDEFGHIJ'[i]}. {opt}
-                                {(combDraft.correctIndices||[]).includes(i)&&<span className="ml-2 text-xs text-green-400" style="color:#4ade80 font-bold">(correct)</span>}
+                                {(combDraft.correctIndices||[]).includes(i)&&<span className="ml-2 text-xs text-green-600 font-bold">(correct)</span>}
                               </div>
                             ))}
                           </div>
                         )}
                         {combDraft.questionType==='OR'&&(
-                          <div className="w-full px-4 py-3 border-2 border-[#253a50]" style={{borderColor:"#253a50" rounded-lg text-gray-400 bg-[#152030]" style="background:#152030">Student types answer here...</div>
+                          <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-400 bg-gray-50">Student types answer here...</div>
                         )}
                       </>
                     )}
@@ -3278,7 +3278,7 @@ const QuizApp = () => {
                   <p className="text-xs text-gray-400 text-center">This is a visual preview only — not interactive.</p>
                 </div>
                 <div className="px-5 pb-5">
-                  <button onClick={()=>setShowPreview(false)} className="w-full px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium">Close</button>
+                  <button onClick={()=>setShowPreview(false)} className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button>
                 </div>
               </div>
             </div>
@@ -3287,14 +3287,14 @@ const QuizApp = () => {
         {showExportModal&&(
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-lg flex flex-col">
-              <div className="flex justify-between items-center p-5 border-b"><h2 className="text-lg font-bold" style={{color:"#FFFFFF"}}>Export Data</h2><button onClick={()=>setShowExportModal(false)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button></div>
+              <div className="flex justify-between items-center p-5 border-b"><h2 className="text-lg font-bold text-gray-800">Export Data</h2><button onClick={()=>setShowExportModal(false)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button></div>
               <div className="p-5">
                 <p className="text-sm text-gray-600 mb-3">This JSON is formatted and ready to save as <strong>{exportFilename}</strong>. Click "Copy to Clipboard", then paste into Notepad and save as {exportFilename}. Upload to StackBlitz's <strong>public/quizzes</strong> folder to update the app.</p>
-                <textarea readOnly value={exportContent} className="w-full h-40 bg-[#152030]" style="background:#152030 border border-[#253a50]" style={{borderColor:"#253a50" rounded-lg p-3 text-xs text-[#CCC9DC]" style="color:#CCC9DC font-mono resize-y"/>
+                <textarea readOnly value={exportContent} className="w-full h-40 bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 font-mono resize-y"/>
               </div>
               <div className="px-5 pb-5 flex gap-3">
-                <button onClick={copyToClipboard} className="flex-1 px-4 py-3 text-white rounded-lg" style={{background:"#324A5F"}} onMouseOver={e=>e.currentTarget.style.background="#3d5a72"} onMouseOut={e=>e.currentTarget.style.background="#324A5F"} font-semibold text-center">Copy to Clipboard</button>
-                <button onClick={()=>setShowExportModal(false)} className="px-4 py-3 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium">Close</button>
+                <button onClick={copyToClipboard} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-center">Copy to Clipboard</button>
+                <button onClick={()=>setShowExportModal(false)} className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button>
               </div>
             </div>
           </div>
@@ -3304,10 +3304,10 @@ const QuizApp = () => {
             <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
               <h2 className="text-lg font-bold text-gray-800 mb-2">Delete Quiz?</h2>
               <p className="text-gray-600 mb-1">Are you sure you want to delete <strong>{allQuizData[confirmDeleteKey]?.title}</strong>?</p>
-              <p className="text-red-400" style="color:#f87171 text-sm mb-5">This will permanently delete the quiz, all user attempts, and all scoring data.</p>
+              <p className="text-red-600 text-sm mb-5">This will permanently delete the quiz, all user attempts, and all scoring data.</p>
               <div className="flex gap-3">
-                <button onClick={()=>handleDeleteQuiz(confirmDeleteKey)} className="flex-1 px-4 py-2 text-white rounded-lg" style={{background:"#3a1a1a",border:"1px solid #f87171",color:"#f87171"}} font-medium">Yes, Delete</button>
-                <button onClick={()=>setConfirmDeleteKey(null)} className="flex-1 px-4 py-2 rounded-lg" style={{background:"#0C1821",border:"1px solid #324A5F",color:"#CCC9DC"}} font-medium">Cancel</button>
+                <button onClick={()=>handleDeleteQuiz(confirmDeleteKey)} className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium">Yes, Delete</button>
+                <button onClick={()=>setConfirmDeleteKey(null)} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
               </div>
             </div>
           </div>
