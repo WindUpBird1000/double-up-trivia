@@ -11,6 +11,143 @@
         emailjs.init('0k_9ewelPuyyBY1HX');
       });
     </script>
+    <style>
+      /* ── Double Up Trivia — Dark Theme ────────────────────────────────────────
+         Palette:
+           #0C1821  Ink Black      — page backgrounds
+           #1B2A41  Prussian Blue  — cards / panels
+           #324A5F  Charcoal Blue  — borders, primary buttons
+           #CCC9DC  Lavender       — body text, secondary buttons
+           #8899aa                 — muted text
+           #556677                 — dimmed text
+      ──────────────────────────────────────────────────────────────────────── */
+
+      /* Page & layout backgrounds */
+      .bg-gray-50  { background-color: #0C1821 !important; }
+      .bg-gray-100 { background-color: #0F1E28 !important; }
+      .bg-white    { background-color: #1B2A41 !important; }
+
+      /* Text */
+      .text-gray-900 { color: #FFFFFF   !important; }
+      .text-gray-800 { color: #FFFFFF   !important; }
+      .text-gray-700 { color: #CCC9DC   !important; }
+      .text-gray-600 { color: #CCC9DC   !important; }
+      .text-gray-500 { color: #8899aa   !important; }
+      .text-gray-400 { color: #556677   !important; }
+      .text-gray-300 { color: #445566   !important; }
+
+      /* Borders */
+      .border-gray-100 { border-color: #1e2e3e !important; }
+      .border-gray-200 { border-color: #253a50 !important; }
+      .border-gray-300 { border-color: #324A5F !important; }
+      .divide-gray-100 > * + * { border-color: #1e2e3e !important; }
+      .divide-gray-200 > * + * { border-color: #253a50 !important; }
+
+      /* Primary action buttons (blue) */
+      .bg-blue-600               { background-color: #324A5F !important; }
+      .bg-blue-700               { background-color: #3d5a72 !important; }
+      .hover\:bg-blue-700:hover  { background-color: #3d5a72 !important; }
+      .hover\:bg-blue-800:hover  { background-color: #324A5F !important; }
+      .text-blue-600             { color: #7eb8e8 !important; }
+      .text-blue-700             { color: #7eb8e8 !important; }
+      .text-blue-800             { color: #7eb8e8 !important; }
+      .bg-blue-50                { background-color: #162840 !important; }
+      .bg-blue-100               { background-color: #1e3a55 !important; }
+      .bg-blue-500               { background-color: #324A5F !important; }
+      .border-blue-500           { border-color: #7eb8e8 !important; }
+      .hover\:bg-blue-50:hover   { background-color: #162840 !important; }
+
+      /* Scoreboards / purple buttons */
+      .bg-purple-600              { background-color: #1B2A41 !important; border: 1px solid #CCC9DC !important; }
+      .bg-purple-700              { background-color: #253a50 !important; border: 1px solid #CCC9DC !important; }
+      .hover\:bg-purple-700:hover { background-color: #253a50 !important; }
+      .text-purple-600            { color: #CCC9DC !important; }
+      .text-purple-700            { color: #CCC9DC !important; }
+      .bg-purple-50               { background-color: #1a1228 !important; }
+      .bg-purple-100              { background-color: #2a1a3e !important; }
+      .border-purple-500          { border-color: #CCC9DC !important; }
+      .hover\:bg-purple-50:hover  { background-color: #1a1228 !important; }
+
+      /* Gray cancel / nav buttons */
+      .bg-gray-200               { background-color: #0C1821 !important; border: 1px solid #324A5F; }
+      .bg-gray-300               { background-color: #0C1821 !important; border: 1px solid #324A5F; }
+      .bg-gray-400               { background-color: #253a50 !important; }
+      .bg-gray-500               { background-color: #253a50 !important; }
+      .bg-gray-600               { background-color: #253a50 !important; }
+      .bg-gray-700               { background-color: #253a50 !important; }
+      .bg-gray-800               { background-color: #1B2A41 !important; }
+      .bg-gray-900               { background-color: #0C1821 !important; }
+      .hover\:bg-gray-100:hover  { background-color: #1e3045 !important; }
+      .hover\:bg-gray-200:hover  { background-color: #152535 !important; }
+      .hover\:bg-gray-300:hover  { background-color: #152535 !important; }
+      .hover\:bg-gray-400:hover  { background-color: #1e3045 !important; }
+      .hover\:bg-gray-500:hover  { background-color: #2a3f55 !important; }
+      .hover\:bg-gray-700:hover  { background-color: #2a3f55 !important; }
+      .hover\:bg-gray-800:hover  { background-color: #324A5F !important; }
+      .hover\:bg-gray-900:hover  { background-color: #0a1520 !important; }
+      .hover\:bg-gray-50:hover   { background-color: #1e3045 !important; }
+
+      /* Submit / success (green) */
+      .bg-green-600              { background-color: #1a3a2a !important; border: 1px solid #4ade80 !important; }
+      .bg-green-700              { background-color: #1f4a33 !important; }
+      .hover\:bg-green-700:hover { background-color: #1f4a33 !important; }
+      .text-green-600            { color: #4ade80 !important; }
+      .text-green-700            { color: #4ade80 !important; }
+      .text-green-800            { color: #4ade80 !important; }
+      .bg-green-50               { background-color: #0d2a1a !important; }
+      .bg-green-100              { background-color: #0d2a1a !important; }
+      .border-green-500          { border-color: #4ade80 !important; }
+
+      /* Danger (red) */
+      .bg-red-500                { background-color: #3a1a1a !important; border: 1px solid #f87171 !important; }
+      .bg-red-600                { background-color: #3a1a1a !important; border: 1px solid #f87171 !important; }
+      .hover\:bg-red-600:hover   { background-color: #4a2020 !important; }
+      .hover\:bg-red-700:hover   { background-color: #4a2020 !important; }
+      .text-red-500              { color: #f87171 !important; }
+      .text-red-600              { color: #f87171 !important; }
+      .text-red-700              { color: #f87171 !important; }
+      .bg-red-50                 { background-color: #2a0d0d !important; }
+      .bg-red-100                { background-color: #2a0d0d !important; }
+      .bg-red-200                { background-color: #3a1010 !important; }
+      .border-red-500            { border-color: #f87171 !important; }
+
+      /* Yellow warning */
+      .bg-yellow-50              { background-color: #1a1a0a !important; }
+      .text-yellow-800           { color: #e5e05a !important; }
+      .text-yellow-600           { color: #e5e05a !important; }
+      .border-yellow-300         { border-color: #7a7a00 !important; }
+
+      /* Orange */
+      .bg-orange-100             { background-color: #2a1a0a !important; }
+      .text-orange-700           { color: #fdba74 !important; }
+      .border-orange-400         { border-color: #fdba74 !important; }
+
+      /* Inputs, selects, textareas */
+      input:not([type="checkbox"]):not([type="radio"]),
+      select,
+      textarea {
+        background-color: #0C1821 !important;
+        color: #CCC9DC !important;
+        border-color: #324A5F !important;
+      }
+      input::placeholder { color: #556677 !important; }
+
+      /* Focus rings */
+      .focus\:ring-blue-500:focus  { --tw-ring-color: #324A5F !important; }
+      .focus\:ring-blue-400:focus  { --tw-ring-color: #324A5F !important; }
+      .border-blue-400             { border-color: #324A5F !important; }
+
+      /* Shadows */
+      .shadow-md  { box-shadow: 0 4px 6px rgba(0,0,0,0.5) !important; }
+      .shadow-lg  { box-shadow: 0 8px 16px rgba(0,0,0,0.6) !important; }
+      .shadow-xl  { box-shadow: 0 12px 24px rgba(0,0,0,0.7) !important; }
+
+      /* Rounded corners on the fixed token bin */
+      .border-t { border-top-color: #324A5F !important; }
+
+      /* Body background (catches any unstyled areas) */
+      body { background-color: #0C1821; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
