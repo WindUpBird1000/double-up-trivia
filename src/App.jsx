@@ -1924,6 +1924,10 @@ const QuizApp = () => {
   };
 
   const HELP_CONTENT = {
+    submitted: {
+      title: 'Disputes — Help',
+      body: 'Disputes FAQ placeholder text. Check boxes next to any answers you believe were incorrectly marked, add a brief explanation, and tap Send Disputes.',
+    },
     setup: {
       title: 'Available Quizzes — Help',
       body: 'Available Quizzes FAQ placeholder text. Replace this with instructions for how to select and start a quiz, what the status labels mean, and anything else users should know.',
@@ -2405,6 +2409,16 @@ const QuizApp = () => {
     const hasDisputes = Object.values(disputedQuestions).some(v=>v);
     return (
       <div className="max-w-5xl mx-auto p-6 bg-gray-50 min-h-screen">
+        {/* Header row */}
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-sm text-gray-500">{displayName || currentUser?.email || ''}</span>
+          <div className="flex gap-2">
+            <button onClick={()=>setShowHelpModal('submitted')} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm">?</button>
+            <button onClick={()=>setMode('scoreboards')} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">Scoreboards</button>
+            <button onClick={()=>setMode('setup')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+            <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
+          </div>
+        </div>
         <div className="bg-white rounded-xl shadow-md p-6 mb-4">
           <h1 className="text-2xl font-bold text-gray-800 mb-1">Quiz Submitted!</h1>
           <p className="text-gray-600">Your answers for <span className="font-semibold">{activeQuiz?.title}</span> have been recorded. Results and scores will be posted once everyone has completed the quiz — stay tuned!</p>
@@ -2453,10 +2467,7 @@ const QuizApp = () => {
             );
           })}
         </div>
-        <div className="flex gap-3">
-          <button onClick={()=>setMode('setup')} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Back to Quiz List</button>
-          <button onClick={handleSendDisputes} disabled={!hasDisputes||disputeSending} className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold disabled:opacity-40 disabled:cursor-not-allowed">{disputeSending?'Sending...':'Send Disputes'}</button>
-        </div>
+        <button onClick={handleSendDisputes} disabled={!hasDisputes||disputeSending} className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold disabled:opacity-40 disabled:cursor-not-allowed">{disputeSending?'Sending...':'Send Disputes'}</button>
       </div>
     );
   }
