@@ -2362,7 +2362,7 @@ const QuizApp = () => {
         {/* Token bin + Final Submission — fixed to bottom of viewport */}
         <div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:40}}>
         <div style={{maxWidth:'48rem',margin:'0 auto'}}>
-        <div className="bg-white border-t border-gray-200 shadow-lg px-5 pt-4 pb-4 text-center" onClick={handleTapBin}>
+        <div className="bg-white border-t border-gray-200 shadow-lg px-5 pt-4 pb-4 text-center rounded-t-2xl" onClick={handleTapBin}>
           <p className="text-sm font-semibold text-gray-700 mb-1">Your tokens — tap to select, then tap a question to assign</p>
           <p className="text-xs text-gray-400 mb-3">Hover over a token to see what it does. Tap an assigned token to pick it back up.</p>
           {binTokensList.length > 0 ? (
