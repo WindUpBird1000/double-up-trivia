@@ -171,6 +171,12 @@
       .bg-green-50 .text-green-800 { color: #6ee8a0 !important; }
       .bg-red-50 .font-bold    { color: #e89090 !important; }
 
+      /* Alternating rows inside card lists */
+      /* even rows (bg-white): slightly lighter than card bg */
+      .rounded-lg > .bg-white  { background-color: #223550 !important; }
+      /* odd rows (bg-gray-50): slightly darker than card bg */
+      .rounded-lg > .bg-gray-50 { background-color: #152535 !important; }
+
       /* Body background (catches any unstyled areas) */
       body { background-color: #0C1821; }
     </style>
