@@ -162,6 +162,138 @@ const ordinal = (n) => {
   return n + (s[(v-20)%10] || s[v] || s[0]);
 };
 
+// ── Dark Theme ────────────────────────────────────────────────────────────────
+// Overrides Tailwind utility classes for the user-facing dark palette.
+// Admin screens are excluded by scoping to .dark-theme.
+const DarkTheme = () => (
+  <style>{`
+    /* Page backgrounds */
+    .dark-theme .bg-gray-50  { background-color: #0C1821 !important; }
+    .dark-theme .bg-gray-100 { background-color: #0F1E28 !important; }
+    .dark-theme .bg-gray-200 { background-color: #152535 !important; }
+    .dark-theme .bg-white    { background-color: #1B2A41 !important; }
+
+    /* Text */
+    .dark-theme .text-gray-900 { color: #FFFFFF   !important; }
+    .dark-theme .text-gray-800 { color: #FFFFFF   !important; }
+    .dark-theme .text-gray-700 { color: #CCC9DC   !important; }
+    .dark-theme .text-gray-600 { color: #CCC9DC   !important; }
+    .dark-theme .text-gray-500 { color: #8899aa   !important; }
+    .dark-theme .text-gray-400 { color: #556677   !important; }
+    .dark-theme .text-gray-300 { color: #445566   !important; }
+
+    /* Borders */
+    .dark-theme .border-gray-100 { border-color: #1e2e3e !important; }
+    .dark-theme .border-gray-200 { border-color: #253a50 !important; }
+    .dark-theme .border-gray-300 { border-color: #324A5F !important; }
+    .dark-theme .divide-gray-100 > * + * { border-color: #1e2e3e !important; }
+    .dark-theme .divide-gray-200 > * + * { border-color: #253a50 !important; }
+
+    /* Primary action buttons (blue) */
+    .dark-theme .bg-blue-600  { background-color: #324A5F !important; }
+    .dark-theme .bg-blue-700  { background-color: #3d5a72 !important; }
+    .dark-theme .hover\:bg-blue-700:hover { background-color: #3d5a72 !important; }
+    .dark-theme .hover\:bg-blue-800:hover { background-color: #324A5F !important; }
+    .dark-theme .text-blue-600 { color: #7eb8e8 !important; }
+    .dark-theme .text-blue-700 { color: #7eb8e8 !important; }
+    .dark-theme .text-blue-800 { color: #7eb8e8 !important; }
+
+    /* Scoreboards / purple buttons */
+    .dark-theme .bg-purple-600 { background-color: #1B2A41 !important; border: 1px solid #CCC9DC !important; }
+    .dark-theme .bg-purple-700 { background-color: #253a50 !important; border: 1px solid #CCC9DC !important; }
+    .dark-theme .hover\:bg-purple-700:hover { background-color: #253a50 !important; }
+    .dark-theme .text-purple-600 { color: #CCC9DC !important; }
+    .dark-theme .text-purple-700 { color: #CCC9DC !important; }
+
+    /* Gray cancel/nav buttons */
+    .dark-theme .bg-gray-300 { background-color: #0C1821 !important; border: 1px solid #324A5F; }
+    .dark-theme .bg-gray-400 { background-color: #253a50 !important; }
+    .dark-theme .bg-gray-500 { background-color: #253a50 !important; }
+    .dark-theme .hover\:bg-gray-300:hover { background-color: #152535 !important; }
+    .dark-theme .hover\:bg-gray-400:hover { background-color: #1e3045 !important; }
+    .dark-theme .hover\:bg-gray-500:hover { background-color: #2a3f55 !important; }
+    .dark-theme .bg-gray-700 { background-color: #253a50 !important; }
+    .dark-theme .bg-gray-800 { background-color: #1B2A41 !important; }
+    .dark-theme .hover\:bg-gray-700:hover { background-color: #2a3f55 !important; }
+    .dark-theme .hover\:bg-gray-800:hover { background-color: #324A5F !important; }
+    .dark-theme .hover\:bg-gray-900:hover { background-color: #0a1520 !important; }
+    .dark-theme .text-gray-700 { color: #CCC9DC !important; }
+
+    /* Submit / success (green) */
+    .dark-theme .bg-green-600 { background-color: #1a3a2a !important; border: 1px solid #4ade80 !important; }
+    .dark-theme .bg-green-700 { background-color: #1f4a33 !important; }
+    .dark-theme .hover\:bg-green-700:hover { background-color: #1f4a33 !important; }
+    .dark-theme .text-green-600 { color: #4ade80 !important; }
+    .dark-theme .text-green-700 { color: #4ade80 !important; }
+    .dark-theme .text-green-800 { color: #4ade80 !important; }
+    .dark-theme .bg-green-50  { background-color: #0d2a1a !important; }
+    .dark-theme .bg-green-100 { background-color: #0d2a1a !important; }
+    .dark-theme .border-green-500 { border-color: #4ade80 !important; }
+
+    /* Danger (red) */
+    .dark-theme .bg-red-500   { background-color: #3a1a1a !important; border: 1px solid #f87171 !important; }
+    .dark-theme .bg-red-600   { background-color: #3a1a1a !important; border: 1px solid #f87171 !important; }
+    .dark-theme .hover\:bg-red-600:hover { background-color: #4a2020 !important; }
+    .dark-theme .hover\:bg-red-700:hover { background-color: #4a2020 !important; }
+    .dark-theme .text-red-500  { color: #f87171 !important; }
+    .dark-theme .text-red-600  { color: #f87171 !important; }
+    .dark-theme .text-red-700  { color: #f87171 !important; }
+    .dark-theme .bg-red-50    { background-color: #2a0d0d !important; }
+    .dark-theme .bg-red-100   { background-color: #2a0d0d !important; }
+    .dark-theme .border-red-500 { border-color: #f87171 !important; }
+
+    /* Yellow warning */
+    .dark-theme .bg-yellow-50  { background-color: #1a1a0a !important; }
+    .dark-theme .text-yellow-800 { color: #e5e05a !important; }
+    .dark-theme .text-yellow-600 { color: #e5e05a !important; }
+    .dark-theme .border-yellow-300 { border-color: #7a7a00 !important; }
+
+    /* Blue highlight (selected rows, MC options) */
+    .dark-theme .bg-blue-50   { background-color: #162840 !important; }
+    .dark-theme .bg-blue-100  { background-color: #1e3a55 !important; }
+    .dark-theme .border-blue-500 { border-color: #7eb8e8 !important; }
+    .dark-theme .hover\:bg-blue-50:hover { background-color: #162840 !important; }
+
+    /* Purple highlight */
+    .dark-theme .bg-purple-50  { background-color: #1a1228 !important; }
+    .dark-theme .bg-purple-100 { background-color: #2a1a3e !important; }
+    .dark-theme .border-purple-500 { border-color: #CCC9DC !important; }
+    .dark-theme .text-purple-600 { color: #CCC9DC !important; }
+
+    /* Orange */
+    .dark-theme .bg-orange-100 { background-color: #2a1a0a !important; }
+    .dark-theme .text-orange-700 { color: #fdba74 !important; }
+    .dark-theme .border-orange-400 { border-color: #fdba74 !important; }
+
+    /* Inputs and selects */
+    .dark-theme input:not([type="checkbox"]):not([type="radio"]),
+    .dark-theme select,
+    .dark-theme textarea {
+      background-color: #0C1821 !important;
+      color: #CCC9DC !important;
+      border-color: #324A5F !important;
+    }
+    .dark-theme input::placeholder { color: #556677 !important; }
+
+    /* Progress bar */
+    .dark-theme .bg-blue-500 { background-color: #324A5F !important; }
+
+    /* Focus ring */
+    .dark-theme .focus\:ring-blue-500:focus { --tw-ring-color: #324A5F !important; }
+
+    /* Shadow */
+    .dark-theme .shadow-md { box-shadow: 0 4px 6px rgba(0,0,0,0.4) !important; }
+
+    /* Hover row highlight */
+    .dark-theme .hover\:bg-gray-50:hover  { background-color: #1e3045 !important; }
+    .dark-theme .hover\:bg-gray-100:hover { background-color: #1e3045 !important; }
+    .dark-theme .hover\:bg-purple-50:hover { background-color: #1a1228 !important; }
+
+    /* Date picker */
+    .dark-theme .hover\:bg-blue-50 { background-color: #162840 !important; }
+  `}</style>
+);
+
 const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelectQuiz, onSelectSeason, onQuizzes, onLogout, isAdminView, onAdminDashboard, onHelp }) => {
   const [allResults, setAllResults] = React.useState([]);
   const [myAttempts, setMyAttempts] = React.useState({});
@@ -260,7 +392,7 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
           </div>
         </div>
       )}
-    <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen">
+    <div className="dark-theme max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen">
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
         <span className="text-sm text-gray-500">{displayName || ''}</span>
         <div className="flex gap-2">
@@ -763,7 +895,7 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
   const selectedBreakdown = isAdminView && selectedUserId ? (allBreakdowns[selectedUserId] || []) : [];
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+    <div className="dark-theme max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen"><DarkTheme/>
       {/* Header */}
       <div className="mb-6">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
@@ -1982,7 +2114,7 @@ const QuizApp = () => {
   ) : null;
 
   if (mode==='login') return (
-    <div className="max-w-md mx-auto p-6 bg-gray-50 min-h-screen flex flex-col justify-center">
+    <div className="dark-theme"><DarkTheme/><div className="max-w-md mx-auto p-6 bg-gray-50 min-h-screen flex flex-col justify-center">
       <ForgotModal/>
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-gray-800 tracking-tight mb-2">Double Up Trivia</h1>
@@ -2007,13 +2139,13 @@ const QuizApp = () => {
       <div className="text-center mt-6">
         <button onClick={()=>setMode('admin')} className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium mx-auto"><Settings size={18}/> Admin</button>
       </div>
-    </div>
+    </div></div>
   );
 
-  if (isLoading) return <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center"><div className="text-xl text-gray-500">Loading quizzes...</div></div>;
+  if (isLoading) return <div className="dark-theme max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center"><DarkTheme/><div className="text-xl text-gray-500">Loading quizzes...</div></div>;
   if (mode==='setup') return (
     <><HelpModal/>
-    <div className="max-w-2xl mx-auto bg-gray-50 min-h-screen" style={{padding:"1.5rem"}}>
+    <div className="dark-theme max-w-2xl mx-auto bg-gray-50 min-h-screen" style={{padding:"1.5rem"}}>
       <div style={{position:"relative"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
           <span className="text-sm text-gray-500">{displayName || currentUser?.email || ''}</span>
@@ -2077,7 +2209,7 @@ const QuizApp = () => {
     const sortedWB=[...activeQuiz.wordBank].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
     const parts=display.split('______');
     return (
-      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="dark-theme max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen"><DarkTheme/>
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-gray-800">{activeQuiz.title}</h1>
           <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">Exit Quiz</button>
@@ -2103,7 +2235,7 @@ const QuizApp = () => {
     const answeredCount=Object.keys(studentAnswers).filter(k=>(studentAnswers[k]||[]).length>0).length;
     const sels=studentAnswers[currentQuestionIndex]||[]; const multi=q.displayOptions.filter(o=>o.correct).length>1;
     return (
-      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="dark-theme max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen"><DarkTheme/>
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-gray-800">{activeQuiz.title}</h1>
           <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">Exit Quiz</button>
@@ -2124,7 +2256,7 @@ const QuizApp = () => {
     const q=activeQuestions[currentQuestionIndex]; const total=activeQuestions.length;
     const answeredCount=Object.keys(studentAnswers).filter(k=>(studentAnswers[k]||'').trim()!=='').length;
     return (
-      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="dark-theme max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen"><DarkTheme/>
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-gray-800">{activeQuiz.title}</h1>
           <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">Exit Quiz</button>
@@ -2148,7 +2280,7 @@ const QuizApp = () => {
     const sortedWB=[...new Set(fitbAnswers)].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
     const usedFITB=activeQuestions.map((_,i)=>studentAnswers[i]).filter(Boolean);
     return (
-      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="dark-theme max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen"><DarkTheme/>
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">{activeQuiz.title}</h1>
           <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">Exit Quiz</button>
@@ -2183,7 +2315,7 @@ const QuizApp = () => {
   }
 
   if (mode==='authornote') return (
-    <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen">
+    <div className="dark-theme max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen">
       <div className="flex justify-end mb-4">
         <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">Exit Quiz</button>
       </div>
@@ -2306,7 +2438,7 @@ const QuizApp = () => {
 
     return (
       <><HelpModal/>
-      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="dark-theme max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen"><DarkTheme/>
         <div className="flex justify-between items-center mb-4">
           <span className="text-sm text-gray-500">{displayName || currentUser?.email || ''}</span>
           <div className="flex gap-2">
@@ -2404,7 +2536,7 @@ const QuizApp = () => {
   if (mode==='submitted') {
     const hasDisputes = Object.values(disputedQuestions).some(v=>v);
     return (
-      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="dark-theme max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen"><DarkTheme/>
         <div className="bg-white rounded-xl shadow-md p-6 mb-4">
           <h1 className="text-2xl font-bold text-gray-800 mb-1">Quiz Submitted!</h1>
           <p className="text-gray-600">Your answers for <span className="font-semibold">{activeQuiz?.title}</span> have been recorded. Results and scores will be posted once everyone has completed the quiz — stay tuned!</p>
@@ -2464,7 +2596,7 @@ const QuizApp = () => {
   if (mode==='results' && activeQuiz?.type==='fillintheblank') {
     const{correct,total}=getScore();
     return (
-      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="dark-theme max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen"><DarkTheme/>
         <Header title="Quiz Results" rightSlot={<button onClick={()=>setMode('setup')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">New Quiz</button>}/>
         <ScoreBanner correct={correct} total={total}/>
         <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">{activeQuestions.map((_,i)=>renderResultRow(activeQuestions[i],i,'fillintheblank'))}</div>
@@ -2476,7 +2608,7 @@ const QuizApp = () => {
   if (mode==='results' && activeQuiz?.type==='MC') {
     const{correct,total}=getScore();
     return (
-      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="dark-theme max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen"><DarkTheme/>
         <Header title="Quiz Results" rightSlot={<button onClick={()=>setMode('setup')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">New Quiz</button>}/>
         <ScoreBanner correct={correct} total={total}/>
         <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">{activeQuestions.map((_,i)=>renderResultRow(activeQuestions[i],i,'MC'))}</div>
@@ -2488,7 +2620,7 @@ const QuizApp = () => {
   if (mode==='results' && activeQuiz?.type==='openresponse') {
     const{correct,total}=getScore();
     return (
-      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="dark-theme max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen"><DarkTheme/>
         <Header title="Quiz Results" rightSlot={<button onClick={()=>setMode('setup')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">New Quiz</button>}/>
         <ScoreBanner correct={correct} total={total}/>
         <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">{activeQuestions.map((_,i)=>renderResultRow(activeQuestions[i],i,'openresponse'))}</div>
@@ -2502,7 +2634,7 @@ const QuizApp = () => {
     const{correct,total}=getScore();
     const questionsForDisplay=activeQuestions.map(q=>q.questionType==='MC'?{...q,displayOptions:q.options.map((opt,i)=>({opt,correct:q.correctIndices.includes(i)})).filter(o=>o.opt.trim()!=='')}:q);
     return (
-      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="dark-theme max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen"><DarkTheme/>
         <Header title="Quiz Results" rightSlot={<button onClick={()=>setMode('setup')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">New Quiz</button>}/>
         <ScoreBanner correct={correct} total={total}/>
         <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
