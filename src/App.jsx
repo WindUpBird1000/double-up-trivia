@@ -1,3 +1,4 @@
+// v2.1
 import React, { useState, useEffect } from 'react';
 import { Check, X, ChevronLeft, ChevronRight, Settings, BookOpen, LogOut, Plus, Trash2, Download, Edit2, Star, List } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
