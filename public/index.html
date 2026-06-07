@@ -40,8 +40,8 @@
       .text-gray-900 { color: #FFFFFF   !important; }
       .text-gray-800 { color: #FFFFFF   !important; }
       .text-gray-700 { color: #dde8f2   !important; }
-      .text-gray-600 { color: #e0eaf4   !important; }
-      .text-gray-500 { color: #c8d8e8   !important; }
+      .text-gray-600 { color: #e8f0f8   !important; }
+      .text-gray-500 { color: #d8e8f4   !important; }
       .text-gray-400 { color: #556677   !important; }
       .text-gray-300 { color: #445566   !important; }
 
@@ -53,9 +53,9 @@
       .divide-gray-200 > * + * { border-color: #253a50 !important; }
 
       /* Primary action buttons (blue) */
-      .bg-blue-600               { background-color: #324A5F !important; border: 1px solid #6a7a8a !important; }
-      .bg-blue-700               { background-color: #3d5a72 !important; }
-      .hover\:bg-blue-700:hover  { background-color: #3d5a72 !important; }
+      .bg-blue-600               { background-color: #1B2A41 !important; border: 1px solid #6a7a8a !important; }
+      .bg-blue-700               { background-color: #253a50 !important; }
+      .hover\:bg-blue-700:hover  { background-color: #253a50 !important; }
       .hover\:bg-blue-800:hover  { background-color: #324A5F !important; }
       .text-blue-600             { color: #7eb8e8 !important; }
       .text-blue-700             { color: #7eb8e8 !important; }
@@ -163,6 +163,11 @@
       /* ? button (bg-black) — add dimmed border */
       .bg-black { background-color: #000000 !important; border: 1px solid #6a7a8a !important; }
       .hover\:bg-gray-900:hover { background-color: #111 !important; }
+
+      /* Scoreboard first-place rows: font-bold has no color class, force white */
+      .font-bold { color: #FFFFFF !important; }
+      /* But font-bold inside green/red rows should stay their color */
+      .bg-green-50 .font-bold, .bg-red-50 .font-bold { color: inherit !important; }
 
       /* Body background (catches any unstyled areas) */
       body { background-color: #0C1821; }
