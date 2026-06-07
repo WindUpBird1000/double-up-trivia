@@ -164,10 +164,12 @@
       .bg-black { background-color: #000000 !important; border: 1px solid #6a7a8a !important; }
       .hover\:bg-gray-900:hover { background-color: #111 !important; }
 
-      /* Scoreboard first-place rows: font-bold has no color class, force white */
+      /* Scoreboard first-place rows: font-bold with no color class, force white */
       .font-bold { color: #FFFFFF !important; }
-      /* But font-bold inside green/red rows should stay their color */
-      .bg-green-50 .font-bold, .bg-red-50 .font-bold { color: inherit !important; }
+      /* Green/red highlighted rows override bold color explicitly */
+      .bg-green-50 .font-bold  { color: #6ee8a0 !important; }
+      .bg-green-50 .text-green-800 { color: #6ee8a0 !important; }
+      .bg-red-50 .font-bold    { color: #e89090 !important; }
 
       /* Body background (catches any unstyled areas) */
       body { background-color: #0C1821; }
