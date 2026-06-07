@@ -27,8 +27,7 @@
       body, * {
         font-family: 'Inter', system-ui, sans-serif;
       }
-      .text-4xl, .text-3xl, .text-2xl,
-      h1, h2 {
+      .text-4xl, .text-3xl {
         font-family: 'Playfair Display', Georgia, serif !important;
       }
 
@@ -68,8 +67,8 @@
       .hover\:bg-blue-50:hover   { background-color: #162840 !important; }
 
       /* Scoreboards / purple buttons */
-      .bg-purple-600              { background-color: #1B2A41 !important; border: 1px solid #CCC9DC !important; }
-      .bg-purple-700              { background-color: #253a50 !important; border: 1px solid #CCC9DC !important; }
+      .bg-purple-600              { background-color: #1B2A41 !important; border: 1px solid #6a7a8a !important; }
+      .bg-purple-700              { background-color: #253a50 !important; border: 1px solid #6a7a8a !important; }
       .hover\:bg-purple-700:hover { background-color: #253a50 !important; }
       .text-purple-600            { color: #CCC9DC !important; }
       .text-purple-700            { color: #CCC9DC !important; }
@@ -160,6 +159,13 @@
 
       /* Click Here / secondary button text */
       .bg-gray-100 .text-gray-600, .text-gray-600 { color: #CCC9DC !important; }
+
+      /* ? button (bg-black) — add dimmed border */
+      .bg-black { background-color: #000000 !important; border: 1px solid #6a7a8a !important; }
+      .hover\:bg-gray-900:hover { background-color: #111 !important; }
+
+      /* Quizzes button (bg-blue-600) — add matching border */
+      .bg-blue-600 { background-color: #324A5F !important; border: 1px solid #6a7a8a !important; }
 
       /* Body background (catches any unstyled areas) */
       body { background-color: #0C1821; }
