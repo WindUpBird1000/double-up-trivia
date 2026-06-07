@@ -142,8 +142,11 @@
       .shadow-lg  { box-shadow: 0 8px 16px rgba(0,0,0,0.6) !important; }
       .shadow-xl  { box-shadow: 0 12px 24px rgba(0,0,0,0.7) !important; }
 
-      /* Rounded corners on the fixed token bin */
+      /* Fixed token bin — rounded top corners */
       .border-t { border-top-color: #324A5F !important; }
+      [style*="position:fixed"][style*="bottom:0"] > div > div {
+        border-radius: 1rem 1rem 0 0 !important;
+      }
 
       /* Body background (catches any unstyled areas) */
       body { background-color: #0C1821; }
