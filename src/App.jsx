@@ -96,11 +96,12 @@ const shuffleArray = (arr) => {
 const normalizeAnswer = (s) => (s || '').trim().toLowerCase();
 const emptyMCQuestion  = () => ({ prompt: '', options: ['','','','','',''], correctIndices: [], randomizeOptions: false });
 const emptyORQuestion  = () => ({ prompt: '', acceptedAnswers: [], primaryAnswerIndex: 0, showOthersCount: false });
+const emptyDDQuestion  = () => ({ prompt: '', correctAnswer: null }); // Data Dash: single numeric answer
 const emptyCombQuestion = (questionType) => ({
   questionType,
   ...(questionType === 'MC' ? emptyMCQuestion() : questionType === 'OR' ? emptyORQuestion() : { text: '', answer: '' })
 });
-const typeLabel = (t) => t === 'MC' ? 'Multiple Choice' : t === 'openresponse' ? 'Open Response' : t === 'combination' ? 'Combination' : 'Fill-in-the-blank';
+const typeLabel = (t) => t === 'MC' ? 'Multiple Choice' : t === 'openresponse' ? 'Open Response' : t === 'datadash' ? 'Data Dash' : t === 'combination' ? 'Combination' : 'Fill-in-the-blank';
 
 const renderInlineFormatting = (text) => {
   const parts = text.split(/(\{\{(?:b|i|u):[^}]+\}\})/);
@@ -502,8 +503,8 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
         </div>
         <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
           <div className="col-span-1">#</div>
-          <div className="col-span-7">Player</div>
-          <div className="col-span-2 text-center">Correct</div>
+          <div className={quiz.type==='datadash' ? 'col-span-9' : 'col-span-7'}>Player</div>
+          {quiz.type!=='datadash' && <div className="col-span-2 text-center">Correct</div>}
           <div className="col-span-2 text-right">Points</div>
         </div>
         {withRanks.map((u, i) => {
@@ -519,10 +520,10 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                 ${isSelected ? 'bg-blue-100' : isMe ? 'bg-green-50' : 'bg-white'}`}
             >
               <div className={`col-span-1 text-sm ${isFirst ? 'font-bold' : 'text-gray-500'}`}>{u.rank}</div>
-              <div className={`col-span-7 text-sm ${isFirst ? 'font-bold' : ''} ${isMe ? 'text-green-800' : isSelected ? 'text-blue-800' : 'text-gray-800'}`}>
+              <div className={`${quiz.type==='datadash'?'col-span-9':'col-span-7'} text-sm ${isFirst ? 'font-bold' : ''} ${isMe ? 'text-green-800' : isSelected ? 'text-blue-800' : 'text-gray-800'}`}>
                 {u.display_name}{isMe ? ' (you)' : ''}
               </div>
-              <div className={`col-span-2 text-center text-sm ${isFirst ? 'font-bold' : 'text-gray-600'}`}>{u.questionsCorrect}</div>
+              {quiz.type!=='datadash' && <div className={`col-span-2 text-center text-sm ${isFirst ? 'font-bold' : 'text-gray-600'}`}>{u.questionsCorrect}</div>}
               <div className={`col-span-2 text-right text-sm ${isFirst ? 'font-bold' : 'text-gray-600'}`}>{u.score}</div>
             </div>
           );
@@ -622,6 +623,32 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               tokenLabel = 'parasite';
             } else {
               myPts = correct ? pts : 0;
+            }
+            // ── Data Dash: show difference and per-question score ──────────
+            if (quiz.type === 'datadash') {
+              const myRawAnswer = (myAnswers[i] || '').toString().replace(/,/g,'').trim();
+              const myNumVal = parseFloat(myRawAnswer);
+              const diff = isNaN(myNumVal) ? 'N/A' : Math.abs(myNumVal - q.correctAnswer);
+              const ddPts = results.scores?.ddPointsByUser?.[currentUser?.id]?.[i] ?? pts;
+              return (
+                <div key={i} className="border-b last:border-b-0 bg-white">
+                  <div className="grid grid-cols-3 gap-4 p-4">
+                    <div className="col-span-2">
+                      <p className="text-sm text-gray-800 mb-2 flex items-center gap-1 flex-wrap">
+                        <span>{i+1}.</span>
+                        {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(20)}</span>}
+                        <span>{q.prompt}</span>
+                      </p>
+                      <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {q.correctAnswer?.toLocaleString()}</p>
+                      <p className="text-xs text-gray-600 mt-0.5"><span className="font-semibold">Your Answer:</span> {myRawAnswer || '—'}</p>
+                      <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Difference:</span> {typeof diff === 'number' ? diff.toLocaleString() : diff}</p>
+                    </div>
+                    <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
+                      <p className="font-semibold text-gray-800">{ddPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}</p>
+                    </div>
+                  </div>
+                </div>
+              );
             }
             const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
             const hasOtherAnswers = (qtype === 'OR' || qtype === 'openresponse') && q.acceptedAnswers?.length > 1;
@@ -929,7 +956,7 @@ const QuizApp = () => {
   const [newQuizCategory, setNewQuizCategory] = useState('');
   const [newCategoryInput, setNewCategoryInput] = useState('');
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
-  const [newQuizStatus, setNewQuizStatus] = useState('Active');
+  const [newQuizStatus, setNewQuizStatus] = useState('Inactive');
   const [newQuizAuthorNote, setNewQuizAuthorNote] = useState('');
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
@@ -962,6 +989,9 @@ const QuizApp = () => {
   const [orCurrentIndex, setOrCurrentIndex] = useState(0);
   const [orRandomizeQuestions, setOrRandomizeQuestions] = useState(false);
   const [orAnswerInput, setOrAnswerInput] = useState('');
+  const [ddQuestions, setDdQuestions] = useState([emptyDDQuestion()]);
+  const [ddCurrentIndex, setDdCurrentIndex] = useState(0);
+  const [ddAnswerInput, setDdAnswerInput] = useState('');
   const [combQuestions, setCombQuestions] = useState([]);
   const [combCurrentIndex, setCombCurrentIndex] = useState(null);
   const [combNewQType, setCombNewQType] = useState('MC');
@@ -1062,6 +1092,8 @@ const QuizApp = () => {
       prev.includes(i) ? prev.filter(x => x !== i) : prev.length < DOUBLES_ALLOWED ? [...prev, i] : prev
     );
   };
+
+  const isDashQuiz = activeQuiz?.type === 'datadash';
 
   const getAnswerDisplay = (q, i) => {
     const qtype = activeQuiz?.type === 'combination' ? q.questionType : activeQuiz?.type;
@@ -1282,6 +1314,7 @@ const QuizApp = () => {
     setNewCategoryInput(''); setShowNewCategoryInput(false); setNewQuizStatus('Active'); setNewQuizAuthorNote('');
     setNewQuizType('fillintheblank'); setNewSentenceInput(''); setNewQuizSentences([]);
     setNewQuizTokenSlots([...DEFAULT_TOKEN_SLOTS]); setNewQuizClosingDate(''); setShowDatePicker(false); setDatePickerMonth({ year: new Date().getFullYear(), month: new Date().getMonth() });
+    setDdQuestions([emptyDDQuestion()]); setDdCurrentIndex(0); setDdAnswerInput('');
     setExtraWords([]); setMcQuestions([emptyMCQuestion()]); setMcCurrentIndex(0); setMcRandomizeQuestions(false);
     setOrQuestions([emptyORQuestion()]); setOrCurrentIndex(0); setOrRandomizeQuestions(false); setOrAnswerInput('');
     setCombQuestions([]); setCombCurrentIndex(null); setCombNewQType('MC'); setCombDraft(null);
@@ -1354,6 +1387,11 @@ const QuizApp = () => {
   };
   const removeORAnswer = (ai) => setOrQuestions(p => p.map((q,i) => { if(i!==orCurrentIndex) return q; const na=q.acceptedAnswers.filter((_,j)=>j!==ai); const np=ai===q.primaryAnswerIndex?0:ai<q.primaryAnswerIndex?q.primaryAnswerIndex-1:q.primaryAnswerIndex; return {...q,acceptedAnswers:na,primaryAnswerIndex:na.length>0?np:0}; }));
   const setORPrimary = (ai) => setOrQuestions(p => p.map((q,i) => i===orCurrentIndex ? {...q,primaryAnswerIndex:ai} : q));
+  const updateDDQuestion = (field, value) => setDdQuestions(p => p.map((q,i) => i===ddCurrentIndex ? {...q,[field]:value} : q));
+  const addDDQuestion = () => { setDdQuestions(p=>[...p,emptyDDQuestion()]); setDdCurrentIndex(ddQuestions.length); };
+  const removeDDQuestion = (idx) => { if(ddQuestions.length===1){alert('A quiz must have at least one question.');return;} const u=ddQuestions.filter((_,i)=>i!==idx); setDdQuestions(u); setDdCurrentIndex(Math.min(ddCurrentIndex,u.length-1)); };
+  const parseNumber = (s) => { const cleaned=(s||'').replace(/,/g,'').trim(); const n=parseFloat(cleaned); return isNaN(n)?null:n; };
+
   const addORQuestion = () => { setOrQuestions(p=>[...p,emptyORQuestion()]); setOrCurrentIndex(orQuestions.length); };
   const removeORQuestion = (idx) => { if(orQuestions.length===1){alert('A quiz must have at least one question.');return;} const u=orQuestions.filter((_,i)=>i!==idx); setOrQuestions(u); setOrCurrentIndex(Math.min(orCurrentIndex,u.length-1)); };
 
@@ -1407,6 +1445,9 @@ const QuizApp = () => {
     } else if (newQuizType==='combination') {
       if (combQuestions.length===0) { alert('Please add at least one question.'); return false; }
       if (combDraft) { alert('You are in the middle of editing a question. Click "Update Question" or "Cancel Edit" first.'); return false; }
+    } else if (newQuizType==='datadash') {
+      if (!ddQuestions[0]?.prompt.trim()) { alert('Please add at least one question.'); return false; }
+      for(let i=0;i<ddQuestions.length;i++){ if(ddQuestions[i].correctAnswer===null){alert(`Q${i+1} needs a correct numeric answer.`);return false;} }
     }
     return true;
   };
@@ -1421,6 +1462,8 @@ const QuizApp = () => {
       return { ...base, randomizeQuestions:mcRandomizeQuestions, questions:mcQuestions.map(q=>({ prompt:q.prompt, options:q.options.filter(o=>o.trim()!==''), correctIndices:q.correctIndices.filter(i=>q.options[i]&&q.options[i].trim()!=='').map(i=>q.options.filter((_,idx)=>idx<=i&&q.options[idx].trim()!=='').length-1), randomizeOptions:q.randomizeOptions||false })) };
     } else if (newQuizType==='openresponse') {
       return { ...base, randomizeQuestions:orRandomizeQuestions, questions:orQuestions.map(q=>({ prompt:q.prompt, acceptedAnswers:q.acceptedAnswers, primaryAnswerIndex:q.primaryAnswerIndex, showOthersCount:q.showOthersCount })) };
+    } else if (newQuizType==='datadash') {
+      return { ...base, questions:ddQuestions.map(q=>({ prompt:q.prompt, correctAnswer:q.correctAnswer })) };
     } else {
       return { ...base, questions:combQuestions.map(q => {
         const qt=q.questionType;
@@ -1447,12 +1490,87 @@ const QuizApp = () => {
         return ans && q.acceptedAnswers.some(a => normalizeAnswer(a) === normalizeAnswer(ans));
       } else if (qtype === 'FITB' || quiz.type === 'fillintheblank') {
         return ans === parseSentence(q.text).answer;
+      } else if (quiz.type === 'datadash') {
+        return true; // datadash has no correct/incorrect — all answers are 'valid'
       }
       return false;
     });
   };
 
   const computeQuizResults = (quiz, attempts) => {
+    // ── Data Dash scoring ──────────────────────────────────────────────────
+    if (quiz.type === 'datadash') {
+      const questions = quiz.questions;
+      const n = questions.length;
+      const totalAttempts = attempts.length;
+      // For each question, collect each user's |answer - correct| difference
+      // Then rank by difference (smallest = best = most points)
+      const userScores = attempts.map(a => {
+        const tokenMap = a.token_assignments || {};
+        const doublesArr = a.doubles || [];
+        let total = 0;
+        const diffs = questions.map((q, i) => {
+          const raw = (a.answers[i] || '').toString().replace(/,/g,'').trim();
+          const userVal = parseFloat(raw);
+          return isNaN(userVal) ? Infinity : Math.abs(userVal - q.correctAnswer);
+        });
+        // Store diffs on the attempt for scoring
+        a._diffs = diffs;
+        return { user_id: a.user_id, display_name: a.display_name, diffs };
+      });
+      // Per question, rank by diff and assign points
+      const pointValues = questions.map((_, qi) => {
+        const ranked = attempts
+          .map((a, ai) => ({ ai, diff: a._diffs[qi] }))
+          .sort((a, b) => a.diff - b.diff);
+        const pts = new Array(attempts.length).fill(0);
+        let rank = totalAttempts;
+        let j = 0;
+        while (j < ranked.length) {
+          let k = j;
+          while (k < ranked.length - 1 && ranked[k+1].diff === ranked[k].diff) k++;
+          const avg = Math.round(((ranked.slice(j,k+1).reduce((s,_,ii)=>s+(rank-ii),0))/(k-j+1))*10)/10;
+          for (let m = j; m <= k; m++) pts[ranked[m].ai] = avg;
+          rank -= (k - j + 1);
+          j = k + 1;
+        }
+        return pts; // pts[attemptIndex] = points for this question
+      });
+      // Build per-user scores with token effects
+      const userScoresFinal = attempts.map((a, ai) => {
+        let total = 0;
+        const tokenMap = a.token_assignments || {};
+        const doublesArr = a.doubles || [];
+        questions.forEach((q, i) => {
+          const basePts = pointValues[i][ai];
+          const token = tokenMap[i] || (doublesArr.includes(i) ? 'doubler' : null);
+          if (token === 'doubler') {
+            total += Math.round(basePts * 2 * 10) / 10;
+          } else if (token === 'insurance') {
+            total += basePts; // insurance has no wrong answer in DD
+          } else if (token === 'sniper') {
+            total += SNIPER_POINTS;
+          } else if (token === 'parasite') {
+            total += basePts; // parasite same as normal in DD (no correctCount)
+          } else {
+            total += basePts;
+          }
+        });
+        return { user_id: a.user_id, display_name: a.display_name, score: Math.round(total * 10) / 10, questionsCorrect: 0 };
+      });
+      // pointValues for storage: per-question base value for the median user (just store the first user's values for reference)
+      const pointValuesFlat = questions.map((_, qi) => pointValues[qi][0] || 0);
+      const correctCounts = questions.map(() => 0); // not used for DD
+      const correctnessByUser = {};
+      attempts.forEach(a => { correctnessByUser[a.user_id] = questions.map(() => true); });
+      // Store per-question per-user point values for auditor
+      const ddPointsByUser = {};
+      attempts.forEach((a, ai) => {
+        ddPointsByUser[a.user_id] = questions.map((_, qi) => pointValues[qi][ai]);
+      });
+      return { pointValues: pointValuesFlat, userScores: userScoresFinal, correctnessByUser, correctCounts, ddPointsByUser, isDashQuiz: true };
+    }
+    // ── Standard scoring ───────────────────────────────────────────────────
     const questions = quiz.type === 'fillintheblank' ? quiz.sentences : quiz.questions;
     const n = questions.length;
     const correctCounts = questions.map((_, i) => attempts.filter(a => a.correctness[i]).length);
@@ -1571,9 +1689,11 @@ const QuizApp = () => {
     const quiz = quizRow.data;
     const season = quizRow.category;
     const questions = quiz.type === 'fillintheblank' ? quiz.sentences : quiz.questions;
-    const { pointValues, userScores, correctnessByUser, correctCounts } = resultRow.scores;
+    const scores = resultRow.scores;
+    const { pointValues, userScores, correctnessByUser, correctCounts } = scores;
     const totalAttempts = attempts.length;
     const n = questions.length;
+    const isDashQuiz = quiz.type === 'datadash';
 
     // Fetch display names
     const userIds = attempts.map(a => a.user_id);
@@ -1581,76 +1701,100 @@ const QuizApp = () => {
     const nameMap = {};
     (profiles || []).forEach(p => { nameMap[p.user_id] = p.display_name; });
 
-    // ── Difficulty ranking explanation ──────────────────────────────────────
-    // Group questions by their correct count, then rank hardest→easiest
-    const sorted = [...correctCounts.map((c, i) => ({ i, c }))]
-      .sort((a, b) => a.c - b.c || a.i - b.i);
-    const rankingRows = [];
-    let rank = n;
-    let j = 0;
-    while (j < sorted.length) {
-      let k = j;
-      while (k < sorted.length - 1 && sorted[k + 1].c === sorted[k].c) k++;
-      const tieCount = k - j + 1;
-      const rawRanks = [];
-      for (let m = 0; m < tieCount; m++) rawRanks.push(rank - m);
-      const avg = Math.round((rawRanks.reduce((s, v) => s + v, 0) / tieCount) * 10) / 10;
-      const isTie = tieCount > 1;
-      for (let m = j; m <= k; m++) {
-        const qi = sorted[m].i;
-        rankingRows.push({
-          qIndex: qi,
-          correctCount: correctCounts[qi],
-          totalAttempts,
-          assignedPoints: pointValues[qi],
-          isTie,
-          tieWith: isTie ? sorted.slice(j, k + 1).map(x => x.i).filter(x => x !== qi) : [],
-          tieFormula: isTie ? `(${rawRanks.join(' + ')}) ÷ ${tieCount} = ${avg}` : null,
-        });
-      }
-      rank -= tieCount;
-      j = k + 1;
-    }
-    rankingRows.sort((a, b) => a.correctCount - b.correctCount || b.assignedPoints - a.assignedPoints);
+    let rankingRows = [];
 
-    // ── Per-user per-question cell detail ──────────────────────────────────
+    if (!isDashQuiz) {
+      // ── Difficulty ranking explanation ────────────────────────────────────
+      const sorted = [...correctCounts.map((c, i) => ({ i, c }))]
+        .sort((a, b) => a.c - b.c || a.i - b.i);
+      let rank = n;
+      let j = 0;
+      while (j < sorted.length) {
+        let k = j;
+        while (k < sorted.length - 1 && sorted[k + 1].c === sorted[k].c) k++;
+        const tieCount = k - j + 1;
+        const rawRanks = [];
+        for (let m = 0; m < tieCount; m++) rawRanks.push(rank - m);
+        const avg = Math.round((rawRanks.reduce((s, v) => s + v, 0) / tieCount) * 10) / 10;
+        const isTie = tieCount > 1;
+        for (let m = j; m <= k; m++) {
+          const qi = sorted[m].i;
+          rankingRows.push({
+            qIndex: qi, correctCount: correctCounts[qi], totalAttempts,
+            assignedPoints: pointValues[qi], isTie,
+            tieWith: isTie ? sorted.slice(j, k + 1).map(x => x.i).filter(x => x !== qi) : [],
+            tieFormula: isTie ? `(${rawRanks.join(' + ')}) ÷ ${tieCount} = ${avg}` : null,
+          });
+        }
+        rank -= tieCount;
+        j = k + 1;
+      }
+      rankingRows.sort((a, b) => a.correctCount - b.correctCount || b.assignedPoints - a.assignedPoints);
+    }
+
+    // ── Per-user per-question cell detail ────────────────────────────────────
     const userRows = attempts.map(attempt => {
       const displayName = nameMap[attempt.user_id] || attempt.user_id;
       const tokenMap = attempt.token_assignments || {};
       const doublesArr = attempt.doubles || [];
-      const correctness = correctnessByUser[attempt.user_id] || [];
-      const cells = questions.map((_, i) => {
-        const correct = correctness[i] || false;
-        const pts = pointValues[i];
-        const token = tokenMap[i] || (doublesArr.includes(i) ? 'doubler' : null);
-        let earned = 0;
-        let formula = '';
-        if (token === 'doubler') {
-          earned = correct ? Math.round(pts * 2 * 10) / 10 : 0;
-          formula = correct ? `${pts} × 2 = ${earned}` : `✗ + Doubler → 0`;
-        } else if (token === 'insurance') {
-          earned = correct ? pts : Math.round((pts / 2) * 10) / 10;
-          formula = correct ? `${pts} (insurance, correct)` : `${pts} ÷ 2 = ${earned} (insurance)`;
-        } else if (token === 'sniper') {
-          earned = correct ? SNIPER_POINTS : 0;
-          formula = correct ? `Sniper flat = ${SNIPER_POINTS}` : `✗ + Sniper → 0`;
-        } else if (token === 'parasite') {
-          earned = totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0;
-          formula = `${correctCounts[i]} × ${pts} ÷ ${totalAttempts} = ${earned} (parasite)`;
-        } else {
-          earned = correct ? pts : 0;
-          formula = correct ? `${pts}` : `✗ → 0`;
-        }
-        return { correct, token, earned, formula };
-      });
+
+      let cells;
+      if (isDashQuiz) {
+        // Data Dash: base pts come from ddPointsByUser stored in scores
+        const ddPts = scores.ddPointsByUser?.[attempt.user_id] || questions.map(() => 0);
+        cells = questions.map((q, i) => {
+          const rawAns = (attempt.answers[i] || '').toString().replace(/,/g, '').trim();
+          const userVal = parseFloat(rawAns);
+          const diff = isNaN(userVal) ? null : Math.abs(userVal - q.correctAnswer);
+          const basePts = ddPts[i] || 0;
+          const token = tokenMap[i] || (doublesArr.includes(i) ? 'doubler' : null);
+          let earned = basePts;
+          let formula = `${basePts} pts (rank-based)`;
+          if (token === 'doubler') {
+            earned = Math.round(basePts * 2 * 10) / 10;
+            formula = `${basePts} × 2 = ${earned} (doubler)`;
+          } else if (token === 'sniper') {
+            earned = SNIPER_POINTS;
+            formula = `Sniper flat = ${SNIPER_POINTS}`;
+          }
+          return { correct: true, token, earned, formula, diff };
+        });
+      } else {
+        const correctness = correctnessByUser[attempt.user_id] || [];
+        cells = questions.map((_, i) => {
+          const correct = correctness[i] || false;
+          const pts = pointValues[i];
+          const token = tokenMap[i] || (doublesArr.includes(i) ? 'doubler' : null);
+          let earned = 0;
+          let formula = '';
+          if (token === 'doubler') {
+            earned = correct ? Math.round(pts * 2 * 10) / 10 : 0;
+            formula = correct ? `${pts} × 2 = ${earned}` : `✗ + Doubler → 0`;
+          } else if (token === 'insurance') {
+            earned = correct ? pts : Math.round((pts / 2) * 10) / 10;
+            formula = correct ? `${pts} (insurance, correct)` : `${pts} ÷ 2 = ${earned} (insurance)`;
+          } else if (token === 'sniper') {
+            earned = correct ? SNIPER_POINTS : 0;
+            formula = correct ? `Sniper flat = ${SNIPER_POINTS}` : `✗ + Sniper → 0`;
+          } else if (token === 'parasite') {
+            earned = totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0;
+            formula = `${correctCounts[i]} × ${pts} ÷ ${totalAttempts} = ${earned} (parasite)`;
+          } else {
+            earned = correct ? pts : 0;
+            formula = correct ? `${pts}` : `✗ → 0`;
+          }
+          return { correct, token, earned, formula };
+        });
+      }
+
       const storedScore = (userScores.find(u => u.user_id === attempt.user_id) || {}).score;
       const recomputedTotal = Math.round(cells.reduce((s, c) => s + c.earned, 0) * 10) / 10;
-      const matches = storedScore === recomputedTotal;
+      const matches = !isDashQuiz ? storedScore === recomputedTotal : true;
       return { user_id: attempt.user_id, displayName, cells, recomputedTotal, storedScore, matches };
     });
     userRows.sort((a, b) => b.recomputedTotal - a.recomputedTotal);
 
-    setAuditData({ quizKey, quizTitle: quiz.title || quizKey, season, questions, rankingRows, userRows, n, totalAttempts });
+    setAuditData({ quizKey, quizTitle: quiz.title || quizKey, season, questions, rankingRows, userRows, n, totalAttempts, isDashQuiz });
     setAuditLoading(false);
   };
 
@@ -2042,6 +2186,44 @@ const QuizApp = () => {
         </div>
         <NavBar current={currentQuestionIndex} total={total} label="Question"/>
         <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
+        <ExitModal/>
+      </div>
+    );
+  }
+
+  if (mode==='assessment' && activeQuiz?.type==='datadash') {
+    const q=activeQuestions[currentQuestionIndex]; const total=activeQuestions.length;
+    const answeredCount=Object.keys(studentAnswers).filter(k=>{const v=(studentAnswers[k]||'').toString().replace(/,/g,'').trim();return v!==''&&!isNaN(parseFloat(v));}).length;
+    const curVal = studentAnswers[currentQuestionIndex] || '';
+    const curNumeric = curVal.toString().replace(/,/g,'').trim();
+    const isValidNum = curNumeric === '' || !isNaN(parseFloat(curNumeric));
+    return (
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-800">{activeQuiz.title}</h1>
+          <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">Exit Quiz</button>
+        </div>
+        <div className="bg-white rounded-xl shadow-md p-8 mb-6">
+          <div className="text-xl text-gray-800 font-semibold mb-6">{renderPrompt(q.prompt)}</div>
+          <input
+            type="text"
+            value={curVal}
+            onChange={e=>setStudentAnswers(p=>({...p,[currentQuestionIndex]:e.target.value}))}
+            placeholder="Enter a number..."
+            className={`w-full px-4 py-3 border-2 rounded-lg text-gray-800 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!isValidNum ? 'border-red-400' : 'border-gray-300'}`}
+          />
+          {!isValidNum && <p className="text-red-600 text-sm mt-2">Please enter a valid number (commas are ok, e.g. 1,234.5)</p>}
+        </div>
+        <NavBar current={currentQuestionIndex} total={total} label="Question"/>
+        <button
+          onClick={()=>{
+            // Validate all answers are numbers before submitting
+            const invalid = Object.entries(studentAnswers).filter(([,v])=>{const c=(v||'').toString().replace(/,/g,'').trim();return c!==''&&isNaN(parseFloat(c));});
+            if(invalid.length>0){alert('Some of your answers are not valid numbers. Please check and correct them before submitting.');return;}
+            submitQuiz();
+          }}
+          className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"
+        ><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
         <ExitModal/>
       </div>
     );
@@ -2490,6 +2672,7 @@ const QuizApp = () => {
             <span className="text-sm font-medium text-gray-600 whitespace-nowrap">New Quiz:</span>
             <select value={newQuizTypeSelector} onChange={e=>setNewQuizTypeSelector(e.target.value)} className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500">
               <option value="openresponse">Open Response</option>
+              <option value="datadash">Data Dash</option>
             </select>
             <button onClick={startCreateQuiz} className="px-3 py-1 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">Create</button>
           </div>
@@ -2875,9 +3058,46 @@ const QuizApp = () => {
               </div>
             )}
 
+            {newQuizType==='datadash'&&(
+              <div className="bg-white rounded-xl shadow-md p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-800">Question {ddCurrentIndex+1} of {ddQuestions.length}</h2>
+                  <div className="flex items-center gap-2">
+                    <button onClick={()=>setDdCurrentIndex(i=>Math.max(0,i-1))} disabled={ddCurrentIndex===0} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronLeft size={18}/></button>
+                    <button onClick={()=>setDdCurrentIndex(i=>Math.min(ddQuestions.length-1,i+1))} disabled={ddCurrentIndex===ddQuestions.length-1} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronRight size={18}/></button>
+                    <button onClick={()=>removeDDQuestion(ddCurrentIndex)} className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200 ml-1"><Trash2 size={16}/></button>
+                  </div>
+                </div>
+                {(()=>{const ddQ=ddQuestions[ddCurrentIndex]||emptyDDQuestion();return(<>
+                  <div className="mb-5">
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Prompt <span className="text-red-500">*</span></label>
+                    <textarea value={ddQ.prompt} onChange={e=>updateDDQuestion('prompt',e.target.value)} placeholder="Enter the question..." rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/>
+                    <ImageHelper key={`dd-${ddCurrentIndex}`}/>
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Correct Answer (number) <span className="text-red-500">*</span></label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={ddAnswerInput}
+                        onChange={e=>setDdAnswerInput(e.target.value)}
+                        onKeyDown={e=>{if(e.key==='Enter'){const n=parseNumber(ddAnswerInput);if(n===null){alert('Please enter a valid number.');return;}updateDDQuestion('correctAnswer',n);setDdAnswerInput('');}}}
+                        placeholder="e.g. 1,497.05"
+                        className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${ddAnswerInput&&parseNumber(ddAnswerInput)===null?'border-red-400':'border-gray-300'}`}
+                      />
+                      <button onClick={()=>{const n=parseNumber(ddAnswerInput);if(n===null){alert('Please enter a valid number (commas ok, e.g. 1,234.5).');return;}updateDDQuestion('correctAnswer',n);setDdAnswerInput('');}} className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"><Check size={18}/> Set</button>
+                    </div>
+                    {ddQ.correctAnswer!==null&&<p className="mt-2 text-sm text-green-700 font-medium">✓ Correct answer: <span className="font-bold">{ddQ.correctAnswer.toLocaleString()}</span></p>}
+                    {ddAnswerInput&&parseNumber(ddAnswerInput)===null&&<p className="text-red-500 text-xs mt-1">Not a valid number</p>}
+                  </div>
+                </>);})()}
+              </div>
+            )}
+
             <div className="flex gap-3">
               {newQuizType==='MC'&&<button onClick={addMCQuestion} className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-semibold"><Plus size={18}/> Add Next Question</button>}
               {newQuizType==='openresponse'&&<button onClick={addORQuestion} className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-semibold"><Plus size={18}/> Add Next Question</button>}
+              {newQuizType==='datadash'&&<button onClick={addDDQuestion} className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-semibold"><Plus size={18}/> Add Next Question</button>}
               <button onClick={()=>setShowPreview(true)} className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold"><BookOpen size={20}/> Preview Question</button>
               <button onClick={saveQuizLocally} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">{editingKey?'Save Changes':'Save Quiz'}</button>
               <button onClick={()=>{resetQuizBuilder();setAdminSection('list');}} className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
@@ -2994,8 +3214,8 @@ const QuizApp = () => {
 
               return (
                 <>
-                  {/* ── Section 1: Difficulty Ranking ── */}
-                  <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                  {/* ── Section 1: Difficulty Ranking (skipped for Data Dash) ── */}
+                  {!auditData.isDashQuiz && <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     <div className="px-5 py-3 bg-gray-100 border-b">
                       <h2 className="font-bold text-gray-700">1. Difficulty Ranking & Point Values</h2>
                       <p className="text-xs text-gray-500 mt-0.5">Sorted hardest → easiest (fewest correct = hardest = most points). Ties are averaged.</p>
@@ -3028,13 +3248,13 @@ const QuizApp = () => {
                         </tbody>
                       </table>
                     </div>
-                  </div>
+                  </div>}
 
                   {/* ── Section 2: Per-user accordion ── */}
                   <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     <div className="px-5 py-3 bg-gray-100 border-b">
-                      <h2 className="font-bold text-gray-700">2. Per-User Score Breakdown</h2>
-                      <p className="text-xs text-gray-500 mt-0.5">Click a player to expand their full question-by-question breakdown. ✅ = recomputed total matches stored score; ❌ = mismatch.</p>
+                      <h2 className="font-bold text-gray-700">{auditData.isDashQuiz ? '1' : '2'}. Per-User Score Breakdown</h2>
+                      <p className="text-xs text-gray-500 mt-0.5">{auditData.isDashQuiz ? 'Click a player to expand their per-question breakdown.' : 'Click a player to expand their full question-by-question breakdown. ✅ = recomputed total matches stored score; ❌ = mismatch.'}</p>
                     </div>
                     {/* Collapsed header row */}
                     <div className="divide-y divide-gray-100">
@@ -3051,16 +3271,21 @@ const QuizApp = () => {
                             >
                               <div className="flex items-center gap-3">
                                 <span className="text-sm font-medium text-gray-800 w-40">{row.displayName}</span>
-                                {/* Mini ✓/✗ strip */}
+                                {/* Mini strip: ✓/✗ for standard, Q labels for datadash */}
                                 <div className="flex gap-0.5">
-                                  {row.cells.map((cell, i) => (
-                                    <span key={i} title={`Q${i+1}`} className={`text-xs font-bold px-1 rounded ${cell.correct ? 'text-green-600 bg-green-50' : 'text-red-500 bg-red-50'}`}>{cell.correct ? '✓' : '✗'}</span>
-                                  ))}
+                                  {auditData.isDashQuiz
+                                    ? row.cells.map((cell, i) => (
+                                        <span key={i} title={`Q${i+1}: diff ${cell.diff}`} className="text-xs font-bold px-1 rounded text-gray-500 bg-gray-100">Q{i+1}</span>
+                                      ))
+                                    : row.cells.map((cell, i) => (
+                                        <span key={i} title={`Q${i+1}`} className={`text-xs font-bold px-1 rounded ${cell.correct ? 'text-green-600 bg-green-50' : 'text-red-500 bg-red-50'}`}>{cell.correct ? '✓' : '✗'}</span>
+                                      ))
+                                  }
                                 </div>
                               </div>
                               <div className="flex items-center gap-3">
                                 <span className="font-bold text-gray-800 text-sm">{row.recomputedTotal} pts</span>
-                                <span className={`text-xs ${row.matches ? 'text-green-600' : 'text-red-600 font-bold'}`}>{row.matches ? '✅' : `❌ stored: ${row.storedScore}`}</span>
+                                {!auditData.isDashQuiz && <span className={`text-xs ${row.matches ? 'text-green-600' : 'text-red-600 font-bold'}`}>{row.matches ? '✅' : `❌ stored: ${row.storedScore}`}</span>}
                                 <span className="text-gray-400 text-xs">{isOpen ? '▲' : '▼'}</span>
                               </div>
                             </div>
@@ -3071,7 +3296,9 @@ const QuizApp = () => {
                                   <thead>
                                     <tr className="text-xs text-gray-500 uppercase border-b border-gray-200">
                                       <th className="py-1.5 text-left font-semibold w-12">Q#</th>
-                                      <th className="py-1.5 text-center font-semibold w-12">Result</th>
+                                      {auditData.isDashQuiz
+                                        ? <th className="py-1.5 text-right font-semibold w-24">Difference</th>
+                                        : <th className="py-1.5 text-center font-semibold w-12">Result</th>}
                                       <th className="py-1.5 text-left font-semibold w-28">Token</th>
                                       <th className="py-1.5 text-right font-semibold w-20">Base Pts</th>
                                       <th className="py-1.5 text-right font-semibold w-20">Earned</th>
@@ -3080,9 +3307,11 @@ const QuizApp = () => {
                                   </thead>
                                   <tbody className="divide-y divide-gray-100">
                                     {row.cells.map((cell, i) => (
-                                      <tr key={i} className={cell.token ? '' : ''} style={{backgroundColor: cell.token ? tokenBg(cell.token) : 'transparent'}}>
+                                      <tr key={i} style={{backgroundColor: cell.token ? tokenBg(cell.token) : 'transparent'}}>
                                         <td className="py-1.5 text-gray-500 font-medium">Q{i+1}</td>
-                                        <td className={`py-1.5 text-center font-bold text-base ${cell.correct ? 'text-green-600' : 'text-red-500'}`}>{cell.correct ? '✓' : '✗'}</td>
+                                        {auditData.isDashQuiz
+                                          ? <td className="py-1.5 text-right text-gray-500">{cell.diff !== null && cell.diff !== undefined ? cell.diff.toLocaleString() : '—'}</td>
+                                          : <td className={`py-1.5 text-center font-bold text-base ${cell.correct ? 'text-green-600' : 'text-red-500'}`}>{cell.correct ? '✓' : '✗'}</td>}
                                         <td className="py-1.5 text-xs text-gray-600">{cell.token ? tokenLabel(cell.token) : <span className="text-gray-300">—</span>}</td>
                                         <td className="py-1.5 text-right text-gray-500">{ptsByQIndex[i]} pts</td>
                                         <td className="py-1.5 text-right font-semibold text-gray-800">{cell.earned} pts</td>
@@ -3090,12 +3319,12 @@ const QuizApp = () => {
                                       </tr>
                                     ))}
                                     <tr className="border-t-2 border-gray-300 bg-gray-100">
-                                      <td colSpan={4} className="py-2 text-sm font-semibold text-gray-700 text-right pr-2">Total</td>
+                                      <td colSpan={auditData.isDashQuiz ? 3 : 4} className="py-2 text-sm font-semibold text-gray-700 text-right pr-2">Total</td>
                                       <td className="py-2 text-right font-bold text-gray-900">{row.recomputedTotal} pts</td>
                                       <td className="py-2 pl-4">
-                                        <span className={`text-xs font-semibold ${row.matches ? 'text-green-600' : 'text-red-600'}`}>
+                                        {!auditData.isDashQuiz && <span className={`text-xs font-semibold ${row.matches ? 'text-green-600' : 'text-red-600'}`}>
                                           {row.matches ? '✅ matches stored score' : `❌ stored score was ${row.storedScore} pts`}
-                                        </span>
+                                        </span>}
                                       </td>
                                     </tr>
                                   </tbody>
