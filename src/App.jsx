@@ -2556,9 +2556,6 @@ const QuizApp = () => {
             <span className="text-sm font-medium text-gray-600 whitespace-nowrap">New Quiz:</span>
             <select value={newQuizTypeSelector} onChange={e=>setNewQuizTypeSelector(e.target.value)} className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500">
               <option value="openresponse">Open Response</option>
-              <option value="MC">Multiple Choice</option>
-              <option value="fillintheblank">Fill-in-the-blank</option>
-              <option value="combination">Combination</option>
             </select>
             <button onClick={startCreateQuiz} className="px-3 py-1 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">Create</button>
           </div>
