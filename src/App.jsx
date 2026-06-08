@@ -692,22 +692,14 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
             const n = userScores.length;
             if (n === 0) return null;
             const sorted = [...userScores].sort((a, b) => b.score - a.score);
-            let seasonPts = null;
-            let position = null;
-            let i = 0;
-            while (i < sorted.length) {
-              let j = i;
-              while (j < sorted.length - 1 && sorted[j + 1].score === sorted[j].score) j++;
-              let sum = 0;
-              for (let k = i; k <= j; k++) sum += (n - k);
-              const avg = Math.round((sum / (j - i + 1)) * 10) / 10;
-              for (let k = i; k <= j; k++) {
-                if (sorted[k].user_id === userId) { seasonPts = avg; position = i + 1; }
-              }
-              i = j + 1;
+            // Find user's score and position
+            const userEntry = userScores.find(u => u.user_id === userId);
+            if (!userEntry) return null;
+            let position = 1;
+            for (let k = 0; k < sorted.length; k++) {
+              if (sorted[k].score > userEntry.score) position++;
             }
-            if (seasonPts === null) return null;
-            return { quiz_key: r.quiz_key, quizTitle, position, totalParticipants: n, seasonPts };
+            return { quiz_key: r.quiz_key, quizTitle, position, totalParticipants: n, seasonPts: userEntry.score };
           }).filter(Boolean).sort((a, b) => a.quizTitle.localeCompare(b.quizTitle));
         };
 
@@ -825,7 +817,7 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
               <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
                 <div className="col-span-6">Quiz</div>
                 <div className="col-span-4 text-center">Finish</div>
-                <div className="col-span-2 text-right">Season Pts</div>
+                <div className="col-span-2 text-right">Points</div>
               </div>
               {selectedBreakdown.map((item, i) => (
                 <div key={item.quiz_key} className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
@@ -854,7 +846,7 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
           <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
             <div className="col-span-6">Quiz</div>
             <div className="col-span-4 text-center">Your Finish</div>
-            <div className="col-span-2 text-right">Season Pts</div>
+            <div className="col-span-2 text-right">Points</div>
           </div>
           {quizBreakdown.map((item, i) => (
             <div key={item.quiz_key} className={`grid grid-cols-12 px-4 py-3 border-b last:border-b-0 items-center ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
@@ -1535,40 +1527,18 @@ const QuizApp = () => {
 
     if (!results || results.length === 0) return;
 
-    // Accumulate season points per user across all quizzes in the season.
-    // For each quiz: rank users by score, award X points to 1st (X = # participants),
-    // X-1 to 2nd, ..., 1 to last. Ties share averaged points.
+    // Season points = direct sum of each user's quiz scores across the season.
     const seasonTotals = {}; // user_id -> { display_name, seasonPoints }
 
     results.forEach(({ scores }) => {
       const userScores = scores?.userScores || [];
-      if (userScores.length === 0) return;
-
-      // Sort descending by quiz score
-      const sorted = [...userScores].sort((a, b) => b.score - a.score);
-      const n = sorted.length;
-
-      // Assign position points with tie-averaging
-      let i = 0;
-      while (i < n) {
-        let j = i;
-        // find the end of this tie group
-        while (j < n - 1 && sorted[j + 1].score === sorted[j].score) j++;
-        // positions i..j are tied; they each get the average of ranks (n-i) down to (n-j)
-        // e.g. 5 players, tied for 1st/2nd: (5+4)/2 = 4.5 each
-        let sum = 0;
-        for (let k = i; k <= j; k++) sum += (n - k);
-        const avg = Math.round((sum / (j - i + 1)) * 10) / 10;
-        for (let k = i; k <= j; k++) {
-          const u = sorted[k];
-          if (!seasonTotals[u.user_id]) {
-            seasonTotals[u.user_id] = { display_name: u.display_name, seasonPoints: 0 };
-          }
-          seasonTotals[u.user_id].seasonPoints =
-            Math.round((seasonTotals[u.user_id].seasonPoints + avg) * 10) / 10;
+      userScores.forEach(u => {
+        if (!seasonTotals[u.user_id]) {
+          seasonTotals[u.user_id] = { display_name: u.display_name, seasonPoints: 0 };
         }
-        i = j + 1;
-      }
+        seasonTotals[u.user_id].seasonPoints =
+          Math.round((seasonTotals[u.user_id].seasonPoints + (u.score || 0)) * 10) / 10;
+      });
     });
 
     // Build the standings array sorted by season points descending
@@ -1680,43 +1650,7 @@ const QuizApp = () => {
     });
     userRows.sort((a, b) => b.recomputedTotal - a.recomputedTotal);
 
-    // ── Season points breakdown ─────────────────────────────────────────────
-    let seasonRows = null;
-    if (season && season.trim().toLowerCase() !== 'offseason') {
-      const sortedByScore = [...userScores].sort((a, b) => b.score - a.score);
-      const np = sortedByScore.length;
-      seasonRows = [];
-      let si = 0;
-      while (si < np) {
-        let sj = si;
-        while (sj < np - 1 && sortedByScore[sj + 1].score === sortedByScore[sj].score) sj++;
-        const tieCount = sj - si + 1;
-        let sum = 0;
-        for (let k = si; k <= sj; k++) sum += (np - k);
-        const avg = Math.round((sum / tieCount) * 10) / 10;
-        const rawRanks = [];
-        for (let k = si; k <= sj; k++) rawRanks.push(np - k);
-        const isTie = tieCount > 1;
-        for (let k = si; k <= sj; k++) {
-          const u = sortedByScore[k];
-          seasonRows.push({
-            user_id: u.user_id,
-            displayName: nameMap[u.user_id] || u.display_name,
-            quizScore: u.score,
-            position: si + 1,
-            totalPlayers: np,
-            seasonPts: avg,
-            isTie,
-            formula: isTie
-              ? `(${rawRanks.join(' + ')}) ÷ ${tieCount} = ${avg} season pts`
-              : `${ordinal(si + 1)} of ${np} → ${avg} season pts`,
-          });
-        }
-        si = sj + 1;
-      }
-    }
-
-    setAuditData({ quizKey, quizTitle: quiz.title || quizKey, season, questions, rankingRows, userRows, seasonRows, n, totalAttempts });
+    setAuditData({ quizKey, quizTitle: quiz.title || quizKey, season, questions, rankingRows, userRows, n, totalAttempts });
     setAuditLoading(false);
   };
 
@@ -3054,7 +2988,7 @@ const QuizApp = () => {
             </div>
 
             {auditData && (() => {
-              const { quizTitle, season, questions, rankingRows, userRows, seasonRows, n, totalAttempts } = auditData;
+              const { quizTitle, season, questions, rankingRows, userRows, n, totalAttempts } = auditData;
               const tokenLabel = (token) => token ? ({ doubler:'×2 Doubler', insurance:'INS Insurance', sniper:'🎯 Sniper', parasite:'PAR Parasite' }[token] || token) : '—';
               const tokenBg = (token) => token ? ({ doubler:'#fef9c3', insurance:'#eff6ff', sniper:'#fef2f2', parasite:'#f0fdf4' }[token] || '#f9fafb') : 'transparent';
 
@@ -3174,42 +3108,7 @@ const QuizApp = () => {
                     </div>
                   </div>
 
-                  {/* ── Section 3: Season points ── */}
-                  {seasonRows ? (
-                    <div className="bg-white rounded-xl shadow-md overflow-hidden">
-                      <div className="px-5 py-3 bg-gray-100 border-b">
-                        <h2 className="font-bold text-gray-700">3. Season Points — {season}</h2>
-                        <p className="text-xs text-gray-500 mt-0.5">Points awarded toward season standings based on finishing position on this quiz. 1st place earns {totalAttempts} pts, last place earns 1 pt. Ties average the available positions.</p>
-                      </div>
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="bg-gray-50 border-b text-xs text-gray-500 uppercase">
-                            <th className="px-4 py-2 text-left font-semibold">Player</th>
-                            <th className="px-4 py-2 text-right font-semibold">Quiz Score</th>
-                            <th className="px-4 py-2 text-center font-semibold">Finish</th>
-                            <th className="px-4 py-2 text-right font-semibold">Season Pts</th>
-                            <th className="px-4 py-2 text-left font-semibold">Formula</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {seasonRows.map((row, i) => (
-                            <tr key={row.user_id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                              <td className="px-4 py-2 font-medium text-gray-700">{row.displayName}</td>
-                              <td className="px-4 py-2 text-right text-gray-600">{row.quizScore}</td>
-                              <td className="px-4 py-2 text-center text-gray-600">{ordinal(row.position)} of {row.totalPlayers}</td>
-                              <td className="px-4 py-2 text-right font-bold text-green-700">{row.seasonPts}</td>
-                              <td className="px-4 py-2 text-xs text-gray-500">{row.formula}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="bg-white rounded-xl shadow-md p-5">
-                      <h2 className="font-bold text-gray-700 mb-1">3. Season Points</h2>
-                      <p className="text-sm text-gray-400 italic">This quiz is in the Offseason category — it does not contribute to any season standings.</p>
-                    </div>
-                  )}
+
                 </>
               );
             })()}
