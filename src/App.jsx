@@ -3301,33 +3301,33 @@ const QuizApp = () => {
                                 <table className="w-full text-sm">
                                   <thead>
                                     <tr className="text-xs text-gray-500 uppercase border-b border-gray-200">
-                                      <th className="py-1.5 text-left font-semibold w-12">Q#</th>
+                                      <th className="py-2 px-3 text-center font-semibold">Q#</th>
                                       {auditData.isDashQuiz
-                                        ? <th className="py-1.5 text-right font-semibold w-24">Difference</th>
-                                        : <th className="py-1.5 text-center font-semibold w-12">Result</th>}
-                                      <th className="py-1.5 text-left font-semibold w-28">Token</th>
-                                      <th className="py-1.5 text-right font-semibold w-20">Base Pts</th>
-                                      <th className="py-1.5 text-right font-semibold w-20">Earned</th>
-                                      <th className="py-1.5 text-left font-semibold pl-4">Formula</th>
+                                        ? <th className="py-2 px-3 text-center font-semibold">Difference</th>
+                                        : <th className="py-2 px-3 text-center font-semibold">Result</th>}
+                                      <th className="py-2 px-3 text-center font-semibold">Token</th>
+                                      <th className="py-2 px-3 text-center font-semibold">Base Pts</th>
+                                      <th className="py-2 px-3 text-center font-semibold">Earned</th>
+                                      <th className="py-2 px-3 text-center font-semibold">Formula</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-gray-100">
                                     {row.cells.map((cell, i) => (
-                                      <tr key={i} style={{backgroundColor: cell.token ? tokenBg(cell.token) : 'transparent'}}>
-                                        <td className="py-1.5 text-gray-500 font-medium">Q{i+1}</td>
+                                      <tr key={i}>
+                                        <td className="py-2 px-3 text-center text-gray-500 font-medium">Q{i+1}</td>
                                         {auditData.isDashQuiz
-                                          ? <td className="py-1.5 text-right text-gray-500">{cell.diff !== null && cell.diff !== undefined ? cell.diff.toLocaleString() : '—'}</td>
-                                          : <td className={`py-1.5 text-center font-bold text-base ${cell.correct ? 'text-green-600' : 'text-red-500'}`}>{cell.correct ? '✓' : '✗'}</td>}
-                                        <td className="py-1.5 text-xs text-gray-600">{cell.token ? tokenLabel(cell.token) : <span className="text-gray-300">—</span>}</td>
-                                        <td className="py-1.5 text-right text-gray-500">{ptsByQIndex[i]} pts</td>
-                                        <td className="py-1.5 text-right font-semibold text-gray-800">{cell.earned} pts</td>
-                                        <td className="py-1.5 text-xs text-gray-500 pl-4">{cell.formula}</td>
+                                          ? <td className="py-2 px-3 text-center text-gray-500">{cell.diff !== null && cell.diff !== undefined ? cell.diff.toLocaleString() : '—'}</td>
+                                          : <td className={`py-2 px-3 text-center font-bold text-base ${cell.correct ? 'text-green-600' : 'text-red-500'}`}>{cell.correct ? '✓' : '✗'}</td>}
+                                        <td className="py-2 px-3 text-center text-xs text-gray-600">{cell.token ? tokenLabel(cell.token) : <span className="text-gray-300">—</span>}</td>
+                                        <td className="py-2 px-3 text-center text-gray-500">{ptsByQIndex[i]} pts</td>
+                                        <td className="py-2 px-3 text-center font-semibold text-gray-800">{cell.earned} pts</td>
+                                        <td className="py-2 px-3 text-center text-xs text-gray-500">{cell.formula}</td>
                                       </tr>
                                     ))}
                                     <tr className="border-t-2 border-gray-300 bg-gray-100">
-                                      <td colSpan={auditData.isDashQuiz ? 3 : 4} className="py-2 text-sm font-semibold text-gray-700 text-right pr-2">Total</td>
-                                      <td className="py-2 text-right font-bold text-gray-900">{row.recomputedTotal} pts</td>
-                                      <td className="py-2 pl-4">
+                                      <td colSpan={auditData.isDashQuiz ? 3 : 4} className="py-2 px-3 text-sm font-semibold text-gray-700 text-right">Total</td>
+                                      <td className="py-2 px-3 text-center font-bold text-gray-900">{row.recomputedTotal} pts</td>
+                                      <td className="py-2 px-3 text-center">
                                         {!auditData.isDashQuiz && <span className={`text-xs font-semibold ${row.matches ? 'text-green-600' : 'text-red-600'}`}>
                                           {row.matches ? '✅ matches stored score' : `❌ stored score was ${row.storedScore} pts`}
                                         </span>}
