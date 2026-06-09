@@ -1027,6 +1027,7 @@ const QuizApp = () => {
       return [...quiz.questions].map(q => ({ ...q, displayOptions: q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '') }));
     }
     if (quiz.type === 'openresponse') return [...quiz.questions];
+    if (quiz.type === 'datadash') return [...quiz.questions];
     if (quiz.type === 'combination') return quiz.questions.map(q => {
       if (q.questionType === 'MC') {
         return { ...q, displayOptions: q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '') };
@@ -1352,6 +1353,11 @@ const QuizApp = () => {
     } else if (quiz.type === 'combination') {
       setCombQuestions(quiz.questions.map(q=>({...q}))); setCombCurrentIndex(null); setCombDraft(null);
       setNewQuizSentences([]); setExtraWords([]); setMcQuestions([emptyMCQuestion()]); setOrQuestions([emptyORQuestion()]);
+      setDdQuestions([emptyDDQuestion()]); setDdCurrentIndex(0);
+    } else if (quiz.type === 'datadash') {
+      setDdQuestions(quiz.questions.map(q=>({...q}))); setDdCurrentIndex(0);
+      setOrQuestions([emptyORQuestion()]); setMcQuestions([emptyMCQuestion()]); setNewQuizSentences([]); setExtraWords([]);
+      setCombQuestions([]); setCombCurrentIndex(null); setCombDraft(null);
     } else {
       setNewQuizSentences(quiz.sentences.map(s=>s.text));
       setExtraWords((quiz.wordBank||[]).filter(w => !extractAnswerWords(quiz.sentences).includes(w)));
