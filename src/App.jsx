@@ -259,8 +259,8 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
             <>
               <button onClick={()=>onHelp&&onHelp()} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm">?</button>
               <button onClick={onQuizzes} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
-              {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
               {onSettings && <button onClick={onSettings} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm"><Settings size={16}/></button>}
+              {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
             </>
           )}
         </div>
@@ -903,7 +903,6 @@ const QuizApp = () => {
   const [loginError, setLoginError] = useState('');
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(null); // 'setup' | 'scoreboards' | 'summary' | null
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [notifyNewQuiz, setNotifyNewQuiz] = useState(false);
   const [notifyScored, setNotifyScored] = useState(false);
   const [savedNotifyNewQuiz, setSavedNotifyNewQuiz] = useState(false);
@@ -2034,64 +2033,6 @@ const QuizApp = () => {
       body: 'Token Assignment FAQ placeholder text. Replace this with instructions for how to assign tokens, what each token does, and how to submit your final answers.',
     },
   };
-  // ── Settings Modal ──────────────────────────────────────────────────────
-  const SettingsModal = () => {
-    if (!showSettingsModal) return null;
-    const hasChanges = notifyNewQuiz !== savedNotifyNewQuiz || notifyScored !== savedNotifyScored;
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-          {/* Header row */}
-          <div className="flex justify-between items-center px-5 pt-5 pb-3 border-b border-gray-200">
-            <span className="text-sm text-gray-500">{displayName || currentUser?.email || ''}</span>
-            <div className="flex gap-2">
-              <button onClick={()=>setMode('setup')} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
-              <button onClick={()=>{setShowSettingsModal(false);setMode('scoreboards');}} className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">Scoreboards</button>
-              <button onClick={()=>{setShowSettingsModal(false);handleLogout();}} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={14}/> Log Out</button>
-            </div>
-          </div>
-          {/* Title */}
-          <div className="text-center py-4 border-b border-gray-100">
-            <h2 className="text-2xl font-bold text-gray-800">Profile Settings</h2>
-          </div>
-          {/* User info */}
-          <div className="px-6 pt-5 pb-3 space-y-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Display Name</label>
-              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 text-sm">{displayName || '—'}</div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Email</label>
-              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 text-sm">{currentUser?.email || '—'}</div>
-            </div>
-          </div>
-          {/* Notification prefs */}
-          <div className="px-6 pt-2 pb-5 space-y-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Email Notifications</p>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" checked={notifyNewQuiz} onChange={e=>setNotifyNewQuiz(e.target.checked)} className="w-5 h-5 rounded accent-blue-600"/>
-              <span className="text-sm text-gray-700">Email me when a new quiz is posted.</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" checked={notifyScored} onChange={e=>setNotifyScored(e.target.checked)} className="w-5 h-5 rounded accent-blue-600"/>
-              <span className="text-sm text-gray-700">Email me when a quiz I took is scored.</span>
-            </label>
-          </div>
-          {/* Save button */}
-          <div className="px-6 pb-6">
-            <button
-              onClick={saveNotificationSettings}
-              disabled={!hasChanges || settingsSaving}
-              className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {settingsSaving ? 'Saving…' : 'Save Changes'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
     const HelpModal = () => {
     if (!showHelpModal) return null;
     const info = HELP_CONTENT[showHelpModal] || { title: 'Help', body: 'Placeholder help text.' };
@@ -2167,7 +2108,7 @@ const QuizApp = () => {
 
   if (isLoading) return <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center"><div className="text-xl text-gray-500">Loading quizzes...</div></div>;
   if (mode==='setup') return (
-    <><HelpModal/><SettingsModal/>
+    <><HelpModal/>
     <div className="max-w-2xl mx-auto bg-gray-50 min-h-screen" style={{padding:"1.5rem"}}>
       <div style={{position:"relative"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
@@ -2175,8 +2116,8 @@ const QuizApp = () => {
           <div className="flex gap-2">
             <button onClick={()=>setShowHelpModal('setup')} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm">?</button>
             <button onClick={()=>setMode('scoreboards')} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">Scoreboards</button>
+            <button onClick={()=>setMode('settings')} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm"><Settings size={16}/></button>
             <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
-            <button onClick={()=>setShowSettingsModal(true)} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm"><Settings size={16}/></button>
           </div>
         </div>
         <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
@@ -2366,7 +2307,69 @@ const QuizApp = () => {
     );
   }
 
-  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onSelectSeason={(name)=>{setViewSeasonName(name);setMode('season-scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')} onHelp={()=>setShowHelpModal('scoreboards')} onSettings={!isAdminAuthenticated ? ()=>setShowSettingsModal(true) : undefined}/>;
+  if (mode==='settings') {
+    const hasChanges = notifyNewQuiz !== savedNotifyNewQuiz || notifyScored !== savedNotifyScored;
+    return (
+      <div className="max-w-2xl mx-auto bg-gray-50 min-h-screen" style={{padding:"1.5rem"}}>
+        {/* Header row */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
+          <span className="text-sm text-gray-500">{displayName || currentUser?.email || ''}</span>
+          <div className="flex gap-2">
+            <button onClick={()=>setMode('setup')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Quizzes</button>
+            <button onClick={()=>setMode('scoreboards')} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">Scoreboards</button>
+            <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
+          </div>
+        </div>
+        {/* Title */}
+        <div style={{textAlign:"center",marginBottom:"2rem"}}>
+          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Profile Settings</h1>
+        </div>
+        {/* User info card */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-4">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Account Info</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Display Name</label>
+              <div className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-400 text-sm italic select-none">{displayName || '—'}</div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Email</label>
+              <div className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-400 text-sm italic select-none">{currentUser?.email || '—'}</div>
+            </div>
+          </div>
+        </div>
+        {/* Notifications card */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Email Notifications</h2>
+          <div className="space-y-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={notifyNewQuiz} onChange={e=>setNotifyNewQuiz(e.target.checked)} className="w-5 h-5 mt-0.5 rounded accent-blue-600 flex-shrink-0"/>
+              <div>
+                <p className="text-sm font-medium text-gray-700">Email me when a new quiz is posted.</p>
+                <p className="text-xs text-gray-400 mt-0.5">You'll receive a notification each time a quiz becomes available.</p>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={notifyScored} onChange={e=>setNotifyScored(e.target.checked)} className="w-5 h-5 mt-0.5 rounded accent-blue-600 flex-shrink-0"/>
+              <div>
+                <p className="text-sm font-medium text-gray-700">Email me when a quiz I took is scored.</p>
+                <p className="text-xs text-gray-400 mt-0.5">You'll be notified when results are posted for a quiz you completed.</p>
+              </div>
+            </label>
+          </div>
+        </div>
+        <button
+          onClick={saveNotificationSettings}
+          disabled={!hasChanges || settingsSaving}
+          className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {settingsSaving ? 'Saving…' : 'Save Changes'}
+        </button>
+      </div>
+    );
+  }
+
+  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onSelectSeason={(name)=>{setViewSeasonName(name);setMode('season-scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')} onHelp={()=>setShowHelpModal('scoreboards')} onSettings={!isAdminAuthenticated ? ()=>setMode('settings') : undefined}/>;
 
   if (mode==='season-scoreboard' && viewSeasonName) return <SeasonScoreboardScreen seasonName={viewSeasonName} currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onBack={()=>setMode('scoreboards')} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')}/>;
 
