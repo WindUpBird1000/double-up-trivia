@@ -1164,6 +1164,7 @@ const QuizApp = () => {
   };
 
   const isQuestionCorrect = (q, i) => {
+    if (activeQuiz?.type === 'datadash') return true; // no correct/incorrect for datadash
     const qtype = activeQuiz?.type === 'combination' ? q.questionType : activeQuiz?.type;
     if (qtype === 'MC') {
       const sel = studentAnswers[i] || [];
@@ -1178,6 +1179,7 @@ const QuizApp = () => {
   };
 
   const getCorrectAnswerDisplay = (q) => {
+    if (activeQuiz?.type === 'datadash') return q.correctAnswer?.toLocaleString() ?? '—';
     const qtype = activeQuiz?.type === 'combination' ? q.questionType : activeQuiz?.type;
     if (qtype === 'MC') {
       const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -2617,50 +2619,86 @@ const QuizApp = () => {
           <p className="text-gray-600">Your answers for <span className="font-semibold">{activeQuiz?.title}</span> have been recorded. Results and scores will be posted once everyone has completed the quiz — stay tuned!</p>
           {Object.keys(tokenAssignments).length > 0 && <p className="text-sm text-gray-500 mt-2">Token icons show your assignments.</p>}
         </div>
-        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
-          <div className="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            <div className="col-span-1 text-center">#</div>
-            <div className="col-span-6">Question</div>
-            <div className="col-span-2 text-center leading-tight">Your Answer</div>
-            <div className="col-span-2 text-center">Correct Answer</div>
-            <div className="col-span-1 text-center">Dispute</div>
-          </div>
-          {activeQuestions.map((q, i) => {
-            const correct = isQuestionCorrect(q, i);
-            const assignedToken = tokenAssignments[i];
-            const alreadyDisputed = submittedDisputes.includes(i);
-            const disputing = disputedQuestions[i] || false;
-            return (
-              <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
-                <div className="grid grid-cols-12 gap-2 px-5 py-3 items-center">
-                  <div className="col-span-1 text-center text-sm font-medium text-gray-500 flex flex-col items-center gap-1">
-                    {i+1}
-                    {assignedToken && TOKEN_CONFIG[assignedToken] && (
-                      <span title={TOKEN_CONFIG[assignedToken].description}>
-                        {TOKEN_CONFIG[assignedToken].svgIcon(20)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="col-span-6 text-sm text-gray-700">{getPromptPreview(q)}</div>
-                  <div className={`col-span-2 text-sm font-medium text-center ${correct ? 'text-green-700' : 'text-red-600'}`}>{getAnswerDisplay(q, i)}</div>
-                  <div className="col-span-2 text-sm text-gray-600 text-center">{getCorrectAnswerDisplay(q)}</div>
-                  <div className="col-span-1 flex flex-col items-center justify-center">
-                    {alreadyDisputed
-                      ? <><input type="checkbox" checked readOnly className="w-5 h-5 mb-1 cursor-not-allowed opacity-40"/><span className="text-xs text-gray-400 italic">Disputed</span></>
-                      : correct ? null
-                      : <input type="checkbox" checked={disputing} onChange={e=>setDisputedQuestions(p=>({...p,[i]:e.target.checked}))} className="w-5 h-5 accent-red-500 cursor-pointer"/>}
+        {activeQuiz?.type === 'datadash' ? (
+          /* ── Data Dash submitted view ── */
+          <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
+            <div className="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <div className="col-span-1 text-center">#</div>
+              <div className="col-span-5">Question</div>
+              <div className="col-span-2 text-center">Correct Answer</div>
+              <div className="col-span-2 text-center">Your Answer</div>
+              <div className="col-span-2 text-center">Difference</div>
+            </div>
+            {activeQuestions.map((q, i) => {
+              const assignedToken = tokenAssignments[i];
+              const myRaw = (studentAnswers[i] || '').toString().replace(/,/g,'').trim();
+              const myVal = parseFloat(myRaw);
+              const diff = isNaN(myVal) ? '—' : Math.abs(myVal - q.correctAnswer).toLocaleString();
+              return (
+                <div key={i} className="border-b last:border-b-0 bg-white">
+                  <div className="grid grid-cols-12 gap-2 px-5 py-3 items-center">
+                    <div className="col-span-1 text-center text-sm font-medium text-gray-500 flex flex-col items-center gap-1">
+                      {i+1}
+                      {assignedToken && TOKEN_CONFIG[assignedToken] && (
+                        <span title={TOKEN_CONFIG[assignedToken].description}>{TOKEN_CONFIG[assignedToken].svgIcon(20)}</span>
+                      )}
+                    </div>
+                    <div className="col-span-5 text-sm text-gray-700">{getPromptPreview(q)}</div>
+                    <div className="col-span-2 text-sm text-gray-600 text-center">{q.correctAnswer?.toLocaleString() ?? '—'}</div>
+                    <div className="col-span-2 text-sm font-medium text-center text-gray-700">{myRaw || '—'}</div>
+                    <div className="col-span-2 text-sm text-center text-gray-500">{diff}</div>
                   </div>
                 </div>
-                {disputing && !alreadyDisputed && (
-                  <div className="px-5 pb-3">
-                    <textarea value={disputeReasons[i]||''} onChange={e=>setDisputeReasons(p=>({...p,[i]:e.target.value}))} placeholder="Briefly explain why you disagree, i.e., spelling error, factual error, etc." rows={2} className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-300 resize-none"/>
+              );
+            })}
+          </div>
+        ) : (
+          /* ── Standard submitted view ── */
+          <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
+            <div className="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <div className="col-span-1 text-center">#</div>
+              <div className="col-span-6">Question</div>
+              <div className="col-span-2 text-center leading-tight">Your Answer</div>
+              <div className="col-span-2 text-center">Correct Answer</div>
+              <div className="col-span-1 text-center">Dispute</div>
+            </div>
+            {activeQuestions.map((q, i) => {
+              const correct = isQuestionCorrect(q, i);
+              const assignedToken = tokenAssignments[i];
+              const alreadyDisputed = submittedDisputes.includes(i);
+              const disputing = disputedQuestions[i] || false;
+              return (
+                <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <div className="grid grid-cols-12 gap-2 px-5 py-3 items-center">
+                    <div className="col-span-1 text-center text-sm font-medium text-gray-500 flex flex-col items-center gap-1">
+                      {i+1}
+                      {assignedToken && TOKEN_CONFIG[assignedToken] && (
+                        <span title={TOKEN_CONFIG[assignedToken].description}>
+                          {TOKEN_CONFIG[assignedToken].svgIcon(20)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="col-span-6 text-sm text-gray-700">{getPromptPreview(q)}</div>
+                    <div className={`col-span-2 text-sm font-medium text-center ${correct ? 'text-green-700' : 'text-red-600'}`}>{getAnswerDisplay(q, i)}</div>
+                    <div className="col-span-2 text-sm text-gray-600 text-center">{getCorrectAnswerDisplay(q)}</div>
+                    <div className="col-span-1 flex flex-col items-center justify-center">
+                      {alreadyDisputed
+                        ? <><input type="checkbox" checked readOnly className="w-5 h-5 mb-1 cursor-not-allowed opacity-40"/><span className="text-xs text-gray-400 italic">Disputed</span></>
+                        : correct ? null
+                        : <input type="checkbox" checked={disputing} onChange={e=>setDisputedQuestions(p=>({...p,[i]:e.target.checked}))} className="w-5 h-5 accent-red-500 cursor-pointer"/>}
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <button onClick={handleSendDisputes} disabled={!hasDisputes||disputeSending} className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold disabled:opacity-40 disabled:cursor-not-allowed">{disputeSending?'Sending...':'Send Disputes'}</button>
+                  {disputing && !alreadyDisputed && (
+                    <div className="px-5 pb-3">
+                      <textarea value={disputeReasons[i]||''} onChange={e=>setDisputeReasons(p=>({...p,[i]:e.target.value}))} placeholder="Briefly explain why you disagree, i.e., spelling error, factual error, etc." rows={2} className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-300 resize-none"/>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {activeQuiz?.type !== 'datadash' && <button onClick={handleSendDisputes} disabled={!hasDisputes||disputeSending} className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold disabled:opacity-40 disabled:cursor-not-allowed">{disputeSending?'Sending...':'Send Disputes'}</button>}
       </div>
     );
   }
