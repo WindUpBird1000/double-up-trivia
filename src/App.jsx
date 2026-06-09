@@ -2666,7 +2666,7 @@ const QuizApp = () => {
             <button onClick={adminLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"><LogOut size={18}/> Log Out</button>
           </div>
         </div>
-        {adminSection!=='users'&&<div className="flex items-center gap-3 mb-6 flex-wrap">
+        {adminSection!=='users'&&<div className="flex items-center justify-center gap-3 mb-6 flex-wrap">
           <button onClick={()=>{setAdminSection('list');resetQuizBuilder();}} className={`px-5 py-2 rounded-lg font-medium ${adminSection==='list'?'bg-gray-800 text-white':'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}>Existing Quizzes</button>
           <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${adminSection==='create'&&!editingKey?'border-gray-800 bg-gray-50':'border-gray-300 bg-white'}`}>
             <span className="text-sm font-medium text-gray-600 whitespace-nowrap">New Quiz:</span>
@@ -2676,7 +2676,7 @@ const QuizApp = () => {
             </select>
             <button onClick={startCreateQuiz} className="px-3 py-1 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">Create</button>
           </div>
-          <button onClick={()=>setAdminSection('audit')} className={`px-5 py-2 rounded-lg font-medium ${adminSection==='audit'?'bg-gray-800 text-white':'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}>🔍 Score Auditor</button>
+          <button onClick={()=>setAdminSection('audit')} className={`px-5 py-2 rounded-lg font-medium ${adminSection==='audit'?'bg-gray-800 text-white':'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}>Score Auditor</button>
         </div>}
 
         {adminSection==='list'&&(
@@ -2743,7 +2743,7 @@ const QuizApp = () => {
               {/* Row 1: Title (full width) */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-600 mb-1">Quiz Title <span className="text-red-500">*</span></label>
-                <input type="text" value={newQuizTitle} onChange={e=>setNewQuizTitle(e.target.value)} placeholder="e.g. Chapter 5 Review" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/>
+                <input type="text" value={newQuizTitle} onChange={e=>setNewQuizTitle(e.target.value)} placeholder="e.g. General Knowledge MMIV" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/>
               </div>
               {/* Row 2: Season (wider) + Status + Closing Date */}
               <div className="flex gap-3 items-end mb-3">
@@ -3029,7 +3029,7 @@ const QuizApp = () => {
                     <button onClick={()=>removeORQuestion(orCurrentIndex)} className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200 ml-1"><Trash2 size={16}/></button>
                   </div>
                 </div>
-                <div className="mb-5"><label className="block text-sm font-medium text-gray-600 mb-1">Prompt <span className="text-red-500">*</span></label><textarea value={orQ.prompt} onChange={e=>updateORQuestion('prompt',e.target.value)} placeholder="Enter the question..." rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/><ImageHelper key={`or-${orCurrentIndex}`}/></div>
+                <div className="mb-5"><label className="block text-sm font-medium text-gray-600 mb-1">Prompt <span className="text-red-500">*</span></label><textarea value={orQ.prompt} onChange={e=>updateORQuestion('prompt',e.target.value)} placeholder="Enter the question..." rows={8} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/><ImageHelper key={`or-${orCurrentIndex}`}/></div>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-600 mb-1">Correct Answer</label>
                   <div className="flex gap-2"><input type="text" value={orAnswerInput} onChange={e=>setOrAnswerInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addORAnswer()} placeholder="Type an accepted answer..." className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/><button onClick={addORAnswer} className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"><Plus size={18}/> Include</button></div>
@@ -3071,7 +3071,7 @@ const QuizApp = () => {
                 {(()=>{const ddQ=ddQuestions[ddCurrentIndex]||emptyDDQuestion();return(<>
                   <div className="mb-5">
                     <label className="block text-sm font-medium text-gray-600 mb-1">Prompt <span className="text-red-500">*</span></label>
-                    <textarea value={ddQ.prompt} onChange={e=>updateDDQuestion('prompt',e.target.value)} placeholder="Enter the question..." rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/>
+                    <textarea value={ddQ.prompt} onChange={e=>updateDDQuestion('prompt',e.target.value)} placeholder="Enter the question..." rows={8} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"/>
                     <ImageHelper key={`dd-${ddCurrentIndex}`}/>
                   </div>
                   <div className="mb-4">
@@ -3171,7 +3171,7 @@ const QuizApp = () => {
           <div className="space-y-6">
             {/* Quiz selector — two dropdowns: season then quiz */}
             <div className="bg-white rounded-xl shadow-md p-5">
-              <h2 className="text-lg font-bold text-gray-800 mb-3">🔍 Score Auditor</h2>
+              <h2 className="text-lg font-bold text-gray-800 mb-3">Score Auditor</h2>
               <p className="text-sm text-gray-500 mb-4">Select a season and quiz to see a full breakdown of every calculation — difficulty ranking, token effects, per-user scores, and season points.</p>
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Step 1: season */}
@@ -3345,7 +3345,7 @@ const QuizApp = () => {
         )}
 
                 {showPreview&&(()=>{
-          const previewQ = newQuizType==='MC' ? mcQ : newQuizType==='openresponse' ? orQ : null;
+          const previewQ = newQuizType==='MC' ? mcQ : newQuizType==='openresponse' ? orQ : newQuizType==='datadash' ? ddQuestions[ddCurrentIndex] : null;
           const previewType = newQuizType;
           return (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -3376,6 +3376,13 @@ const QuizApp = () => {
                         {previewQ.acceptedAnswers?.filter(a=>a.trim()).length>0&&(
                           <p className="mt-3 text-sm text-green-700"><span className="font-semibold">Accepted answers:</span> {previewQ.acceptedAnswers.filter(a=>a.trim()).join(', ')}</p>
                         )}
+                      </>
+                    )}
+                    {previewType==='datadash'&&previewQ&&(
+                      <>
+                        <div className="text-lg font-semibold text-gray-800 mb-4">{renderPrompt(previewQ.prompt||'')}</div>
+                        <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-400 bg-gray-50">Student enters a number here...</div>
+                        {previewQ.correctAnswer!==null&&<p className="mt-3 text-sm text-green-700"><span className="font-semibold">Correct answer:</span> {previewQ.correctAnswer?.toLocaleString()}</p>}
                       </>
                     )}
                     {previewType==='fillintheblank'&&(
