@@ -1480,6 +1480,18 @@ const QuizApp = () => {
       if (!ddQuestions[0]?.prompt.trim()) { alert('Please add at least one question.'); return false; }
       for(let i=0;i<ddQuestions.length;i++){ if(ddQuestions[i].correctAnswer===null){alert(`Q${i+1} needs a correct numeric answer.`);return false;} }
     }
+    // Check token count doesn't exceed question count
+    const activeTokenCount = newQuizTokenSlots.filter(t => t !== 'none').length;
+    const questionCount = newQuizType === 'fillintheblank' ? newQuizSentences.length
+      : newQuizType === 'MC' ? mcQuestions.filter(q => q.prompt?.trim()).length
+      : newQuizType === 'openresponse' ? orQuestions.filter(q => q.prompt?.trim()).length
+      : newQuizType === 'combination' ? combQuestions.length
+      : newQuizType === 'datadash' ? ddQuestions.filter(q => q.prompt?.trim()).length
+      : 0;
+    if (activeTokenCount > questionCount) {
+      alert(`You have ${activeTokenCount} token${activeTokenCount !== 1 ? 's' : ''} assigned but only ${questionCount} question${questionCount !== 1 ? 's' : ''}. Players must be able to assign all tokens, so please either reduce the number of tokens or add more questions.`);
+      return false;
+    }
     return true;
   };
 
@@ -2984,9 +2996,9 @@ const QuizApp = () => {
                       >
                         <option value="none">None</option>
                         <option value="doubler">Doubler</option>
-                        <option value="insurance">Insurance</option>
-                        <option value="parasite">Parasite</option>
-                        <option value="sniper">Sniper</option>
+                        {newQuizType !== 'datadash' && <option value="insurance">Insurance</option>}
+                        {newQuizType !== 'datadash' && <option value="parasite">Parasite</option>}
+                        {newQuizType !== 'datadash' && <option value="sniper">Sniper</option>}
                       </select>
                     </div>
                   ))}
