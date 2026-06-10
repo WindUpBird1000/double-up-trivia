@@ -3311,7 +3311,7 @@ const QuizApp = () => {
           </div>
         )}
         <button onClick={handleSendDisputes} disabled={!hasDisputes||disputeSending} className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold disabled:opacity-40 disabled:cursor-not-allowed">{disputeSending?'Sending...':'Send Disputes'}</button>
-      </div>
+      </div></>
     );
   }
 
