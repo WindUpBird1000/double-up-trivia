@@ -3179,7 +3179,7 @@ const QuizApp = () => {
                             </span>
                             <button
                               onClick={e=>{e.stopPropagation();setConfirmDeleteMsgId(msg.id);}}
-                              className="text-gray-400 hover:text-red-500 transition-colors"
+                              className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200"
                               title="Delete message"
                             ><Trash2 size={15}/></button>
                           </div>
