@@ -2799,7 +2799,7 @@ const QuizApp = () => {
             ))}
           </div>
         )}
-      </div>
+      </div></>
     );
   }
 
@@ -3155,6 +3155,7 @@ const QuizApp = () => {
   if (mode==='submitted') {
     const hasDisputes = Object.values(disputedQuestions).some(v=>v);
     return (
+      <><HelpModal/>
       <div className="max-w-5xl mx-auto p-6 bg-gray-50 min-h-screen">
         {/* Header row */}
         <div className="flex justify-between items-center mb-4">
