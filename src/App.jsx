@@ -960,6 +960,10 @@ const QuizApp = () => {
   const [editingMsgId, setEditingMsgId] = useState(null);
   const [editingMsgPublished, setEditingMsgPublished] = useState(false);
   const [msgSaving, setMsgSaving] = useState(false);
+  const [confirmDeleteMsgId, setConfirmDeleteMsgId] = useState(null);
+  const [sysMessagesOpen, setSysMessagesOpen] = useState(false);
+  const [allPublishedMsgs, setAllPublishedMsgs] = useState([]);
+  const [msgPopupIndex, setMsgPopupIndex] = useState(null);
   // User-facing message interstitial
   const [unreadMessages, setUnreadMessages] = useState([]);
   const [msgPageIndex, setMsgPageIndex] = useState(0);
@@ -1243,6 +1247,18 @@ const QuizApp = () => {
   };
 
   // ── Messages ──────────────────────────────────────────────────────────────
+  const deleteMessage = async (id) => {
+    await supabase.from('messages').delete().eq('id', id);
+    if (editingMsgId === id) startNewMessage();
+    setConfirmDeleteMsgId(null);
+    await fetchAdminMessages();
+  };
+
+  const fetchPublishedMessages = async () => {
+    const { data } = await supabase.from('messages').select('*').not('published_at', 'is', null).order('published_at', { ascending: false });
+    setAllPublishedMsgs(data || []);
+  };
+
   const fetchAdminMessages = async () => {
     try {
       const { data, error } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
@@ -2544,6 +2560,64 @@ const QuizApp = () => {
             </div>
           </div>
         </div>
+        {/* System Messages collapsible card */}
+        <div className="bg-white rounded-xl shadow-md mb-4 overflow-hidden">
+          <button
+            onClick={()=>{ setSysMessagesOpen(o=>{ if(!o) fetchPublishedMessages(); return !o; }); }}
+            className="w-full px-6 py-4 flex justify-between items-center hover:bg-gray-50"
+          >
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">System Messages</h2>
+            <span className="text-gray-400 text-xs">{sysMessagesOpen ? '▲ Collapse' : '▼ Expand'}</span>
+          </button>
+          {sysMessagesOpen && (
+            <div className="border-t border-gray-100">
+              {allPublishedMsgs.length === 0 ? (
+                <p className="px-6 py-4 text-sm text-gray-400 italic">No messages posted yet.</p>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {allPublishedMsgs.map((msg, idx) => (
+                    <div
+                      key={msg.id}
+                      onClick={()=>setMsgPopupIndex(idx)}
+                      className="px-6 py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+                    >
+                      <span className="text-sm font-medium text-gray-700">{msg.title}</span>
+                      <span className="text-xs text-gray-400">{new Date(msg.published_at).toLocaleDateString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        {/* Message popup */}
+        {msgPopupIndex !== null && allPublishedMsgs[msgPopupIndex] && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+              <div className="flex justify-between items-center p-5 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-800">{allPublishedMsgs[msgPopupIndex].title}</h2>
+                <button onClick={()=>setMsgPopupIndex(null)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button>
+              </div>
+              <div className="p-5 max-h-96 overflow-y-auto">
+                <p className="text-xs text-gray-400 mb-4">{new Date(allPublishedMsgs[msgPopupIndex].published_at).toLocaleDateString()}</p>
+                <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">{renderPrompt(allPublishedMsgs[msgPopupIndex].body)}</div>
+              </div>
+              <div className="flex items-center justify-between px-5 pb-5 pt-3 border-t border-gray-100">
+                <button
+                  onClick={()=>setMsgPopupIndex(i=>i-1)}
+                  disabled={msgPopupIndex === 0}
+                  className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-30"
+                ><ChevronLeft size={18}/></button>
+                <span className="text-xs text-gray-400">{msgPopupIndex+1} of {allPublishedMsgs.length}</span>
+                <button
+                  onClick={()=>setMsgPopupIndex(i=>i+1)}
+                  disabled={msgPopupIndex === allPublishedMsgs.length-1}
+                  className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-30"
+                ><ChevronRight size={18}/></button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Notifications card */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-6">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Email Notifications</h2>
@@ -3084,15 +3158,33 @@ const QuizApp = () => {
               ) : (
                 <div className="divide-y divide-gray-100">
                   {adminMessages.map(msg => (
-                    <div
-                      key={msg.id}
-                      onClick={()=>loadMessageForEdit(msg)}
-                      className={`px-5 py-3 cursor-pointer hover:bg-gray-50 flex justify-between items-center ${editingMsgId===msg.id?'bg-blue-50':''}`}
-                    >
-                      <span className="text-sm font-medium text-gray-800">{msg.title}</span>
-                      <span className={`text-xs ${msg.published_at?'text-green-700':'text-gray-400 italic'}`}>
-                        {msg.published_at ? `Published ${new Date(msg.published_at).toLocaleString()}` : 'Draft'}
-                      </span>
+                    <div key={msg.id}>
+                      {confirmDeleteMsgId === msg.id ? (
+                        <div className="px-5 py-3 bg-red-50 flex items-center justify-between gap-3">
+                          <span className="text-sm text-red-700 font-medium">Delete "{msg.title}"? This cannot be undone.</span>
+                          <div className="flex gap-2 flex-shrink-0">
+                            <button onClick={()=>deleteMessage(msg.id)} className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700">Delete</button>
+                            <button onClick={()=>setConfirmDeleteMsgId(null)} className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-300">Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          onClick={()=>loadMessageForEdit(msg)}
+                          className={`px-5 py-3 cursor-pointer hover:bg-gray-50 flex justify-between items-center ${editingMsgId===msg.id?'bg-blue-50':''}`}
+                        >
+                          <span className="text-sm font-medium text-gray-800">{msg.title}</span>
+                          <div className="flex items-center gap-3">
+                            <span className={`text-xs ${msg.published_at?'text-green-700':'text-gray-400 italic'}`}>
+                              {msg.published_at ? `Published ${new Date(msg.published_at).toLocaleString()}` : 'Draft'}
+                            </span>
+                            <button
+                              onClick={e=>{e.stopPropagation();setConfirmDeleteMsgId(msg.id);}}
+                              className="text-gray-400 hover:text-red-500 transition-colors"
+                              title="Delete message"
+                            ><Trash2 size={15}/></button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
