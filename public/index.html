@@ -179,6 +179,33 @@
       /* odd rows (bg-gray-50): slightly darker than card bg */
       .rounded-lg > .bg-gray-50 { background-color: #152535 !important; }
 
+      /* ── Asymmetric corners (Option D) ──────────────────────────────────────
+         Cards/panels: top-left + bottom-right rounded
+         Buttons: matching asymmetric, slightly smaller radius
+      ────────────────────────────────────────────────────────────────────── */
+
+      /* Cards and panels */
+      .rounded-xl  { border-radius: 12px 0 12px 0 !important; }
+      .rounded-lg  { border-radius: 10px 0 10px 0 !important; }
+      .rounded-md  { border-radius: 6px  0 6px  0 !important; }
+      .rounded     { border-radius: 4px  0 4px  0 !important; }
+
+      /* Buttons */
+      .rounded-lg.font-medium,
+      .rounded-lg.font-semibold { border-radius: 8px 0 8px 0 !important; }
+
+      /* Inputs, selects, textareas */
+      input:not([type="checkbox"]):not([type="radio"]),
+      select, textarea          { border-radius: 6px 0 6px 0 !important; }
+
+      /* Token bin fixed bottom — keep top corners only */
+      [style*="position:fixed"][style*="bottom:0"] > div > div {
+        border-radius: 12px 0 0 0 !important;
+      }
+
+      /* Full-round elements that should stay circular */
+      .rounded-full { border-radius: 9999px !important; }
+
       /* Body background (catches any unstyled areas) */
       body { background-color: #0C1821; }
     </style>
