@@ -1503,11 +1503,12 @@ const QuizApp = () => {
 
   const resetQuizBuilder = () => {
     setEditingKey(null); setNewQuizTitle(''); setNewQuizKey(''); setNewQuizCategory('');
-    setNewCategoryInput(''); setShowNewCategoryInput(false); setNewQuizStatus('Active'); setNewQuizAuthorNote('');
+    setNewCategoryInput(''); setShowNewCategoryInput(false); setNewQuizStatus('Inactive'); setNewQuizAuthorNote('');
     setNewQuizType('fillintheblank'); setNewSentenceInput(''); setNewQuizSentences([]);
     setNewQuizTokenSlots([...DEFAULT_TOKEN_SLOTS]); setNewQuizClosingDate(''); setShowDatePicker(false); setDatePickerMonth({ year: new Date().getFullYear(), month: new Date().getMonth() });
     setDdQuestions([emptyDDQuestion()]); setDdCurrentIndex(0); setDdAnswerInput('');
     setMnQuestions([emptyMNQuestion()]); setMnCurrentIndex(0); setMnAnswerInput('');
+    if (newQuizType === 'mysterynoun') setNewQuizTokenSlots(['none','none','none','none','none','none']);
     setExtraWords([]); setMcQuestions([emptyMCQuestion()]); setMcCurrentIndex(0); setMcRandomizeQuestions(false);
     setOrQuestions([emptyORQuestion()]); setOrCurrentIndex(0); setOrRandomizeQuestions(false); setOrAnswerInput('');
     setCombQuestions([]); setCombCurrentIndex(null); setCombNewQType('MC'); setCombDraft(null);
@@ -1663,17 +1664,19 @@ const QuizApp = () => {
       if (!mnQuestions[0]?.clues[0].trim()) { alert('Please add at least one question with at least Clue 1.'); return false; }
       for(let i=0;i<mnQuestions.length;i++){ if(!mnQuestions[i].acceptedAnswers.length){alert(`Q${i+1} needs at least one correct answer.`);return false;} }
     }
-    // Check token count doesn't exceed question count
-    const activeTokenCount = newQuizTokenSlots.filter(t => t !== 'none').length;
-    const questionCount = newQuizType === 'fillintheblank' ? newQuizSentences.length
-      : newQuizType === 'MC' ? mcQuestions.filter(q => q.prompt?.trim()).length
-      : newQuizType === 'openresponse' ? orQuestions.filter(q => q.prompt?.trim()).length
-      : newQuizType === 'combination' ? combQuestions.length
-      : newQuizType === 'datadash' ? ddQuestions.filter(q => q.prompt?.trim()).length
-      : 0;
-    if (activeTokenCount > questionCount) {
-      alert(`You have ${activeTokenCount} token${activeTokenCount !== 1 ? 's' : ''} assigned but only ${questionCount} question${questionCount !== 1 ? 's' : ''}. Players must be able to assign all tokens, so please either reduce the number of tokens or add more questions.`);
-      return false;
+    // Check token count doesn't exceed question count (skip for MN — no tokens)
+    if (newQuizType !== 'mysterynoun') {
+      const activeTokenCount = newQuizTokenSlots.filter(t => t !== 'none').length;
+      const questionCount = newQuizType === 'fillintheblank' ? newQuizSentences.length
+        : newQuizType === 'MC' ? mcQuestions.filter(q => q.prompt?.trim()).length
+        : newQuizType === 'openresponse' ? orQuestions.filter(q => q.prompt?.trim()).length
+        : newQuizType === 'combination' ? combQuestions.length
+        : newQuizType === 'datadash' ? ddQuestions.filter(q => q.prompt?.trim()).length
+        : 0;
+      if (activeTokenCount > questionCount) {
+        alert(`You have ${activeTokenCount} token${activeTokenCount !== 1 ? 's' : ''} assigned but only ${questionCount} question${questionCount !== 1 ? 's' : ''}. Players must be able to assign all tokens, so please either reduce the number of tokens or add more questions.`);
+        return false;
+      }
     }
     return true;
   };
