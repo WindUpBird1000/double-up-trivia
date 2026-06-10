@@ -1327,7 +1327,7 @@ const QuizApp = () => {
       .select('last_login_at')
       .eq('user_id', loginUser.id)
       .single();
-    const lastLogin = profileForLogin?.last_login_at || '1970-01-01';
+    const lastLogin = profileForLogin?.last_login_at || new Date().toISOString(); // first login: treat as now, so no old messages shown
     // Update last_login_at to now
     await supabase.from('profiles').update({ last_login_at: new Date().toISOString() }).eq('user_id', loginUser.id);
     // Check for unread messages published since last login
