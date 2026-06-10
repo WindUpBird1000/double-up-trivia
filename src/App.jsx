@@ -4151,37 +4151,68 @@ const QuizApp = () => {
                               </div>
                               {isExpanded && (
                                 <div className="px-5 pb-4 bg-gray-50 border-t border-gray-100">
-                                  {auditRow ? (
-                                    <table className="w-full text-sm mt-3">
-                                      <thead>
-                                        <tr className="text-xs text-gray-500 uppercase border-b border-gray-200">
-                                          <th className="py-2 px-3 text-center font-semibold">Q#</th>
-                                          <th className="py-2 px-3 text-left font-semibold">Question</th>
-                                          <th className="py-2 px-3 text-center font-semibold">Their Answer</th>
-                                          <th className="py-2 px-3 text-center font-semibold">Correct</th>
-                                          <th className="py-2 px-3 text-center font-semibold">Points</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-gray-100">
-                                        {auditRow.cells.map((cell, qi) => {
-                                          const q = questions[qi];
-                                          const correctAns = !q ? '—' : quiz?.type==='datadash' ? q.correctAnswer?.toLocaleString() : quiz?.type==='mysterynoun' ? (q.acceptedAnswers[q.primaryAnswerIndex??0]||q.acceptedAnswers[0]||'—') : quiz?.type==='openresponse' ? (q.acceptedAnswers[q.primaryAnswerIndex??0]||q.acceptedAnswers[0]||'—') : '—';
-                                          const theirAns = (() => { const a = attempt.full_answers?.[qi]; if(!a) return '—'; if(typeof a==='object') return a.answer||'—'; return a||'—'; })();
-                                          return (
-                                            <tr key={qi} className={cell.correct===false?'bg-red-50':cell.correct===true?'bg-green-50':''}>
+                                  {(() => {
+                                    // Use auditRow if available (scored quiz), otherwise read directly from full_answers
+                                    const isScored = quiz?.status === 'Scored';
+                                    const isMN = quiz?.type === 'mysterynoun';
+                                    const isDash = quiz?.type === 'datadash';
+                                    const isOR = quiz?.type === 'openresponse';
+                                    const getCorrect = (q, ans) => {
+                                      if (isDash) return null; // no correct/incorrect for DD
+                                      if (isMN) { const a = typeof ans==='object'?(ans.answer||''):(ans||''); return a.trim()!==''&&q.acceptedAnswers.some(ac=>normalizeAnswer(ac)===normalizeAnswer(a)); }
+                                      if (isOR) { const a = normalizeAnswer(ans||''); return a!==''&&q.acceptedAnswers.some(ac=>normalizeAnswer(ac)===a); }
+                                      return null;
+                                    };
+                                    const getCorrectAns = (q) => {
+                                      if (isDash) return q.correctAnswer?.toLocaleString()??'—';
+                                      if (isMN||isOR) return q.acceptedAnswers[q.primaryAnswerIndex??0]||q.acceptedAnswers[0]||'—';
+                                      return '—';
+                                    };
+                                    const rows = auditRow
+                                      ? auditRow.cells.map((cell, qi) => ({
+                                          qi, cell,
+                                          q: questions[qi],
+                                          theirAns: (()=>{const a=attempt.full_answers?.[qi];if(!a)return'—';if(typeof a==='object')return a.answer||'—';return a||'—';})(),
+                                          correct: cell.correct,
+                                          pts: cell.earned,
+                                          cluesUsed: isMN ? (cell.cluesUsed||null) : null,
+                                        }))
+                                      : questions.map((q, qi) => {
+                                          const raw = attempt.full_answers?.[qi];
+                                          const theirAns = raw==null ? '—' : typeof raw==='object' ? (raw.answer||'—') : (raw||'—');
+                                          const correct = getCorrect(q, raw);
+                                          const cluesUsed = isMN && raw && typeof raw==='object' ? raw.cluesUsed : null;
+                                          return { qi, q, theirAns, correct, pts: null, cluesUsed };
+                                        });
+                                    return (
+                                      <table className="w-full text-sm mt-3">
+                                        <thead>
+                                          <tr className="text-xs text-gray-500 uppercase border-b border-gray-200">
+                                            <th className="py-2 px-3 text-center font-semibold">Q#</th>
+                                            <th className="py-2 px-3 text-left font-semibold">Question</th>
+                                            {isMN && <th className="py-2 px-3 text-center font-semibold">Clues</th>}
+                                            {isDash && <th className="py-2 px-3 text-center font-semibold">Correct Ans</th>}
+                                            <th className="py-2 px-3 text-center font-semibold">Their Answer</th>
+                                            {!isDash && <th className="py-2 px-3 text-center font-semibold">Correct?</th>}
+                                            {isScored && <th className="py-2 px-3 text-center font-semibold">Points</th>}
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                          {rows.map(({qi, q, theirAns, correct, pts, cluesUsed}) => (
+                                            <tr key={qi} className={correct===false?'bg-red-50':correct===true?'bg-green-50':''}>
                                               <td className="py-2 px-3 text-center text-gray-500">Q{qi+1}</td>
-                                              <td className="py-2 px-3 text-gray-600 text-xs max-w-xs truncate">{q ? (q.clues?q.clues[0]:q.prompt||q.text||'') : '—'}</td>
+                                              <td className="py-2 px-3 text-gray-600 text-xs max-w-xs truncate">{q?(q.clues?q.clues[0]:q.prompt||q.text||''):'—'}</td>
+                                              {isMN && <td className="py-2 px-3 text-center text-gray-500">{cluesUsed||'—'}</td>}
+                                              {isDash && <td className="py-2 px-3 text-center text-gray-500">{q?getCorrectAns(q):'—'}</td>}
                                               <td className="py-2 px-3 text-center text-gray-700">{theirAns}</td>
-                                              <td className="py-2 px-3 text-center font-bold">{cell.correct===true?<span className="text-green-600">✓</span>:cell.correct===false?<span className="text-red-500">✗</span>:<span className="text-gray-400">—</span>}</td>
-                                              <td className="py-2 px-3 text-center font-semibold text-gray-700">{cell.earned}</td>
+                                              {!isDash && <td className="py-2 px-3 text-center font-bold">{correct===true?<span className="text-green-600">✓</span>:correct===false?<span className="text-red-500">✗</span>:<span className="text-gray-400">—</span>}</td>}
+                                              {isScored && <td className="py-2 px-3 text-center font-semibold text-gray-700">{pts??'—'}</td>}
                                             </tr>
-                                          );
-                                        })}
-                                      </tbody>
-                                    </table>
-                                  ) : (
-                                    <p className="text-xs text-gray-400 italic mt-3">Run Audit to see per-question breakdown.</p>
-                                  )}
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    );
+                                  })()}
                                 </div>
                               )}
                             </>
