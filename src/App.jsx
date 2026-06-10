@@ -588,7 +588,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               const mnAd = isMN ? (selectedAnswers[i]||{}) : null;
               const mnCluesUsed = mnAd ? (typeof mnAd==='object' ? (mnAd.cluesUsed||1) : 1) : null;
               return (
-                <div key={i} className={`border-b last:border-b-0 ${isDash||isMN ? 'bg-white' : correct ? 'bg-green-50' : 'bg-red-50'}`}>
+                <div key={i} className={`border-b last:border-b-0 ${isDash ? 'bg-white' : isMN ? (correct?'bg-green-50':'bg-red-50') : correct ? 'bg-green-50' : 'bg-red-50'}`}>
                   <div className="grid grid-cols-3 gap-4 p-4">
                     <div className="col-span-2">
                       <p className="text-xs text-gray-500 mb-1 font-mono flex items-center gap-1">
@@ -1276,7 +1276,8 @@ const QuizApp = () => {
     const disputeText = disputeList.map(i => {
       const q = activeQuestions[parseInt(i)];
       const reason = disputeReasons[i] || '(no reason given)';
-      return `Q${parseInt(i)+1}: ${getPromptPreview(q)}\nYour answer: ${getAnswerDisplay(q, parseInt(i))}\nCorrect answer: ${getCorrectAnswerDisplay(q)}\nReason: ${reason}`;
+      const ans = activeQuiz?.type==='mysterynoun' ? (()=>{const ad=studentAnswers[parseInt(i)]||{};return typeof ad==='object'?(ad.answer||'(no answer)'):(ad||'(no answer)');})() : getAnswerDisplay(q, parseInt(i));
+      return `Q${parseInt(i)+1}: ${getPromptPreview(q)}\nYour answer: ${ans}\nCorrect answer: ${getCorrectAnswerDisplay(q)}\nReason: ${reason}`;
     }).join('\n\n');
     try {
       await sendNotification(
@@ -1430,6 +1431,12 @@ const QuizApp = () => {
     setDisplayName('');
     setUserAttempts({});
     setCurrentAttemptId(null);
+    setSelectedCategory('');
+    setSelectedQuizKey('');
+    setActiveQuiz(null);
+    setActiveQuestions([]);
+    setStudentAnswers({});
+    setTokenAssignments({});
     setLoginEmail('');
     setLoginPassword('');
     setMode('login');
@@ -1583,6 +1590,8 @@ const QuizApp = () => {
   const setORPrimary = (ai) => setOrQuestions(p => p.map((q,i) => i===orCurrentIndex ? {...q,primaryAnswerIndex:ai} : q));
   const updateDDQuestion = (field, value) => setDdQuestions(p => p.map((q,i) => i===ddCurrentIndex ? {...q,[field]:value} : q));
   const updateMNQuestion = (field, value) => setMnQuestions(p => p.map((q,i) => i===mnCurrentIndex ? {...q,[field]:value} : q));
+  const removeMNAnswer = (ai) => setMnQuestions(p => p.map((q,i) => { if(i!==mnCurrentIndex) return q; const na=q.acceptedAnswers.filter((_,j)=>j!==ai); const np=ai===q.primaryAnswerIndex?0:ai<q.primaryAnswerIndex?q.primaryAnswerIndex-1:q.primaryAnswerIndex; return {...q,acceptedAnswers:na,primaryAnswerIndex:na.length>0?np:0}; }));
+  const setMNPrimary = (ai) => setMnQuestions(p => p.map((q,i) => i===mnCurrentIndex ? {...q,primaryAnswerIndex:ai} : q));
   const updateMNClue = (clueIdx, value) => setMnQuestions(p => p.map((q,i) => { if(i!==mnCurrentIndex) return q; const c=[...q.clues]; c[clueIdx]=value; return {...q,clues:c}; }));
   const addMNQuestion = () => { setMnQuestions(p=>[...p,emptyMNQuestion()]); setMnCurrentIndex(mnQuestions.length); setMnAnswerInput(''); };
   const removeMNQuestion = (idx) => { if(mnQuestions.length===1){alert('A quiz must have at least one question.');return;} const u=mnQuestions.filter((_,i)=>i!==idx); setMnQuestions(u); setMnCurrentIndex(Math.min(mnCurrentIndex,u.length-1)); };
@@ -3587,7 +3596,7 @@ const QuizApp = () => {
                 <label className="block text-sm font-medium text-gray-600 mb-1">Author's Note <span className="text-xs text-gray-400">(optional — shown to users before they begin the quiz)</span></label>
                 <textarea value={newQuizAuthorNote} onChange={e=>setNewQuizAuthorNote(e.target.value)} placeholder="Special instructions, context, or notes for quiz-takers..." rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none text-sm"/>
               </div>
-              <div className="mt-4">
+              {newQuizType !== 'mysterynoun' && <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-600 mb-2">Token Slots <span className="text-xs text-gray-400">(6 slots — assign token types players receive)</span></label>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                   {newQuizTokenSlots.map((slot, i) => (
@@ -3613,7 +3622,7 @@ const QuizApp = () => {
                     newQuizTokenSlots.filter(t => t !== 'none').reduce((acc, t) => { acc[t] = (acc[t]||0)+1; return acc; }, {})
                   ).map(([t, count]) => `${count} ${t}${count !== 1 ? 's' : ''}`).join(', ') || 'No tokens assigned'}
                 </p>
-              </div>
+              </div>}
             </div>
 
             {newQuizType==='combination'&&(
@@ -3871,7 +3880,7 @@ const QuizApp = () => {
                     </div>
                   ))}
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Correct Answer(s) <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-gray-600 mb-2">Correct Answers <span className="text-red-500">*</span> <span className="ml-2 text-xs text-gray-400 font-normal">(click to set as primary — shown to users)</span></label>
                     <div className="flex gap-2 mb-2">
                       <input
                         type="text"
@@ -3883,18 +3892,18 @@ const QuizApp = () => {
                       />
                       <button onClick={()=>{if(mnAnswerInput.trim()){updateMNQuestion('acceptedAnswers',[...mnQ.acceptedAnswers,mnAnswerInput.trim()]);setMnAnswerInput('');}}} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">Add</button>
                     </div>
-                    {mnQ.acceptedAnswers.length>0&&(
-                      <div className="space-y-1">
-                        {mnQ.acceptedAnswers.map((ans,ai)=>(
-                          <div key={ai} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg">
-                            <input type="radio" checked={mnQ.primaryAnswerIndex===ai} onChange={()=>updateMNQuestion('primaryAnswerIndex',ai)} className="accent-blue-600"/>
-                            <span className="text-sm text-gray-700 flex-1">{ans} {mnQ.primaryAnswerIndex===ai&&<span className="text-xs text-blue-600 font-medium">(primary — shown to users)</span>}</span>
-                            <button onClick={()=>{const u=mnQ.acceptedAnswers.filter((_,i)=>i!==ai);updateMNQuestion('acceptedAnswers',u);if(mnQ.primaryAnswerIndex>=u.length)updateMNQuestion('primaryAnswerIndex',0);}} className="text-red-400 hover:text-red-600"><X size={14}/></button>
+                    {mnQ.acceptedAnswers.length===0?<div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-400 text-center">No answers added yet.</div>:(
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
+                        {mnQ.acceptedAnswers.map((ans,ai)=>{const isPrimary=ai===mnQ.primaryAnswerIndex;return(
+                          <div key={ai} onClick={()=>setMNPrimary(ai)} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer border-2 transition-all ${isPrimary?'bg-yellow-50 border-yellow-400':'bg-white border-gray-200 hover:border-blue-300'}`}>
+                            <Star size={15} className={isPrimary?'text-yellow-500 fill-yellow-500':'text-gray-300'}/>
+                            <span className={`flex-1 text-sm ${isPrimary?'font-semibold text-gray-800':'text-gray-700'}`}>{ans}</span>
+                            {isPrimary&&<span className="text-xs text-yellow-600 font-medium">Primary</span>}
+                            <button onClick={e=>{e.stopPropagation();removeMNAnswer(ai);}} className="text-red-400 hover:text-red-600 ml-1"><X size={14}/></button>
                           </div>
-                        ))}
+                        );})}
                       </div>
                     )}
-                    <p className="text-xs text-gray-400 mt-1">Select the primary (displayed) answer with the radio button. Add variants as additional entries.</p>
                   </div>
                 </>);})()}
               </div>
@@ -4154,7 +4163,7 @@ const QuizApp = () => {
         )}
 
                 {showPreview&&(()=>{
-          const previewQ = newQuizType==='MC' ? mcQ : newQuizType==='openresponse' ? orQ : newQuizType==='datadash' ? ddQuestions[ddCurrentIndex] : null;
+          const previewQ = newQuizType==='MC' ? mcQ : newQuizType==='openresponse' ? orQ : newQuizType==='datadash' ? ddQuestions[ddCurrentIndex] : newQuizType==='mysterynoun' ? mnQuestions[mnCurrentIndex] : null;
           const previewType = newQuizType;
           return (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -4192,6 +4201,17 @@ const QuizApp = () => {
                         <div className="text-lg font-semibold text-gray-800 mb-4">{renderPrompt(previewQ.prompt||'')}</div>
                         <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-400 bg-gray-50">Student enters a number here...</div>
                         {previewQ.correctAnswer!==null&&<p className="mt-3 text-sm text-green-700"><span className="font-semibold">Correct answer:</span> {previewQ.correctAnswer?.toLocaleString()}</p>}
+                      </>
+                    )}
+                    {previewType==='mysterynoun'&&previewQ&&(
+                      <>
+                        {[0,1,2,3].map(ci => previewQ.clues[ci]?.trim() && (
+                          <div key={ci} className="mb-3">
+                            <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Clue {ci+1} · {MN_POINTS[ci]} pts</p>
+                            <p className="text-base text-gray-800">{previewQ.clues[ci]}</p>
+                          </div>
+                        ))}
+                        {previewQ.acceptedAnswers?.length>0&&<p className="mt-3 text-sm text-green-700"><span className="font-semibold">Primary answer:</span> {previewQ.acceptedAnswers[previewQ.primaryAnswerIndex]||previewQ.acceptedAnswers[0]}</p>}
                       </>
                     )}
                     {previewType==='fillintheblank'&&(
