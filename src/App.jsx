@@ -2247,7 +2247,7 @@ const QuizApp = () => {
   );
 
   const ExitModal = () => showResetModal ? (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl">
         <h2 className="text-xl font-semibold mb-3 text-gray-800">Exit Quiz?</h2>
         <p className="text-gray-600 mb-6">Your answers will be saved and you can continue this quiz later.</p>
@@ -2285,7 +2285,7 @@ const QuizApp = () => {
         ? `${answers[0]} and ${answers[1]}`
         : answers.slice(0,-1).join(', ') + `, and ${answers[answers.length-1]}`;
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
           <div className="flex justify-between items-center p-5 border-b">
             <h2 className="text-lg font-bold text-gray-800">All Correct Answers</h2>
@@ -2384,14 +2384,14 @@ const QuizApp = () => {
     if (!showHelpModal) return null;
     const info = HELP_CONTENT[showHelpModal] || { title: 'Help', body: 'Placeholder help text.' };
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl">
+      <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
           <div className="flex justify-between items-center p-5 border-b">
             <h2 className="text-lg font-bold text-gray-800">{info.title}</h2>
             <button onClick={()=>setShowHelpModal(null)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button>
           </div>
-          <div className="p-5 max-h-[70vh] overflow-y-auto">
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{info.body}</p>
+          <div className="p-5">
+            <p className="text-sm text-gray-700 leading-relaxed">{info.body}</p>
           </div>
           <div className="px-5 pb-5">
             <button onClick={()=>setShowHelpModal(null)} className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button>
@@ -2402,7 +2402,7 @@ const QuizApp = () => {
   };
 
     const ForgotModal = () => showForgotModal ? (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
         <h2 className="text-lg font-bold text-gray-800 mb-2">Request Login Info</h2>
         {forgotSent ? (
@@ -2923,7 +2923,7 @@ const QuizApp = () => {
     );
   }
 
-  if (mode==='scoreboards') return <><HelpModal/><ScoreboardsListScreen currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onSelectSeason={(name)=>{setViewSeasonName(name);setMode('season-scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')} onHelp={()=>setShowHelpModal('scoreboards')} onSettings={!isAdminAuthenticated ? ()=>setMode('settings') : undefined}/></>;
+  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onSelectSeason={(name)=>{setViewSeasonName(name);setMode('season-scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')} onHelp={()=>setShowHelpModal('scoreboards')} onSettings={!isAdminAuthenticated ? ()=>setMode('settings') : undefined}/>;
 
   if (mode==='season-scoreboard' && viewSeasonName) return <SeasonScoreboardScreen seasonName={viewSeasonName} currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onBack={()=>setMode('scoreboards')} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')}/>;
 
@@ -2944,7 +2944,7 @@ const QuizApp = () => {
         <button onClick={()=>setMode('assessment')} className="w-full mt-8 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg">Continue to Quiz</button>
       </div>
       {showResetModal&&(
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
             <h2 className="text-lg font-bold text-gray-800 mb-2">Exit Quiz?</h2>
             <p className="text-gray-600 mb-6">Your answers will be saved and you can continue this quiz later.</p>
@@ -4047,7 +4047,7 @@ const QuizApp = () => {
           </div>
         )}
         {showNewQuizConfirm&&(
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
               <h2 className="text-lg font-bold text-gray-800 mb-2">Start a New Quiz?</h2>
               <p className="text-gray-600 mb-6 text-sm">You have unsaved work on the current quiz. Starting a new one will discard it. Are you sure?</p>
@@ -4369,7 +4369,7 @@ const QuizApp = () => {
           const previewQ = newQuizType==='MC' ? mcQ : newQuizType==='openresponse' ? orQ : newQuizType==='datadash' ? ddQuestions[ddCurrentIndex] : newQuizType==='mysterynoun' ? mnQuestions[mnCurrentIndex] : null;
           const previewType = newQuizType;
           return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-xl shadow-xl w-full max-w-xl flex flex-col max-h-screen overflow-y-auto">
                 <div className="flex justify-between items-center p-5 border-b">
                   <h2 className="text-lg font-bold text-gray-800">Question Preview</h2>
@@ -4449,7 +4449,7 @@ const QuizApp = () => {
           );
         })()}
         {showExportModal&&(
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-lg flex flex-col">
               <div className="flex justify-between items-center p-5 border-b"><h2 className="text-lg font-bold text-gray-800">Export Data</h2><button onClick={()=>setShowExportModal(false)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button></div>
               <div className="p-5">
@@ -4464,7 +4464,7 @@ const QuizApp = () => {
           </div>
         )}
         {confirmDeleteKey&&(
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
               <h2 className="text-lg font-bold text-gray-800 mb-2">Delete Quiz?</h2>
               <p className="text-gray-600 mb-1">Are you sure you want to delete <strong>{allQuizData[confirmDeleteKey]?.title}</strong>?</p>
