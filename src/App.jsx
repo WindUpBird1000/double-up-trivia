@@ -1385,6 +1385,14 @@ const QuizApp = () => {
     setLoginError('');
     const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
     if (error) { setLoginError('Invalid email or password.'); return; }
+    // Clear all quiz session state before loading the new user
+    setSelectedCategory(''); setSelectedQuizKey('');
+    setActiveQuiz(null); setActiveQuestions([]);
+    setStudentAnswers({}); setTokenAssignments({});
+    setCurrentQuestionIndex(0);
+    setMnCluesRevealed({}); setMnAnswered({}); setMnCurrentQ(0);
+    setDisputedQuestions({}); setDisputeReasons({}); setSubmittedDisputes([]);
+    setUserAttempts({}); setCurrentAttemptId(null);
     const loginUser = data.user;
     setCurrentUser(loginUser);
     await fetchUserData(loginUser);
