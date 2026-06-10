@@ -1944,7 +1944,7 @@ const QuizApp = () => {
     setAuditAttempts([]);
     const { data: attempts } = await supabase
       .from('quiz_attempts')
-      .select('id, user_id, status, submitted_at')
+      .select('id, user_id, status, submitted_at, answers, token_assignments, doubles')
       .eq('quiz_key', quizKey)
       .eq('status', 'submitted')
       .order('submitted_at', { ascending: true });
@@ -1954,7 +1954,7 @@ const QuizApp = () => {
     const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
     const nameMap = {};
     (profiles||[]).forEach(p => { nameMap[p.user_id] = p.display_name; });
-    setAuditAttempts(attempts.map(a => ({ ...a, display_name: nameMap[a.user_id] || a.user_id })));
+    setAuditAttempts(attempts.map(a => ({ ...a, display_name: nameMap[a.user_id] || a.user_id, full_answers: a.answers || {} })));
     setAuditAttemptsLoading(false);
   };
 
@@ -3688,7 +3688,6 @@ const QuizApp = () => {
                         {newQuizType !== 'datadash' && newQuizType !== 'mysterynoun' && <option value="insurance">Insurance</option>}
                         {newQuizType !== 'datadash' && newQuizType !== 'mysterynoun' && <option value="parasite">Parasite</option>}
                         {newQuizType !== 'datadash' && newQuizType !== 'mysterynoun' && <option value="sniper">Sniper</option>}
-                        {newQuizType !== 'datadash' && newQuizType !== 'mysterynoun' && <option value="doubler">Doubler (additional)</option>}
                       </select>
                     </div>
                   ))}
@@ -4114,31 +4113,82 @@ const QuizApp = () => {
                 )}
                 {auditAttempts.length > 0 && (
                   <div className="divide-y divide-gray-100">
-                    {auditAttempts.map(attempt => (
-                      <div key={attempt.id}>
-                        {confirmDeleteAttempt?.userId === attempt.user_id ? (
-                          <div className="px-5 py-3 bg-red-50 flex items-center justify-between gap-3">
-                            <span className="text-sm text-red-700 font-medium">Delete {attempt.display_name}'s answers for this quiz? This cannot be undone.</span>
-                            <div className="flex gap-2 flex-shrink-0">
-                              <button onClick={()=>deleteAttempt(attempt.user_id, auditQuizKey)} className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700">Delete</button>
-                              <button onClick={()=>setConfirmDeleteAttempt(null)} className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-300">Cancel</button>
+                    {auditAttempts.map(attempt => {
+                      const isExpanded = auditExpandedUser === attempt.user_id;
+                      // Find this user's row in auditData if available
+                      const auditRow = auditData?.userRows?.find(r => r.user_id === attempt.user_id);
+                      const quiz = allQuizData[auditQuizKey];
+                      const questions = quiz?.type === 'fillintheblank' ? quiz?.sentences : quiz?.questions || [];
+                      return (
+                        <div key={attempt.id}>
+                          {confirmDeleteAttempt?.userId === attempt.user_id ? (
+                            <div className="px-5 py-3 bg-red-50 flex items-center justify-between gap-3">
+                              <span className="text-sm text-red-700 font-medium">Delete {attempt.display_name}'s answers for this quiz? This cannot be undone.</span>
+                              <div className="flex gap-2 flex-shrink-0">
+                                <button onClick={()=>deleteAttempt(attempt.user_id, auditQuizKey)} className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700">Delete</button>
+                                <button onClick={()=>setConfirmDeleteAttempt(null)} className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-300">Cancel</button>
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="px-5 py-3 flex justify-between items-center">
-                            <div>
-                              <span className="text-sm font-medium text-gray-800">{attempt.display_name}</span>
-                              <span className="text-xs text-gray-400 ml-3">{attempt.submitted_at ? new Date(attempt.submitted_at).toLocaleString() : ''}</span>
-                            </div>
-                            <button
-                              onClick={()=>setConfirmDeleteAttempt({userId:attempt.user_id, displayName:attempt.display_name})}
-                              className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200"
-                              title="Delete this user's attempt"
-                            ><Trash2 size={15}/></button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                          ) : (
+                            <>
+                              <div
+                                className="px-5 py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 select-none"
+                                onClick={()=>setAuditExpandedUser(isExpanded ? null : attempt.user_id)}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm font-medium text-gray-800">{attempt.display_name}</span>
+                                  <span className="text-xs text-gray-400">{attempt.submitted_at ? new Date(attempt.submitted_at).toLocaleString() : ''}</span>
+                                  {auditRow && <span className="text-xs text-gray-500">· {auditRow.recomputedTotal} pts</span>}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-400 text-xs">{isExpanded ? '▲' : '▼'}</span>
+                                  <button
+                                    onClick={e=>{e.stopPropagation();setConfirmDeleteAttempt({userId:attempt.user_id, displayName:attempt.display_name});}}
+                                    className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200"
+                                    title="Delete this user's attempt"
+                                  ><Trash2 size={15}/></button>
+                                </div>
+                              </div>
+                              {isExpanded && (
+                                <div className="px-5 pb-4 bg-gray-50 border-t border-gray-100">
+                                  {auditRow ? (
+                                    <table className="w-full text-sm mt-3">
+                                      <thead>
+                                        <tr className="text-xs text-gray-500 uppercase border-b border-gray-200">
+                                          <th className="py-2 px-3 text-center font-semibold">Q#</th>
+                                          <th className="py-2 px-3 text-left font-semibold">Question</th>
+                                          <th className="py-2 px-3 text-center font-semibold">Their Answer</th>
+                                          <th className="py-2 px-3 text-center font-semibold">Correct</th>
+                                          <th className="py-2 px-3 text-center font-semibold">Points</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-gray-100">
+                                        {auditRow.cells.map((cell, qi) => {
+                                          const q = questions[qi];
+                                          const correctAns = !q ? '—' : quiz?.type==='datadash' ? q.correctAnswer?.toLocaleString() : quiz?.type==='mysterynoun' ? (q.acceptedAnswers[q.primaryAnswerIndex??0]||q.acceptedAnswers[0]||'—') : quiz?.type==='openresponse' ? (q.acceptedAnswers[q.primaryAnswerIndex??0]||q.acceptedAnswers[0]||'—') : '—';
+                                          const theirAns = (() => { const a = attempt.full_answers?.[qi]; if(!a) return '—'; if(typeof a==='object') return a.answer||'—'; return a||'—'; })();
+                                          return (
+                                            <tr key={qi} className={cell.correct===false?'bg-red-50':cell.correct===true?'bg-green-50':''}>
+                                              <td className="py-2 px-3 text-center text-gray-500">Q{qi+1}</td>
+                                              <td className="py-2 px-3 text-gray-600 text-xs max-w-xs truncate">{q ? (q.clues?q.clues[0]:q.prompt||q.text||'') : '—'}</td>
+                                              <td className="py-2 px-3 text-center text-gray-700">{theirAns}</td>
+                                              <td className="py-2 px-3 text-center font-bold">{cell.correct===true?<span className="text-green-600">✓</span>:cell.correct===false?<span className="text-red-500">✗</span>:<span className="text-gray-400">—</span>}</td>
+                                              <td className="py-2 px-3 text-center font-semibold text-gray-700">{cell.earned}</td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                  ) : (
+                                    <p className="text-xs text-gray-400 italic mt-3">Run Audit to see per-question breakdown.</p>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
