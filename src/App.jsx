@@ -8,7 +8,7 @@ const supabase = createClient(
   'sb_publishable_zGvjNAiBtoaRersumsUjWA_OGLXkrJz'
 );
 
-const SNIPER_POINTS = 7;
+const SNIPER_POINTS = 8;
 const MN_POINTS = [20, 15, 10, 5]; // points for answering correctly after clue 1/2/3/4
 
 const TOKEN_CONFIG = {
