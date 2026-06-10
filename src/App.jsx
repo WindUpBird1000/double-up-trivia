@@ -3036,7 +3036,7 @@ const QuizApp = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Message <span className="text-xs text-gray-400">(supports {{b:bold}}, {{i:italic}}, {{u:underline}})</span></label>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Message <span className="text-xs text-gray-400">(supports &#123;&#123;b:bold&#125;&#125;, &#123;&#123;i:italic&#125;&#125;, &#123;&#123;u:underline&#125;&#125;)</span></label>
                   <textarea
                     value={msgBody}
                     onChange={e=>setMsgBody(e.target.value)}
