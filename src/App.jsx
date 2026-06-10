@@ -1006,6 +1006,9 @@ const QuizApp = () => {
   const [msgPageIndex, setMsgPageIndex] = useState(0);
   const [allMsgViewed, setAllMsgViewed] = useState(false);
   const [auditQuizKey, setAuditQuizKey] = useState('');
+  const [confirmDeleteAttempt, setConfirmDeleteAttempt] = useState(null); // {userId, displayName}
+  const [auditAttempts, setAuditAttempts] = useState([]); // raw attempts for selected quiz
+  const [auditAttemptsLoading, setAuditAttemptsLoading] = useState(false);
   const [auditSeason, setAuditSeason] = useState('');
   const [auditExpandedUser, setAuditExpandedUser] = useState(null);
   const [auditData, setAuditData] = useState(null);
@@ -1936,7 +1939,63 @@ const QuizApp = () => {
     }, { onConflict: 'season' });
   };
 
-  const runAudit = async (quizKey) => {
+  const fetchAuditAttempts = async (quizKey) => {
+    setAuditAttemptsLoading(true);
+    setAuditAttempts([]);
+    const { data: attempts } = await supabase
+      .from('quiz_attempts')
+      .select('id, user_id, status, submitted_at')
+      .eq('quiz_key', quizKey)
+      .eq('status', 'submitted')
+      .order('submitted_at', { ascending: true });
+    if (!attempts) { setAuditAttemptsLoading(false); return; }
+    // Get display names
+    const userIds = attempts.map(a => a.user_id);
+    const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
+    const nameMap = {};
+    (profiles||[]).forEach(p => { nameMap[p.user_id] = p.display_name; });
+    setAuditAttempts(attempts.map(a => ({ ...a, display_name: nameMap[a.user_id] || a.user_id })));
+    setAuditAttemptsLoading(false);
+  };
+
+  const deleteAttempt = async (userId, quizKey) => {
+    // Delete the attempt
+    await supabase.from('quiz_attempts').delete().eq('user_id', userId).eq('quiz_key', quizKey);
+    setConfirmDeleteAttempt(null);
+    // If quiz is Scored, rescore it
+    const quiz = allQuizData[quizKey];
+    if (quiz?.status === 'Scored') {
+      const { data: remainingAttempts } = await supabase
+        .from('quiz_attempts')
+        .select('*')
+        .eq('quiz_key', quizKey)
+        .eq('status', 'submitted');
+      if (remainingAttempts && remainingAttempts.length > 0) {
+        // Re-fetch display names for scoring
+        const uids = remainingAttempts.map(a => a.user_id);
+        const { data: profs } = await supabase.from('profiles').select('user_id, display_name').in('user_id', uids);
+        const nm = {}; (profs||[]).forEach(p => { nm[p.user_id] = p.display_name; });
+        const attemptsWithNames = remainingAttempts.map(a => ({ ...a, display_name: nm[a.user_id] || a.user_id }));
+        const { pointValues, userScores, correctnessByUser, correctCounts, ddPointsByUser, isDashQuiz } = computeQuizResults(quiz, attemptsWithNames);
+        await supabase.from('quiz_results').upsert({
+          quiz_key: quizKey,
+          quiz_title: quiz.title,
+          posted_at: new Date().toISOString(),
+          scores: { pointValues, userScores, correctnessByUser, correctCounts, ...(isDashQuiz ? { ddPointsByUser } : {}) },
+        }, { onConflict: 'quiz_key' });
+        await updateSeasonStandings(quiz.category, quizKey, userScores);
+      } else {
+        // No attempts left — clear results
+        await supabase.from('quiz_results').delete().eq('quiz_key', quizKey);
+        await updateSeasonStandings(quiz.category, quizKey, []);
+      }
+    }
+    // Refresh the attempts list and audit data
+    await fetchAuditAttempts(quizKey);
+    if (auditData) runAudit(quizKey);
+  };
+
+    const runAudit = async (quizKey) => {
     if (!quizKey) return;
     setAuditLoading(true);
     setAuditData(null);
@@ -2059,6 +2118,7 @@ const QuizApp = () => {
     userRows.sort((a, b) => b.recomputedTotal - a.recomputedTotal);
 
     setAuditData({ quizKey, quizTitle: quiz.title || quizKey, season, questions, rankingRows, userRows, n, totalAttempts, isDashQuiz, isMNQuiz });
+    fetchAuditAttempts(quizKey);
     setAuditLoading(false);
   };
 
@@ -4021,10 +4081,10 @@ const QuizApp = () => {
                 {auditSeason && (
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Quiz</label>
-                    <select value={auditQuizKey} onChange={e=>{setAuditQuizKey(e.target.value);setAuditData(null);setAuditExpandedUser(null);}} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-64">
+                    <select value={auditQuizKey} onChange={e=>{const k=e.target.value;setAuditQuizKey(k);setAuditData(null);setAuditExpandedUser(null);setAuditAttempts([]);setConfirmDeleteAttempt(null);if(k){fetchAuditAttempts(k);}}} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-64">
                       <option value="">— Select a quiz —</option>
-                      {Object.entries(allQuizData).filter(([,q])=>q.status==='Scored'&&q.category===auditSeason).sort((a,b)=>(a[1].title||a[0]).localeCompare(b[1].title||b[0])).map(([key,q])=>(
-                        <option key={key} value={key}>{q.title||key}</option>
+                      {Object.entries(allQuizData).filter(([,q])=>(q.status==='Scored'||q.status==='Active')&&q.category===auditSeason).sort((a,b)=>(a[1].title||a[0]).localeCompare(b[1].title||b[0])).map(([key,q])=>(
+                        <option key={key} value={key}>{q.title||key} {q.status==='Active'?'(Active)':''}</option>
                       ))}
                     </select>
                   </div>
@@ -4038,6 +4098,51 @@ const QuizApp = () => {
                 )}
               </div>
             </div>
+
+            {/* ── Responses section (shown for Active + Scored) ── */}
+            {auditQuizKey && (
+              <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                <div className="px-5 py-3 bg-gray-100 border-b flex justify-between items-center">
+                  <div>
+                    <h2 className="font-bold text-gray-700">Submitted Responses</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">Delete a user's attempt to allow them to retake the quiz. Scored quizzes will be automatically rescored.</p>
+                  </div>
+                  {auditAttemptsLoading && <span className="text-xs text-gray-400 italic">Loading…</span>}
+                </div>
+                {!auditAttemptsLoading && auditAttempts.length === 0 && (
+                  <p className="px-5 py-4 text-sm text-gray-400 italic">No submitted responses yet.</p>
+                )}
+                {auditAttempts.length > 0 && (
+                  <div className="divide-y divide-gray-100">
+                    {auditAttempts.map(attempt => (
+                      <div key={attempt.id}>
+                        {confirmDeleteAttempt?.userId === attempt.user_id ? (
+                          <div className="px-5 py-3 bg-red-50 flex items-center justify-between gap-3">
+                            <span className="text-sm text-red-700 font-medium">Delete {attempt.display_name}'s answers for this quiz? This cannot be undone.</span>
+                            <div className="flex gap-2 flex-shrink-0">
+                              <button onClick={()=>deleteAttempt(attempt.user_id, auditQuizKey)} className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700">Delete</button>
+                              <button onClick={()=>setConfirmDeleteAttempt(null)} className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-300">Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="px-5 py-3 flex justify-between items-center">
+                            <div>
+                              <span className="text-sm font-medium text-gray-800">{attempt.display_name}</span>
+                              <span className="text-xs text-gray-400 ml-3">{attempt.submitted_at ? new Date(attempt.submitted_at).toLocaleString() : ''}</span>
+                            </div>
+                            <button
+                              onClick={()=>setConfirmDeleteAttempt({userId:attempt.user_id, displayName:attempt.display_name})}
+                              className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200"
+                              title="Delete this user's attempt"
+                            ><Trash2 size={15}/></button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {auditData && (() => {
               const { quizTitle, season, questions, rankingRows, userRows, n, totalAttempts } = auditData;
