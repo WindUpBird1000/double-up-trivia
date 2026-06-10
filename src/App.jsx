@@ -1321,13 +1321,21 @@ const QuizApp = () => {
     const loginUser = data.user;
     setCurrentUser(loginUser);
     await fetchUserData(loginUser);
+    // Read last_login_at from profiles BEFORE updating it
+    const { data: profileForLogin } = await supabase
+      .from('profiles')
+      .select('last_login_at')
+      .eq('user_id', loginUser.id)
+      .single();
+    const lastLogin = profileForLogin?.last_login_at || '1970-01-01';
+    // Update last_login_at to now
+    await supabase.from('profiles').update({ last_login_at: new Date().toISOString() }).eq('user_id', loginUser.id);
     // Check for unread messages published since last login
-    const lastLogin = loginUser.last_sign_in_at;
     const { data: msgs } = await supabase
       .from('messages')
       .select('*')
       .not('published_at', 'is', null)
-      .gt('published_at', lastLogin || '1970-01-01')
+      .gt('published_at', lastLogin)
       .order('published_at', { ascending: true });
     if (msgs && msgs.length > 0) {
       setUnreadMessages(msgs);
