@@ -498,10 +498,10 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
         </div>
       </div>
 
-      {/* Leaderboard */}
+      {/* Scoreboard */}
       <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
         <div className="px-5 py-3 bg-gray-100 border-b">
-          <h2 className="font-bold text-gray-700">Leaderboard</h2>
+          <h2 className="font-bold text-gray-700">Scoreboard</h2>
           {isAdminView && <p className="text-xs text-gray-500 mt-0.5">Click any row to view that player's answers.</p>}
         </div>
         <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
@@ -798,13 +798,13 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
         </div>
       </div>
 
-      {/* Leaderboard */}
+      {/* Scoreboard */}
       {ranked.length === 0 ? (
         <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500 mb-6">No scored quizzes in this season yet.</div>
       ) : (
         <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
           <div className="px-5 py-3 bg-gray-100 border-b">
-            <h2 className="font-bold text-gray-700">Leaderboard</h2>
+            <h2 className="font-bold text-gray-700">Scoreboard</h2>
             {isAdminView && <p className="text-xs text-gray-500 mt-0.5">Click any row to view that player's quiz breakdown.</p>}
           </div>
           <div className="grid grid-cols-12 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
@@ -2557,8 +2557,8 @@ const QuizApp = () => {
         <div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:40}}>
         <div style={{maxWidth:'48rem',margin:'0 auto'}}>
         <div className="bg-white border-t border-gray-200 shadow-lg px-5 pt-4 pb-4 text-center rounded-t-2xl" onClick={handleTapBin}>
-          <p className="text-sm font-semibold text-gray-700 mb-1">Your tokens — tap to select, then tap a question to assign</p>
-          <p className="text-xs text-gray-400 mb-3">Hover over a token to see what it does. Tap an assigned token to pick it back up.</p>
+          <p className="text-sm font-semibold text-gray-700 mb-1">Your tokens — click/tap to select, then click/tap a question to assign</p>
+          <p className="text-xs text-gray-400 mb-3">Hover over a token to see what it does. Click/tap an assigned token to pick it back up.</p>
           {binTokensList.length > 0 ? (
             <div className="flex flex-wrap gap-3 items-center justify-center">
               {binTokensList.map((tok) => (
