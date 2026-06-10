@@ -1198,7 +1198,18 @@ const QuizApp = () => {
     }
   };
 
-  const handleSendDisputes = async () => {
+  // Generic notification sender using template_dcdqon6
+  const sendNotification = async (to_email, subject, message) => {
+    try {
+      await window.emailjs.send('service_u91y3sw', 'template_dcdqon6', {
+        to_email, subject, message,
+      }, '0k_9ewelPuyyBY1HX');
+    } catch(e) {
+      console.error('Email notification failed:', e);
+    }
+  };
+
+    const handleSendDisputes = async () => {
     setDisputeSending(true);
     const disputeList = Object.keys(disputedQuestions).filter(i => disputedQuestions[i]);
     const disputeText = disputeList.map(i => {
@@ -1207,11 +1218,11 @@ const QuizApp = () => {
       return `Q${parseInt(i)+1}: ${getPromptPreview(q)}\nYour answer: ${getAnswerDisplay(q, parseInt(i))}\nCorrect answer: ${getCorrectAnswerDisplay(q)}\nReason: ${reason}`;
     }).join('\n\n');
     try {
-      await window.emailjs.send('service_u91y3sw', 'template_dcdqon6', {
-        display_name: displayName || currentUser?.email,
-        quiz_title: activeQuiz?.title,
-        disputes: disputeText,
-      }, '0k_9ewelPuyyBY1HX');
+      await sendNotification(
+        'doubleuptrivia@gmail.com',
+        `Score Dispute — ${activeQuiz?.title} from ${displayName || currentUser?.email}`,
+        `${displayName || currentUser?.email} is disputing the following question(s) on "${activeQuiz?.title}":\n\n${disputeText}`
+      );
       setSubmittedDisputes(prev => [...prev, ...disputeList.map(Number)]);
       setDisputedQuestions({});
       setDisputeReasons({});
@@ -1871,6 +1882,35 @@ const QuizApp = () => {
     setAllQuizData(p => ({ ...p, [key]: quizData }));
     if (!knownQuizzes.quizzes.includes(key)) setKnownQuizzes(p => ({ quizzes: [...p.quizzes, key] }));
 
+    // ── Notify users when quiz goes Active for the first time ──────────────
+    if (newQuizStatus === 'Active') {
+      const prevStatus = allQuizData[key]?.status;
+      const isFirstActive = !prevStatus || prevStatus !== 'Active';
+      if (isFirstActive) {
+        // Check if already notified (stored in quiz data)
+        const alreadyNotified = allQuizData[key]?.activeNotificationSent;
+        if (!alreadyNotified) {
+          const { data: subscribers } = await supabase
+            .from('profiles')
+            .select('email, display_name')
+            .eq('notify_new_quiz', true);
+          if (subscribers && subscribers.length > 0) {
+            for (const sub of subscribers) {
+              await sendNotification(
+                sub.email,
+                `Double Up Trivia — New Quiz Posted: ${quizData.title}`,
+                `Hi ${sub.display_name || 'there'},\n\nA new quiz is available: "${quizData.title}"!\n\nLog in to Double Up Trivia to play.\n\nGood luck!`
+              );
+            }
+          }
+          // Mark as notified by saving flag into quiz data
+          await supabase.from('quizzes').update({
+            data: { ...quizData, activeNotificationSent: true }
+          }).eq('quiz_key', key);
+        }
+      }
+    }
+
     if (newQuizStatus === 'Scored') {
       const { data: attempts } = await supabase.from('quiz_attempts').select('*').eq('quiz_key', key).eq('status', 'submitted');
       if (attempts && attempts.length > 0) {
@@ -1893,6 +1933,25 @@ const QuizApp = () => {
 
         // Update season standings (no-op for Offseason quizzes)
         await updateSeasonStandings(quizData.category, key, userScores);
+
+        // ── Notify users who took this quiz that it has been scored ─────────
+        const participantIds = attempts.map(a => a.user_id);
+        if (participantIds.length > 0) {
+          const { data: notifyProfiles } = await supabase
+            .from('profiles')
+            .select('email, display_name')
+            .eq('notify_scored', true)
+            .in('user_id', participantIds);
+          if (notifyProfiles && notifyProfiles.length > 0) {
+            for (const sub of notifyProfiles) {
+              await sendNotification(
+                sub.email,
+                `Double Up Trivia — Results Posted: ${quizData.title}`,
+                `Hi ${sub.display_name || 'there'},\n\nResults are in for "${quizData.title}"!\n\nLog in to Double Up Trivia to see how you did.`
+              );
+            }
+          }
+        }
       }
     }
 
