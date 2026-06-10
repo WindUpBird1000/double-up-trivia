@@ -1244,8 +1244,12 @@ const QuizApp = () => {
 
   // ── Messages ──────────────────────────────────────────────────────────────
   const fetchAdminMessages = async () => {
-    const { data } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
-    setAdminMessages(data || []);
+    try {
+      const { data, error } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
+      if (!error) setAdminMessages(data || []);
+    } catch(e) {
+      console.error('fetchAdminMessages error:', e);
+    }
   };
 
   const startNewMessage = () => {
