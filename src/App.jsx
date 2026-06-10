@@ -1888,32 +1888,32 @@ const QuizApp = () => {
 
     // ── Notify users when quiz goes Active for the first time ──────────────
     if (newQuizStatus === 'Active') {
-      const prevStatus = allQuizData[key]?.status;
-      const isFirstActive = !prevStatus || prevStatus !== 'Active';
-      if (isFirstActive) {
-        // Check if already notified (stored in quiz data)
-        const alreadyNotified = allQuizData[key]?.activeNotificationSent;
-        if (!alreadyNotified) {
-          const { data: subscribers } = await supabase
-            .from('profiles')
-            .select('email, display_name')
-            .eq('notify_new_quiz', true);
-          if (subscribers && subscribers.length > 0) {
-            for (const sub of subscribers) {
-              await sendNotification(
-                sub.email,
-                `Double Up Trivia — New Quiz Posted: ${quizData.title}`,
-                `Hi ${sub.display_name || 'there'},\n\nA new quiz is available: "${quizData.title}"!\n\nLog in to Double Up Trivia to play.\n\nGood luck!`
-              );
-            }
+      // Re-fetch from Supabase to reliably check the flag — local state may be stale
+      const { data: storedQuiz } = await supabase
+        .from('quizzes').select('data').eq('quiz_key', key).single();
+      const alreadyNotified = storedQuiz?.data?.activeNotificationSent;
+      if (!alreadyNotified) {
+        const { data: subscribers } = await supabase
+          .from('profiles')
+          .select('email, display_name')
+          .eq('notify_new_quiz', true);
+        if (subscribers && subscribers.length > 0) {
+          for (const sub of subscribers) {
+            await sendNotification(
+              sub.email,
+              `Double Up Trivia — New Quiz Posted: ${quizData.title}`,
+              `Hi ${sub.display_name || 'there'},\n\nA new quiz is available: "${quizData.title}"!\n\nLog in to Double Up Trivia to play.\n\nGood luck!`
+            );
           }
-          // Mark as notified by saving flag into quiz data
-          await supabase.from('quizzes').update({
-            data: { ...quizData, activeNotificationSent: true }
-          }).eq('quiz_key', key);
         }
+        // Persist the flag so it survives future edits
+        await supabase.from('quizzes').update({
+          data: { ...quizData, activeNotificationSent: true }
+        }).eq('quiz_key', key);
+        setAllQuizData(p => ({ ...p, [key]: { ...quizData, activeNotificationSent: true } }));
       }
     }
+
 
     if (newQuizStatus === 'Scored') {
       const { data: attempts } = await supabase.from('quiz_attempts').select('*').eq('quiz_key', key).eq('status', 'submitted');
