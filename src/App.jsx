@@ -1871,12 +1871,12 @@ const QuizApp = () => {
           display_name: profileMap[a.user_id] || a.user_id,
           correctness: scoreAttempt(quizData, a.answers || {}),
         }));
-        const { pointValues, userScores, correctnessByUser, correctCounts } = computeQuizResults(quizData, attemptsWithCorrectness);
+        const { pointValues, userScores, correctnessByUser, correctCounts, ddPointsByUser, isDashQuiz } = computeQuizResults(quizData, attemptsWithCorrectness);
         await supabase.from('quiz_results').upsert({
           quiz_key: key,
           quiz_title: quizData.title,
           posted_at: new Date().toISOString(),
-          scores: { pointValues, userScores, correctnessByUser, correctCounts },
+          scores: { pointValues, userScores, correctnessByUser, correctCounts, ...(isDashQuiz ? { ddPointsByUser } : {}) },
         }, { onConflict: 'quiz_key' });
 
         // Update season standings (no-op for Offseason quizzes)
