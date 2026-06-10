@@ -387,6 +387,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
 
   // Correctness check — accepts an answers map and doubles array
   const isCorrectForAnswers = (q, i, answers) => {
+    if (quiz.type === 'datadash') return null;
     const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
     const ans = answers[i];
     if (qtype === 'MC') {
@@ -405,6 +406,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
   const isCorrect = (q, i) => isCorrectForAnswers(q, i, myAnswers);
 
   const getCorrectDisplay = (q) => {
+    if (quiz.type === 'datadash') return q.correctAnswer?.toLocaleString() ?? '—';
     const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
     if (qtype === 'MC') {
       const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -546,6 +548,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
           ) : (
             questions.map((q, i) => {
               const correct = isCorrectForAnswers(q, i, selectedAnswers);
+              const isDash = quiz.type === 'datadash';
               const tokenMap = selectedAttempt.token_assignments || {};
               const doublesArr = selectedAttempt.doubles || [];
               const token = tokenMap[i] || (doublesArr.includes(i) ? 'doubler' : null);
@@ -553,37 +556,38 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               const totalAttempts = withRanks.length;
               let earnedPts = 0;
               let tokenLabel = null;
-              if (token === 'doubler') {
-                earnedPts = correct ? Math.round(pts * 2 * 10) / 10 : 0;
-                if (correct) tokenLabel = 'doubler';
-              } else if (token === 'insurance') {
-                earnedPts = correct ? pts : Math.round(pts / 2 * 10) / 10;
-                if (!correct) tokenLabel = 'insurance';
-              } else if (token === 'sniper') {
-                earnedPts = correct ? SNIPER_POINTS : 0;
-                if (correct) tokenLabel = 'sniper';
-              } else if (token === 'parasite') {
-                earnedPts = totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0;
-                tokenLabel = 'parasite';
+              if (isDash) {
+                const ddPts = results.scores?.ddPointsByUser?.[selectedUserId]?.[i] ?? pts;
+                if (token === 'doubler') { earnedPts = Math.round(ddPts * 2 * 10) / 10; tokenLabel = 'doubler'; }
+                else if (token === 'sniper') { earnedPts = SNIPER_POINTS; tokenLabel = 'sniper'; }
+                else { earnedPts = ddPts; if (token) tokenLabel = token; }
               } else {
-                earnedPts = correct ? pts : 0;
+                if (token === 'doubler') { earnedPts = correct ? Math.round(pts * 2 * 10) / 10 : 0; if (correct) tokenLabel = 'doubler'; }
+                else if (token === 'insurance') { earnedPts = correct ? pts : Math.round(pts / 2 * 10) / 10; if (!correct) tokenLabel = 'insurance'; }
+                else if (token === 'sniper') { earnedPts = correct ? SNIPER_POINTS : 0; if (correct) tokenLabel = 'sniper'; }
+                else if (token === 'parasite') { earnedPts = totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0; tokenLabel = 'parasite'; }
+                else { earnedPts = correct ? pts : 0; }
               }
               const rawText = getRawQuestionText(q);
               const answerDisplay = getAnswerDisplayForAnswers(q, i, selectedAnswers);
               const correctDisplay = getCorrectDisplay(q);
+              const myRaw = (selectedAnswers[i] || '').toString().replace(/,/g,'').trim();
+              const myVal = parseFloat(myRaw);
+              const diff = isDash && !isNaN(myVal) ? Math.abs(myVal - q.correctAnswer).toLocaleString() : null;
               return (
-                <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
+                <div key={i} className={`border-b last:border-b-0 ${isDash ? 'bg-white' : correct ? 'bg-green-50' : 'bg-red-50'}`}>
                   <div className="grid grid-cols-3 gap-4 p-4">
                     <div className="col-span-2">
                       <p className="text-xs text-gray-500 mb-1 font-mono flex items-center gap-1">
                         {i+1}. {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(16)}</span>} {rawText}
                       </p>
                       <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {correctDisplay}</p>
-                      <p className={`text-xs mt-0.5 ${correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Their Answer:</span> {answerDisplay}</p>
+                      <p className={`text-xs mt-0.5 ${isDash ? 'text-gray-600' : correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Their Answer:</span> {answerDisplay}</p>
+                      {isDash && diff !== null && <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Difference:</span> {diff}</p>}
                     </div>
                     <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
-                      <p>Value: <span className="font-semibold">{pts} pts</span></p>
-                      <p className={`font-semibold ${correct || token === 'insurance' ? 'text-green-700' : 'text-red-600'}`}>
+                      {!isDash && <p>Value: <span className="font-semibold">{pts} pts</span></p>}
+                      <p className={`font-semibold ${isDash ? 'text-gray-700' : correct || token === 'insurance' ? 'text-green-700' : 'text-red-600'}`}>
                         {earnedPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}
                       </p>
                     </div>
