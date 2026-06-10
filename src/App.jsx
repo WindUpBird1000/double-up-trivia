@@ -1245,6 +1245,7 @@ const QuizApp = () => {
 
   const getCorrectAnswerDisplay = (q) => {
     if (activeQuiz?.type === 'datadash') return q.correctAnswer?.toLocaleString() ?? '—';
+    if (activeQuiz?.type === 'mysterynoun') return q.acceptedAnswers[q.primaryAnswerIndex ?? 0] || q.acceptedAnswers[0] || '—';
     const qtype = activeQuiz?.type === 'combination' ? q.questionType : activeQuiz?.type;
     if (qtype === 'MC') {
       const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
