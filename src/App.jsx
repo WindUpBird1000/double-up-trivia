@@ -926,7 +926,7 @@ const QuizApp = () => {
       if (session?.user) {
         setCurrentUser(session.user);
         await fetchUserData(session.user);
-        setMode('setup');
+        setMode('setup'); // session restore skips message check
       }
     });
     // Load quizzes from Supabase
@@ -954,6 +954,16 @@ const QuizApp = () => {
   const [othersPopupQuestion, setOthersPopupQuestion] = useState(null);
   const [showNewQuizConfirm, setShowNewQuizConfirm] = useState(false);
   const [adminSection, setAdminSection] = useState('list');
+  const [adminMessages, setAdminMessages] = useState([]); // all messages for admin view
+  const [msgTitle, setMsgTitle] = useState('');
+  const [msgBody, setMsgBody] = useState('');
+  const [editingMsgId, setEditingMsgId] = useState(null);
+  const [editingMsgPublished, setEditingMsgPublished] = useState(false);
+  const [msgSaving, setMsgSaving] = useState(false);
+  // User-facing message interstitial
+  const [unreadMessages, setUnreadMessages] = useState([]);
+  const [msgPageIndex, setMsgPageIndex] = useState(0);
+  const [allMsgViewed, setAllMsgViewed] = useState(false);
   const [auditQuizKey, setAuditQuizKey] = useState('');
   const [auditSeason, setAuditSeason] = useState('');
   const [auditExpandedUser, setAuditExpandedUser] = useState(null);
@@ -1232,7 +1242,47 @@ const QuizApp = () => {
     setDisputeSending(false);
   };
 
-  const handleDeleteQuiz = async (key) => {
+  // ── Messages ──────────────────────────────────────────────────────────────
+  const fetchAdminMessages = async () => {
+    const { data } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
+    setAdminMessages(data || []);
+  };
+
+  const startNewMessage = () => {
+    setMsgTitle(''); setMsgBody(''); setEditingMsgId(null); setEditingMsgPublished(false);
+  };
+
+  const loadMessageForEdit = (msg) => {
+    setMsgTitle(msg.title); setMsgBody(msg.body);
+    setEditingMsgId(msg.id); setEditingMsgPublished(!!msg.published_at);
+  };
+
+  const saveMessage = async (publish) => {
+    setMsgSaving(true);
+    const now = new Date().toISOString();
+    if (editingMsgId) {
+      await supabase.from('messages').update({
+        title: msgTitle,
+        body: msgBody,
+        updated_at: now,
+        ...(publish && !editingMsgPublished ? { published_at: now } : {}),
+      }).eq('id', editingMsgId);
+      if (publish && !editingMsgPublished) setEditingMsgPublished(true);
+    } else {
+      const { data } = await supabase.from('messages').insert({
+        title: msgTitle,
+        body: msgBody,
+        created_at: now,
+        updated_at: now,
+        published_at: publish ? now : null,
+      }).select().single();
+      if (data) { setEditingMsgId(data.id); if (publish) setEditingMsgPublished(true); }
+    }
+    await fetchAdminMessages();
+    setMsgSaving(false);
+  };
+
+    const handleDeleteQuiz = async (key) => {
     await supabase.from('quiz_attempts').delete().eq('quiz_key', key);
     await supabase.from('quiz_results').delete().eq('quiz_key', key);
     await supabase.from('quizzes').delete().eq('quiz_key', key);
@@ -1264,9 +1314,25 @@ const QuizApp = () => {
     setLoginError('');
     const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
     if (error) { setLoginError('Invalid email or password.'); return; }
-    setCurrentUser(data.user);
-    await fetchUserData(data.user);
-    setMode('setup');
+    const loginUser = data.user;
+    setCurrentUser(loginUser);
+    await fetchUserData(loginUser);
+    // Check for unread messages published since last login
+    const lastLogin = loginUser.last_sign_in_at;
+    const { data: msgs } = await supabase
+      .from('messages')
+      .select('*')
+      .not('published_at', 'is', null)
+      .gt('published_at', lastLogin || '1970-01-01')
+      .order('published_at', { ascending: true });
+    if (msgs && msgs.length > 0) {
+      setUnreadMessages(msgs);
+      setMsgPageIndex(0);
+      setAllMsgViewed(msgs.length === 1);
+      setMode('messages');
+    } else {
+      setMode('setup');
+    }
   };
 
   const saveNotificationSettings = async () => {
@@ -2379,6 +2445,62 @@ const QuizApp = () => {
     );
   }
 
+  if (mode==='messages' && unreadMessages.length > 0) {
+    const msg = unreadMessages[msgPageIndex];
+    const total = unreadMessages.length;
+    const isLast = msgPageIndex === total - 1;
+    const goNext = () => {
+      const next = msgPageIndex + 1;
+      setMsgPageIndex(next);
+      if (next === total - 1) setAllMsgViewed(true);
+    };
+    const goPrev = () => setMsgPageIndex(i => Math.max(0, i - 1));
+    return (
+      <div className="max-w-2xl mx-auto bg-gray-50 min-h-screen" style={{padding:"1.5rem"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
+          <span className="text-sm text-gray-500">{displayName || currentUser?.email || ''}</span>
+          <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
+        </div>
+        <div className="bg-white rounded-xl shadow-md p-8 mb-6">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">{msg.title}</h1>
+          <p className="text-xs text-gray-400 mb-6">{new Date(msg.published_at).toLocaleDateString()}</p>
+          <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">{renderPrompt(msg.body)}</div>
+        </div>
+        {/* Navigation */}
+        <div className="flex items-center gap-3">
+          {total > 1 && (
+            <button
+              onClick={goPrev}
+              disabled={msgPageIndex === 0}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium disabled:opacity-40"
+            ><ChevronLeft size={18}/></button>
+          )}
+          <button
+            onClick={()=>setMode('setup')}
+            disabled={!allMsgViewed}
+            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {allMsgViewed ? 'Go to Available Quizzes' : `Read all messages to continue (${msgPageIndex+1} of ${total})`}
+          </button>
+          {total > 1 && (
+            <button
+              onClick={goNext}
+              disabled={isLast}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium disabled:opacity-40"
+            ><ChevronRight size={18}/></button>
+          )}
+        </div>
+        {total > 1 && (
+          <div className="flex justify-center gap-1.5 mt-4">
+            {unreadMessages.map((_, i) => (
+              <div key={i} className={`w-2 h-2 rounded-full ${i===msgPageIndex?'bg-blue-600':'bg-gray-300'}`}/>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (mode==='settings') {
     const hasChanges = notifyNewQuiz !== savedNotifyNewQuiz || notifyScored !== savedNotifyScored;
     return (
@@ -2885,8 +3007,87 @@ const QuizApp = () => {
             </select>
             <button onClick={startCreateQuiz} className="px-3 py-1 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">Create</button>
           </div>
-          <button onClick={()=>setAdminSection('audit')} className={`px-5 py-2 rounded-lg font-medium ${adminSection==='audit'?'bg-gray-800 text-white':'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}>Score Auditor</button>
+          <button onClick={()=>{setAdminSection('messages');fetchAdminMessages();startNewMessage();}} className={`px-5 py-2 rounded-lg font-medium ${adminSection==='messages'?'bg-gray-800 text-white':'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}>Messages</button>
+          <button onClick={()=>setAdminSection('audit')} className={`px-4 py-2 rounded-lg font-medium ${adminSection==='audit'?'bg-gray-800 text-white':'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}>Audit</button>
         </div>}
+
+        {adminSection==='messages'&&(
+          <div className="space-y-6">
+            {/* Compose area */}
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-gray-800">{editingMsgId ? (editingMsgPublished ? 'View Message' : 'Edit Draft') : 'New Message'}</h2>
+                {editingMsgId && <button onClick={startNewMessage} className="text-sm text-blue-600 hover:underline">+ New Message</button>}
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Title</label>
+                  <input
+                    type="text"
+                    value={msgTitle}
+                    onChange={e=>setMsgTitle(e.target.value)}
+                    disabled={editingMsgPublished}
+                    placeholder="Message title..."
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 ${editingMsgPublished?'bg-gray-100 text-gray-400 cursor-not-allowed':''}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Message <span className="text-xs text-gray-400">(supports {{b:bold}}, {{i:italic}}, {{u:underline}})</span></label>
+                  <textarea
+                    value={msgBody}
+                    onChange={e=>setMsgBody(e.target.value)}
+                    disabled={editingMsgPublished}
+                    placeholder="Write your message here..."
+                    rows={12}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none ${editingMsgPublished?'bg-gray-100 text-gray-400 cursor-not-allowed':''}`}
+                  />
+                </div>
+              </div>
+              {!editingMsgPublished && (
+                <div className="flex gap-3 mt-4">
+                  <button
+                    onClick={()=>saveMessage(false)}
+                    disabled={!msgTitle.trim()||!msgBody.trim()||msgSaving}
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium disabled:opacity-40"
+                  >
+                    {msgSaving?'Saving…':'Save Draft'}
+                  </button>
+                  <button
+                    onClick={()=>saveMessage(true)}
+                    disabled={!msgTitle.trim()||!msgBody.trim()||msgSaving}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40"
+                  >
+                    {msgSaving?'Publishing…':'Publish'}
+                  </button>
+                </div>
+              )}
+            </div>
+            {/* Message list */}
+            <div className="bg-white rounded-xl shadow-md overflow-hidden">
+              <div className="px-5 py-3 bg-gray-100 border-b">
+                <h2 className="font-bold text-gray-700">All Messages</h2>
+              </div>
+              {adminMessages.length === 0 ? (
+                <p className="px-5 py-4 text-sm text-gray-400 italic">No messages yet.</p>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {adminMessages.map(msg => (
+                    <div
+                      key={msg.id}
+                      onClick={()=>loadMessageForEdit(msg)}
+                      className={`px-5 py-3 cursor-pointer hover:bg-gray-50 flex justify-between items-center ${editingMsgId===msg.id?'bg-blue-50':''}`}
+                    >
+                      <span className="text-sm font-medium text-gray-800">{msg.title}</span>
+                      <span className={`text-xs ${msg.published_at?'text-green-700':'text-gray-400 italic'}`}>
+                        {msg.published_at ? `Published ${new Date(msg.published_at).toLocaleString()}` : 'Draft'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {adminSection==='list'&&(
           <div className="space-y-4">
