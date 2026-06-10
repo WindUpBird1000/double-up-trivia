@@ -9,6 +9,7 @@ const supabase = createClient(
 );
 
 const SNIPER_POINTS = 8;
+const MN_POINTS = [20, 15, 10, 5]; // points for answering correctly after clue 1/2/3/4
 
 const TOKEN_CONFIG = {
   doubler: {
@@ -97,11 +98,12 @@ const normalizeAnswer = (s) => (s || '').trim().toLowerCase();
 const emptyMCQuestion  = () => ({ prompt: '', options: ['','','','','',''], correctIndices: [], randomizeOptions: false });
 const emptyORQuestion  = () => ({ prompt: '', acceptedAnswers: [], primaryAnswerIndex: 0, showOthersCount: false });
 const emptyDDQuestion  = () => ({ prompt: '', correctAnswer: null }); // Data Dash: single numeric answer
+const emptyMNQuestion  = () => ({ clues: ['','','',''], acceptedAnswers: [], primaryAnswerIndex: 0 }); // Mystery Noun
 const emptyCombQuestion = (questionType) => ({
   questionType,
   ...(questionType === 'MC' ? emptyMCQuestion() : questionType === 'OR' ? emptyORQuestion() : { text: '', answer: '' })
 });
-const typeLabel = (t) => t === 'MC' ? 'Multiple Choice' : t === 'openresponse' ? 'Open Response' : t === 'datadash' ? 'Data Dash' : t === 'combination' ? 'Combination' : 'Fill-in-the-blank';
+const typeLabel = (t) => t === 'MC' ? 'Multiple Choice' : t === 'openresponse' ? 'Open Response' : t === 'datadash' ? 'Data Dash' : t === 'mysterynoun' ? 'Mystery Noun' : t === 'combination' ? 'Combination' : 'Fill-in-the-blank';
 
 const renderInlineFormatting = (text) => {
   const parts = text.split(/(\{\{(?:b|i|u):[^}]+\}\})/);
@@ -407,6 +409,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
 
   const getCorrectDisplay = (q) => {
     if (quiz.type === 'datadash') return q.correctAnswer?.toLocaleString() ?? '—';
+    if (quiz.type === 'mysterynoun') return q.acceptedAnswers[q.primaryAnswerIndex] || q.acceptedAnswers[0] || '—';
     const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
     if (qtype === 'MC') {
       const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -420,6 +423,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
   };
 
   const getAnswerDisplayForAnswers = (q, i, answers) => {
+    if (quiz.type === 'mysterynoun') { const ad = answers[i]; return typeof ad==='object' ? (ad.answer||'—') : (ad||'—'); }
     const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
     const ans = answers[i];
     if (qtype === 'MC') {
@@ -548,6 +552,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
           ) : (
             questions.map((q, i) => {
               const correct = isCorrectForAnswers(q, i, selectedAnswers);
+              const isMN = quiz.type === 'mysterynoun';
               const isDash = quiz.type === 'datadash';
               const tokenMap = selectedAttempt.token_assignments || {};
               const doublesArr = selectedAttempt.doubles || [];
@@ -556,7 +561,13 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               const totalAttempts = withRanks.length;
               let earnedPts = 0;
               let tokenLabel = null;
-              if (isDash) {
+              if (isMN) {
+                const ad = selectedAnswers[i] || {};
+                const answerMN = typeof ad==='object' ? (ad.answer||'') : (ad||'');
+                const cluesUsedMN = typeof ad==='object' ? (ad.cluesUsed||1) : 1;
+                const correctMN = answerMN.trim()!=='' && q.acceptedAnswers.some(a=>normalizeAnswer(a)===normalizeAnswer(answerMN));
+                earnedPts = correctMN ? MN_POINTS[Math.min(cluesUsedMN-1,3)] : 0;
+              } else if (isDash) {
                 const ddPts = results.scores?.ddPointsByUser?.[selectedUserId]?.[i] ?? pts;
                 if (token === 'doubler') { earnedPts = Math.round(ddPts * 2 * 10) / 10; tokenLabel = 'doubler'; }
                 else if (token === 'sniper') { earnedPts = SNIPER_POINTS; tokenLabel = 'sniper'; }
@@ -568,26 +579,29 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                 else if (token === 'parasite') { earnedPts = totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0; tokenLabel = 'parasite'; }
                 else { earnedPts = correct ? pts : 0; }
               }
-              const rawText = getRawQuestionText(q);
+              const rawText = isMN ? (q.clues[0]||'').slice(0,80) : getRawQuestionText(q);
               const answerDisplay = getAnswerDisplayForAnswers(q, i, selectedAnswers);
               const correctDisplay = getCorrectDisplay(q);
               const myRaw = (selectedAnswers[i] || '').toString().replace(/,/g,'').trim();
               const myVal = parseFloat(myRaw);
               const diff = isDash && !isNaN(myVal) ? Math.abs(myVal - q.correctAnswer).toLocaleString() : null;
+              const mnAd = isMN ? (selectedAnswers[i]||{}) : null;
+              const mnCluesUsed = mnAd ? (typeof mnAd==='object' ? (mnAd.cluesUsed||1) : 1) : null;
               return (
-                <div key={i} className={`border-b last:border-b-0 ${isDash ? 'bg-white' : correct ? 'bg-green-50' : 'bg-red-50'}`}>
+                <div key={i} className={`border-b last:border-b-0 ${isDash||isMN ? 'bg-white' : correct ? 'bg-green-50' : 'bg-red-50'}`}>
                   <div className="grid grid-cols-3 gap-4 p-4">
                     <div className="col-span-2">
                       <p className="text-xs text-gray-500 mb-1 font-mono flex items-center gap-1">
                         {i+1}. {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(16)}</span>} {rawText}
                       </p>
                       <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {correctDisplay}</p>
-                      <p className={`text-xs mt-0.5 ${isDash ? 'text-gray-600' : correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Their Answer:</span> {answerDisplay}</p>
+                      <p className={`text-xs mt-0.5 ${isDash||isMN ? 'text-gray-600' : correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Their Answer:</span> {answerDisplay}</p>
                       {isDash && diff !== null && <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Difference:</span> {diff}</p>}
+                      {isMN && mnCluesUsed !== null && <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Clues used:</span> {mnCluesUsed} (max {MN_POINTS[mnCluesUsed-1]} pts)</p>}
                     </div>
                     <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
-                      {!isDash && <p>Value: <span className="font-semibold">{pts} pts</span></p>}
-                      <p className={`font-semibold ${isDash ? 'text-gray-700' : correct || token === 'insurance' ? 'text-green-700' : 'text-red-600'}`}>
+                      {!isDash && !isMN && <p>Value: <span className="font-semibold">{pts} pts</span></p>}
+                      <p className={`font-semibold ${isDash||isMN ? 'text-gray-700' : correct || token === 'insurance' ? 'text-green-700' : 'text-red-600'}`}>
                         {earnedPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}
                       </p>
                     </div>
@@ -628,6 +642,29 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               tokenLabel = 'parasite';
             } else {
               myPts = correct ? pts : 0;
+            }
+            // ── Mystery Noun: show clues used, answer, pts ────────────────
+            if (quiz.type === 'mysterynoun') {
+              const ad = myAnswers[i] || {};
+              const answer = typeof ad==='object' ? (ad.answer||'') : (ad||'');
+              const cluesUsed = typeof ad==='object' ? (ad.cluesUsed||1) : 1;
+              const correctMN = answer.trim()!=='' && q.acceptedAnswers.some(a=>normalizeAnswer(a)===normalizeAnswer(answer));
+              const ptsMN = correctMN ? MN_POINTS[Math.min(cluesUsed-1,3)] : 0;
+              return (
+                <div key={i} className={`border-b last:border-b-0 ${correctMN?'bg-green-50':'bg-red-50'}`}>
+                  <div className="grid grid-cols-3 gap-4 p-4">
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500 mb-1 font-medium">{i+1}. {(q.clues[0]||'').slice(0,80)}</p>
+                      <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {q.acceptedAnswers[q.primaryAnswerIndex]||q.acceptedAnswers[0]}</p>
+                      <p className={`text-xs mt-0.5 ${correctMN?'text-green-700':'text-red-600'}`}><span className="font-semibold">Your Answer:</span> {answer||'(no answer)'}</p>
+                      <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Clues used:</span> {cluesUsed}</p>
+                    </div>
+                    <div className="col-span-1 text-right text-xs text-gray-600">
+                      <p className={`font-semibold ${correctMN?'text-green-700':'text-red-600'}`}>{ptsMN} pts</p>
+                    </div>
+                  </div>
+                </div>
+              );
             }
             // ── Data Dash: show difference and per-question score ──────────
             if (quiz.type === 'datadash') {
@@ -1016,6 +1053,13 @@ const QuizApp = () => {
   const [ddQuestions, setDdQuestions] = useState([emptyDDQuestion()]);
   const [ddCurrentIndex, setDdCurrentIndex] = useState(0);
   const [ddAnswerInput, setDdAnswerInput] = useState('');
+  const [mnQuestions, setMnQuestions] = useState([emptyMNQuestion()]);
+  const [mnCurrentIndex, setMnCurrentIndex] = useState(0);
+  const [mnAnswerInput, setMnAnswerInput] = useState('');
+  // MN assessment state
+  const [mnCluesRevealed, setMnCluesRevealed] = useState({}); // questionIndex -> number of clues shown (1-4)
+  const [mnAnswered, setMnAnswered] = useState({}); // questionIndex -> {answer, pointsEarned, correct}
+  const [mnCurrentQ, setMnCurrentQ] = useState(0);
   const [combQuestions, setCombQuestions] = useState([]);
   const [combCurrentIndex, setCombCurrentIndex] = useState(null);
   const [combNewQType, setCombNewQType] = useState('MC');
@@ -1052,6 +1096,7 @@ const QuizApp = () => {
     }
     if (quiz.type === 'openresponse') return [...quiz.questions];
     if (quiz.type === 'datadash') return [...quiz.questions];
+    if (quiz.type === 'mysterynoun') return [...quiz.questions];
     if (quiz.type === 'combination') return quiz.questions.map(q => {
       if (q.questionType === 'MC') {
         return { ...q, displayOptions: q.options.map((opt,i) => ({ opt, correct: q.correctIndices.includes(i) })).filter(o => o.opt.trim() !== '') };
@@ -1136,12 +1181,13 @@ const QuizApp = () => {
   };
 
   const getPromptPreview = (q) => {
+    if (q.clues) { const raw = q.clues[0] || ''; return raw.length > 90 ? raw.slice(0,90)+'…' : raw; }
     const raw = q.prompt || q.text || '';
     const cleaned = raw.replace(/\{\{[^}]+\}\}/g, '').replace(/\[[^\]]+\]/g, '____').trim();
     return cleaned.length > 90 ? cleaned.slice(0, 90) + '…' : cleaned;
   };
 
-  const submitQuiz = () => { setMode('summary'); };
+  const submitQuiz = () => { if (activeQuiz?.type === 'mysterynoun') { handleFinalSubmission(); } else { setMode('summary'); } };
 
   const saveProgress = async () => {
     if (!currentAttemptId || !currentUser) return;
@@ -1182,7 +1228,8 @@ const QuizApp = () => {
   };
 
   const isQuestionCorrect = (q, i) => {
-    if (activeQuiz?.type === 'datadash') return true; // no correct/incorrect for datadash
+    if (activeQuiz?.type === 'datadash') return true;
+    if (activeQuiz?.type === 'mysterynoun') return true; // MN is scored immediately, not on token page
     const qtype = activeQuiz?.type === 'combination' ? q.questionType : activeQuiz?.type;
     if (qtype === 'MC') {
       const sel = studentAnswers[i] || [];
@@ -1450,6 +1497,7 @@ const QuizApp = () => {
     setNewQuizType('fillintheblank'); setNewSentenceInput(''); setNewQuizSentences([]);
     setNewQuizTokenSlots([...DEFAULT_TOKEN_SLOTS]); setNewQuizClosingDate(''); setShowDatePicker(false); setDatePickerMonth({ year: new Date().getFullYear(), month: new Date().getMonth() });
     setDdQuestions([emptyDDQuestion()]); setDdCurrentIndex(0); setDdAnswerInput('');
+    setMnQuestions([emptyMNQuestion()]); setMnCurrentIndex(0); setMnAnswerInput('');
     setExtraWords([]); setMcQuestions([emptyMCQuestion()]); setMcCurrentIndex(0); setMcRandomizeQuestions(false);
     setOrQuestions([emptyORQuestion()]); setOrCurrentIndex(0); setOrRandomizeQuestions(false); setOrAnswerInput('');
     setCombQuestions([]); setCombCurrentIndex(null); setCombNewQType('MC'); setCombDraft(null);
@@ -1492,6 +1540,12 @@ const QuizApp = () => {
       setDdQuestions(quiz.questions.map(q=>({...q}))); setDdCurrentIndex(0);
       setOrQuestions([emptyORQuestion()]); setMcQuestions([emptyMCQuestion()]); setNewQuizSentences([]); setExtraWords([]);
       setCombQuestions([]); setCombCurrentIndex(null); setCombDraft(null);
+      setMnQuestions([emptyMNQuestion()]); setMnCurrentIndex(0);
+    } else if (quiz.type === 'mysterynoun') {
+      setMnQuestions(quiz.questions.map(q=>({...q}))); setMnCurrentIndex(0);
+      setDdQuestions([emptyDDQuestion()]); setDdCurrentIndex(0);
+      setOrQuestions([emptyORQuestion()]); setMcQuestions([emptyMCQuestion()]); setNewQuizSentences([]); setExtraWords([]);
+      setCombQuestions([]); setCombCurrentIndex(null); setCombDraft(null);
     } else {
       setNewQuizSentences(quiz.sentences.map(s=>s.text));
       setExtraWords((quiz.wordBank||[]).filter(w => !extractAnswerWords(quiz.sentences).includes(w)));
@@ -1528,6 +1582,11 @@ const QuizApp = () => {
   const removeORAnswer = (ai) => setOrQuestions(p => p.map((q,i) => { if(i!==orCurrentIndex) return q; const na=q.acceptedAnswers.filter((_,j)=>j!==ai); const np=ai===q.primaryAnswerIndex?0:ai<q.primaryAnswerIndex?q.primaryAnswerIndex-1:q.primaryAnswerIndex; return {...q,acceptedAnswers:na,primaryAnswerIndex:na.length>0?np:0}; }));
   const setORPrimary = (ai) => setOrQuestions(p => p.map((q,i) => i===orCurrentIndex ? {...q,primaryAnswerIndex:ai} : q));
   const updateDDQuestion = (field, value) => setDdQuestions(p => p.map((q,i) => i===ddCurrentIndex ? {...q,[field]:value} : q));
+  const updateMNQuestion = (field, value) => setMnQuestions(p => p.map((q,i) => i===mnCurrentIndex ? {...q,[field]:value} : q));
+  const updateMNClue = (clueIdx, value) => setMnQuestions(p => p.map((q,i) => { if(i!==mnCurrentIndex) return q; const c=[...q.clues]; c[clueIdx]=value; return {...q,clues:c}; }));
+  const addMNQuestion = () => { setMnQuestions(p=>[...p,emptyMNQuestion()]); setMnCurrentIndex(mnQuestions.length); setMnAnswerInput(''); };
+  const removeMNQuestion = (idx) => { if(mnQuestions.length===1){alert('A quiz must have at least one question.');return;} const u=mnQuestions.filter((_,i)=>i!==idx); setMnQuestions(u); setMnCurrentIndex(Math.min(mnCurrentIndex,u.length-1)); };
+
   const addDDQuestion = () => { setDdQuestions(p=>[...p,emptyDDQuestion()]); setDdCurrentIndex(ddQuestions.length); };
   const removeDDQuestion = (idx) => { if(ddQuestions.length===1){alert('A quiz must have at least one question.');return;} const u=ddQuestions.filter((_,i)=>i!==idx); setDdQuestions(u); setDdCurrentIndex(Math.min(ddCurrentIndex,u.length-1)); };
   const parseNumber = (s) => { const cleaned=(s||'').replace(/,/g,'').trim(); const n=parseFloat(cleaned); return isNaN(n)?null:n; };
@@ -1588,6 +1647,9 @@ const QuizApp = () => {
     } else if (newQuizType==='datadash') {
       if (!ddQuestions[0]?.prompt.trim()) { alert('Please add at least one question.'); return false; }
       for(let i=0;i<ddQuestions.length;i++){ if(ddQuestions[i].correctAnswer===null){alert(`Q${i+1} needs a correct numeric answer.`);return false;} }
+    } else if (newQuizType==='mysterynoun') {
+      if (!mnQuestions[0]?.clues[0].trim()) { alert('Please add at least one question with at least Clue 1.'); return false; }
+      for(let i=0;i<mnQuestions.length;i++){ if(!mnQuestions[i].acceptedAnswers.length){alert(`Q${i+1} needs at least one correct answer.`);return false;} }
     }
     // Check token count doesn't exceed question count
     const activeTokenCount = newQuizTokenSlots.filter(t => t !== 'none').length;
@@ -1616,6 +1678,8 @@ const QuizApp = () => {
       return { ...base, randomizeQuestions:orRandomizeQuestions, questions:orQuestions.map(q=>({ prompt:q.prompt, acceptedAnswers:q.acceptedAnswers, primaryAnswerIndex:q.primaryAnswerIndex, showOthersCount:q.showOthersCount })) };
     } else if (newQuizType==='datadash') {
       return { ...base, questions:ddQuestions.map(q=>({ prompt:q.prompt, correctAnswer:q.correctAnswer })) };
+    } else if (newQuizType==='mysterynoun') {
+      return { ...base, tokenSlots:['none','none','none','none','none','none'], questions:mnQuestions.map(q=>({ clues:q.clues, acceptedAnswers:q.acceptedAnswers, primaryAnswerIndex:q.primaryAnswerIndex })) };
     } else {
       return { ...base, questions:combQuestions.map(q => {
         const qt=q.questionType;
@@ -1650,6 +1714,39 @@ const QuizApp = () => {
   };
 
   const computeQuizResults = (quiz, attempts) => {
+    // ── Mystery Noun scoring ──────────────────────────────────────────────────
+    if (quiz.type === 'mysterynoun') {
+      const questions = quiz.questions;
+      const n = questions.length;
+      // For each attempt, answers stored as { questionIndex: { answer, cluesUsed } }
+      const userScoresFinal = attempts.map(a => {
+        let total = 0;
+        const correctnessByQ = [];
+        questions.forEach((q, i) => {
+          const answerData = a.answers[i]; // { answer, cluesUsed }
+          if (!answerData) { correctnessByQ.push(false); return; }
+          const ans = normalizeAnswer(answerData.answer || '');
+          const correct = ans !== '' && q.acceptedAnswers.some(ac => normalizeAnswer(ac) === ans);
+          const pts = correct ? (MN_POINTS[Math.min((answerData.cluesUsed||1)-1, 3)] || 0) : 0;
+          total += pts;
+          correctnessByQ.push(correct);
+        });
+        return { user_id: a.user_id, display_name: a.display_name, score: Math.round(total*10)/10, questionsCorrect: correctnessByQ.filter(Boolean).length };
+      });
+      const pointValues = questions.map(() => MN_POINTS[0]); // max possible per question
+      const correctCounts = questions.map((q, i) => attempts.filter(a => {
+        const ad = a.answers[i]; if(!ad) return false;
+        return ad.answer && q.acceptedAnswers.some(ac => normalizeAnswer(ac) === normalizeAnswer(ad.answer));
+      }).length);
+      const correctnessByUser = {};
+      attempts.forEach(a => {
+        correctnessByUser[a.user_id] = questions.map((q, i) => {
+          const ad = a.answers[i]; if(!ad) return false;
+          return ad.answer && q.acceptedAnswers.some(ac => normalizeAnswer(ac) === normalizeAnswer(ad.answer));
+        });
+      });
+      return { pointValues, userScores: userScoresFinal, correctnessByUser, correctCounts, isMNQuiz: true };
+    }
     // ── Data Dash scoring ──────────────────────────────────────────────────
     if (quiz.type === 'datadash') {
       const questions = quiz.questions;
@@ -1937,7 +2034,7 @@ const QuizApp = () => {
     });
     userRows.sort((a, b) => b.recomputedTotal - a.recomputedTotal);
 
-    setAuditData({ quizKey, quizTitle: quiz.title || quizKey, season, questions, rankingRows, userRows, n, totalAttempts, isDashQuiz });
+    setAuditData({ quizKey, quizTitle: quiz.title || quizKey, season, questions, rankingRows, userRows, n, totalAttempts, isDashQuiz, isMNQuiz });
     setAuditLoading(false);
   };
 
@@ -2421,6 +2518,99 @@ const QuizApp = () => {
     );
   }
 
+  if (mode==='assessment' && activeQuiz?.type==='mysterynoun') {
+    const total = activeQuestions.length;
+    const q = activeQuestions[mnCurrentQ];
+    const cluesShown = mnCluesRevealed[mnCurrentQ] || 1;
+    const thisAnswered = mnAnswered[mnCurrentQ];
+    const allDone = activeQuestions.every((_, i) => mnAnswered[i] !== undefined);
+
+    const handleMNSubmit = () => {
+      const rawAns = (studentAnswers[mnCurrentQ] || '').trim();
+      const correct = rawAns !== '' && q.acceptedAnswers.some(a => normalizeAnswer(a) === normalizeAnswer(rawAns));
+      const pts = correct ? MN_POINTS[cluesShown - 1] : 0;
+      setMnAnswered(p => ({ ...p, [mnCurrentQ]: { answer: rawAns, cluesUsed: cluesShown, correct, pts } }));
+      // Store in studentAnswers as { answer, cluesUsed } for scoring
+      setStudentAnswers(p => ({ ...p, [mnCurrentQ]: { answer: rawAns, cluesUsed: cluesShown } }));
+    };
+
+    const handleMNPass = () => {
+      if (cluesShown < 4) setMnCluesRevealed(p => ({ ...p, [mnCurrentQ]: cluesShown + 1 }));
+    };
+
+    const goToNext = () => {
+      if (mnCurrentQ < total - 1) {
+        setMnCurrentQ(i => i + 1);
+        if (!mnCluesRevealed[mnCurrentQ + 1]) setMnCluesRevealed(p => ({ ...p, [mnCurrentQ + 1]: 1 }));
+      } else {
+        submitQuiz();
+      }
+    };
+
+    return (
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">{activeQuiz.title}</h1>
+          <button onClick={()=>setShowResetModal(true)} className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium text-sm">Exit Quiz</button>
+        </div>
+        <div className="text-sm text-gray-500 mb-4">Question {mnCurrentQ+1} of {total}</div>
+        {/* Clues revealed so far */}
+        {[...Array(cluesShown)].map((_, ci) => (
+          <div key={ci} className="bg-white rounded-xl shadow-md p-5 mb-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Clue {ci+1} <span className="text-gray-300">· {MN_POINTS[ci]} pts if answered here</span></p>
+            <p className="text-gray-800 text-base leading-relaxed">{renderPrompt(q.clues[ci] || '')}</p>
+          </div>
+        ))}
+        {/* Result if already answered */}
+        {thisAnswered ? (
+          <div className={`rounded-xl shadow-md p-5 mb-4 ${thisAnswered.correct ? 'bg-green-50' : 'bg-red-50'}`}>
+            <p className={`font-semibold text-lg mb-1 ${thisAnswered.correct ? 'text-green-700' : 'text-red-600'}`}>
+              {thisAnswered.correct ? `✓ Correct! +${thisAnswered.pts} points` : '✗ Incorrect — 0 points'}
+            </p>
+            <p className="text-sm text-gray-600">Your answer: <span className="font-medium">{thisAnswered.answer || '(no answer)'}</span></p>
+            <p className="text-sm text-gray-600">Correct answer: <span className="font-medium">{q.acceptedAnswers[q.primaryAnswerIndex] || q.acceptedAnswers[0]}</span></p>
+            <button
+              onClick={goToNext}
+              className="mt-4 w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg"
+            >
+              {mnCurrentQ < total - 1 ? 'Go to Next Question →' : 'Finish Quiz'}
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="bg-white rounded-xl shadow-md p-5 mb-4">
+              <input
+                type="text"
+                value={studentAnswers[mnCurrentQ] && typeof studentAnswers[mnCurrentQ] === 'string' ? studentAnswers[mnCurrentQ] : ''}
+                onChange={e=>setStudentAnswers(p=>({...p,[mnCurrentQ]:e.target.value}))}
+                placeholder="Your answer..."
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-800 text-lg focus:ring-2 focus:ring-blue-500"
+                onKeyDown={e=>{ if(e.key==='Enter') handleMNSubmit(); }}
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleMNSubmit}
+                className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-base"
+              >
+                Submit Answer — {MN_POINTS[cluesShown-1]} Possible Points
+              </button>
+              {cluesShown < 4 && (
+                <button
+                  onClick={handleMNPass}
+                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold text-base"
+                >
+                  Pass — Show Clue {cluesShown+1} ({MN_POINTS[cluesShown]} pts)
+                </button>
+              )}
+            </div>
+          </>
+        )}
+        <ExitModal/>
+      </div>
+    );
+  }
+
   if (mode==='assessment' && activeQuiz?.type==='openresponse') {
     const q=activeQuestions[currentQuestionIndex]; const total=activeQuestions.length;
     const answeredCount=Object.keys(studentAnswers).filter(k=>(studentAnswers[k]||'').trim()!=='').length;
@@ -2897,7 +3087,52 @@ const QuizApp = () => {
           <p className="text-gray-600">Your answers for <span className="font-semibold">{activeQuiz?.title}</span> have been recorded. Results and scores will be posted once everyone has completed the quiz — stay tuned!</p>
           {Object.keys(tokenAssignments).length > 0 && <p className="text-sm text-gray-500 mt-2">Token icons show your assignments.</p>}
         </div>
-        {activeQuiz?.type === 'datadash' ? (
+          {activeQuiz?.type === 'mysterynoun' ? (
+          <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
+            <div className="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <div className="col-span-1 text-center">#</div>
+              <div className="col-span-4">Question (first clue)</div>
+              <div className="col-span-2 text-center">Clues Used</div>
+              <div className="col-span-2 text-center">Your Answer</div>
+              <div className="col-span-1 text-center">Correct?</div>
+              <div className="col-span-1 text-center">Points</div>
+              <div className="col-span-1 text-center">Dispute</div>
+            </div>
+            {activeQuestions.map((q, i) => {
+              const ansData = studentAnswers[i] || {};
+              const answer = typeof ansData === 'object' ? (ansData.answer || '') : (ansData || '');
+              const cluesUsed = typeof ansData === 'object' ? (ansData.cluesUsed || 1) : 1;
+              const correct = answer.trim() !== '' && q.acceptedAnswers.some(a => normalizeAnswer(a) === normalizeAnswer(answer));
+              const pts = correct ? MN_POINTS[Math.min(cluesUsed-1,3)] : 0;
+              const primary = q.acceptedAnswers[q.primaryAnswerIndex] || q.acceptedAnswers[0] || '';
+              const alreadyDisputed = submittedDisputes.includes(i);
+              const disputing = disputedQuestions[i] || false;
+              return (
+                <div key={i} className={`border-b last:border-b-0 ${correct?'bg-green-50':'bg-red-50'}`}>
+                  <div className="grid grid-cols-12 gap-2 px-5 py-3 items-center">
+                    <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}</div>
+                    <div className="col-span-4 text-sm text-gray-700">{(q.clues[0]||'').slice(0,80)}{q.clues[0]?.length>80?'…':''}</div>
+                    <div className="col-span-2 text-center text-sm text-gray-600">{cluesUsed}</div>
+                    <div className="col-span-2 text-center text-sm font-medium text-gray-700">{answer||'—'}</div>
+                    <div className={`col-span-1 text-center text-sm font-bold ${correct?'text-green-700':'text-red-500'}`}>{correct?'✓':'✗'}</div>
+                    <div className="col-span-1 text-center text-sm font-semibold text-gray-700">{pts}</div>
+                    <div className="col-span-1 flex flex-col items-center justify-center">
+                      {alreadyDisputed
+                        ? <><input type="checkbox" checked readOnly className="w-5 h-5 mb-1 cursor-not-allowed opacity-40"/><span className="text-xs text-gray-400 italic">Disputed</span></>
+                        : <input type="checkbox" checked={disputing} onChange={e=>setDisputedQuestions(p=>({...p,[i]:e.target.checked}))} className="w-5 h-5 accent-red-500 cursor-pointer"/>}
+                    </div>
+                  </div>
+                  {!correct && <div className="px-5 pb-2"><p className="text-xs text-gray-500">Correct: <span className="font-medium">{primary}</span></p></div>}
+                  {disputing && !alreadyDisputed && (
+                    <div className="px-5 pb-3">
+                      <textarea value={disputeReasons[i]||''} onChange={e=>setDisputeReasons(p=>({...p,[i]:e.target.value}))} placeholder="Briefly explain your dispute..." rows={2} className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-300 resize-none"/>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          ) : activeQuiz?.type === 'datadash' ? (
           /* ── Data Dash submitted view ── */
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
             <div className="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -3090,6 +3325,7 @@ const QuizApp = () => {
             <select value={newQuizTypeSelector} onChange={e=>setNewQuizTypeSelector(e.target.value)} className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500">
               <option value="openresponse">Open Response</option>
               <option value="datadash">Data Dash</option>
+              <option value="mysterynoun">Mystery Noun</option>
             </select>
             <button onClick={startCreateQuiz} className="px-3 py-1 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">Create</button>
           </div>
@@ -3364,9 +3600,10 @@ const QuizApp = () => {
                       >
                         <option value="none">None</option>
                         <option value="doubler">Doubler</option>
-                        {newQuizType !== 'datadash' && <option value="insurance">Insurance</option>}
-                        {newQuizType !== 'datadash' && <option value="parasite">Parasite</option>}
-                        {newQuizType !== 'datadash' && <option value="sniper">Sniper</option>}
+                        {newQuizType !== 'datadash' && newQuizType !== 'mysterynoun' && <option value="insurance">Insurance</option>}
+                        {newQuizType !== 'datadash' && newQuizType !== 'mysterynoun' && <option value="parasite">Parasite</option>}
+                        {newQuizType !== 'datadash' && newQuizType !== 'mysterynoun' && <option value="sniper">Sniper</option>}
+                        {newQuizType !== 'datadash' && newQuizType !== 'mysterynoun' && <option value="doubler">Doubler (additional)</option>}
                       </select>
                     </div>
                   ))}
@@ -3608,10 +3845,66 @@ const QuizApp = () => {
               </div>
             )}
 
+            {newQuizType==='mysterynoun'&&(
+              <div className="bg-white rounded-xl shadow-md p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-800">Question {mnCurrentIndex+1} of {mnQuestions.length}</h2>
+                  <div className="flex items-center gap-2">
+                    <button onClick={()=>setMnCurrentIndex(i=>Math.max(0,i-1))} disabled={mnCurrentIndex===0} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronLeft size={18}/></button>
+                    <button onClick={()=>setMnCurrentIndex(i=>Math.min(mnQuestions.length-1,i+1))} disabled={mnCurrentIndex===mnQuestions.length-1} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronRight size={18}/></button>
+                    <button onClick={()=>removeMNQuestion(mnCurrentIndex)} className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200 ml-1"><Trash2 size={16}/></button>
+                  </div>
+                </div>
+                {(()=>{ const mnQ=mnQuestions[mnCurrentIndex]||emptyMNQuestion(); return(<>
+                  {[0,1,2,3].map(ci=>(
+                    <div key={ci} className="mb-4">
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Clue {ci+1} {ci===0&&<span className="text-red-500">*</span>} <span className="text-xs text-gray-400 font-normal">({MN_POINTS[ci]} pts if answered here)</span>
+                      </label>
+                      <textarea
+                        value={mnQ.clues[ci]||''}
+                        onChange={e=>updateMNClue(ci,e.target.value)}
+                        placeholder={`Clue ${ci+1}...`}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
+                      />
+                    </div>
+                  ))}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Correct Answer(s) <span className="text-red-500">*</span></label>
+                    <div className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={mnAnswerInput}
+                        onChange={e=>setMnAnswerInput(e.target.value)}
+                        onKeyDown={e=>{if(e.key==='Enter'&&mnAnswerInput.trim()){updateMNQuestion('acceptedAnswers',[...mnQ.acceptedAnswers,mnAnswerInput.trim()]);setMnAnswerInput('');}}}
+                        placeholder="Type answer and press Enter or Add"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+                      <button onClick={()=>{if(mnAnswerInput.trim()){updateMNQuestion('acceptedAnswers',[...mnQ.acceptedAnswers,mnAnswerInput.trim()]);setMnAnswerInput('');}}} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">Add</button>
+                    </div>
+                    {mnQ.acceptedAnswers.length>0&&(
+                      <div className="space-y-1">
+                        {mnQ.acceptedAnswers.map((ans,ai)=>(
+                          <div key={ai} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg">
+                            <input type="radio" checked={mnQ.primaryAnswerIndex===ai} onChange={()=>updateMNQuestion('primaryAnswerIndex',ai)} className="accent-blue-600"/>
+                            <span className="text-sm text-gray-700 flex-1">{ans} {mnQ.primaryAnswerIndex===ai&&<span className="text-xs text-blue-600 font-medium">(primary — shown to users)</span>}</span>
+                            <button onClick={()=>{const u=mnQ.acceptedAnswers.filter((_,i)=>i!==ai);updateMNQuestion('acceptedAnswers',u);if(mnQ.primaryAnswerIndex>=u.length)updateMNQuestion('primaryAnswerIndex',0);}} className="text-red-400 hover:text-red-600"><X size={14}/></button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-400 mt-1">Select the primary (displayed) answer with the radio button. Add variants as additional entries.</p>
+                  </div>
+                </>);})()}
+              </div>
+            )}
+
             <div className="flex gap-3">
               {newQuizType==='MC'&&<button onClick={addMCQuestion} className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-semibold"><Plus size={18}/> Add Next Question</button>}
               {newQuizType==='openresponse'&&<button onClick={addORQuestion} className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-semibold"><Plus size={18}/> Add Next Question</button>}
               {newQuizType==='datadash'&&<button onClick={addDDQuestion} className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-semibold"><Plus size={18}/> Add Next Question</button>}
+              {newQuizType==='mysterynoun'&&<button onClick={addMNQuestion} className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-semibold"><Plus size={18}/> Add Next Question</button>}
               <button onClick={()=>setShowPreview(true)} className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold"><BookOpen size={20}/> Preview Question</button>
               <button onClick={saveQuizLocally} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">{editingKey?'Save Changes':'Save Quiz'}</button>
               <button onClick={()=>{resetQuizBuilder();setAdminSection('list');}} className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
@@ -3729,7 +4022,7 @@ const QuizApp = () => {
               return (
                 <>
                   {/* ── Section 1: Difficulty Ranking (skipped for Data Dash) ── */}
-                  {!auditData.isDashQuiz && <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                  {!auditData.isDashQuiz && !auditData.isMNQuiz && <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     <div className="px-5 py-3 bg-gray-100 border-b">
                       <h2 className="font-bold text-gray-700">1. Difficulty Ranking & Point Values</h2>
                       <p className="text-xs text-gray-500 mt-0.5">Sorted hardest → easiest (fewest correct = hardest = most points). Ties are averaged.</p>
@@ -3767,8 +4060,8 @@ const QuizApp = () => {
                   {/* ── Section 2: Per-user accordion ── */}
                   <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     <div className="px-5 py-3 bg-gray-100 border-b">
-                      <h2 className="font-bold text-gray-700">{auditData.isDashQuiz ? '1' : '2'}. Per-User Score Breakdown</h2>
-                      <p className="text-xs text-gray-500 mt-0.5">{auditData.isDashQuiz ? 'Click a player to expand their per-question breakdown.' : 'Click a player to expand their full question-by-question breakdown. ✅ = recomputed total matches stored score; ❌ = mismatch.'}</p>
+                      <h2 className="font-bold text-gray-700">{auditData.isDashQuiz||auditData.isMNQuiz ? '1' : '2'}. Per-User Score Breakdown</h2>
+                      <p className="text-xs text-gray-500 mt-0.5">{auditData.isDashQuiz||auditData.isMNQuiz ? 'Click a player to expand their per-question breakdown.' : 'Click a player to expand their full question-by-question breakdown. ✅ = recomputed total matches stored score; ❌ = mismatch.'}</p>
                     </div>
                     {/* Collapsed header row */}
                     <div className="divide-y divide-gray-100">
@@ -3810,9 +4103,11 @@ const QuizApp = () => {
                                   <thead>
                                     <tr className="text-xs text-gray-500 uppercase border-b border-gray-200">
                                       <th className="py-2 px-3 text-center font-semibold">Q#</th>
-                                      {auditData.isDashQuiz
-                                        ? <th className="py-2 px-3 text-center font-semibold">Difference</th>
-                                        : <th className="py-2 px-3 text-center font-semibold">Result</th>}
+                                      {auditData.isMNQuiz
+                                        ? <th className="py-2 px-3 text-center font-semibold">Clues</th>
+                                        : auditData.isDashQuiz
+                                          ? <th className="py-2 px-3 text-center font-semibold">Difference</th>
+                                          : <th className="py-2 px-3 text-center font-semibold">Result</th>}
                                       <th className="py-2 px-3 text-center font-semibold">Token</th>
                                       <th className="py-2 px-3 text-center font-semibold">Base Pts</th>
                                       <th className="py-2 px-3 text-center font-semibold">Earned</th>
@@ -3836,7 +4131,7 @@ const QuizApp = () => {
                                       <td colSpan={auditData.isDashQuiz ? 3 : 4} className="py-2 px-3 text-sm font-semibold text-gray-700 text-right">Total</td>
                                       <td className="py-2 px-3 text-center font-bold text-gray-900">{row.recomputedTotal} pts</td>
                                       <td className="py-2 px-3 text-center">
-                                        {!auditData.isDashQuiz && <span className={`text-xs font-semibold ${row.matches ? 'text-green-600' : 'text-red-600'}`}>
+                                        {!auditData.isDashQuiz && !auditData.isMNQuiz && <span className={`text-xs font-semibold ${row.matches ? 'text-green-600' : 'text-red-600'}`}>
                                           {row.matches ? '✅ matches stored score' : `❌ stored score was ${row.storedScore} pts`}
                                         </span>}
                                       </td>
