@@ -2799,7 +2799,7 @@ const QuizApp = () => {
             ))}
           </div>
         )}
-      </div></>
+      </div>
     );
   }
 
