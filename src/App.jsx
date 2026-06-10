@@ -588,7 +588,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               const mnAd = isMN ? (selectedAnswers[i]||{}) : null;
               const mnCluesUsed = mnAd ? (typeof mnAd==='object' ? (mnAd.cluesUsed||1) : 1) : null;
               return (
-                <div key={i} className={`border-b last:border-b-0 ${isDash ? 'bg-white' : isMN ? (correct?'bg-green-50':'bg-red-50') : correct ? 'bg-green-50' : 'bg-red-50'}`}>
+                <div key={i} className={`border-b last:border-b-0 ${isDash ? 'bg-white' : isMN ? (earnedPts>0?'bg-green-50':'bg-red-50') : correct ? 'bg-green-50' : 'bg-red-50'}`}>
                   <div className="grid grid-cols-3 gap-4 p-4">
                     <div className="col-span-2">
                       <p className="text-xs text-gray-500 mb-1 font-mono flex items-center gap-1">
@@ -1288,10 +1288,13 @@ const QuizApp = () => {
       setSubmittedDisputes(prev => [...prev, ...disputeList.map(Number)]);
       setDisputedQuestions({});
       setDisputeReasons({});
+      alert('Your dispute has been sent!');
     } catch(e) {
+      console.error('Dispute send error:', e);
       alert('Could not send disputes. Please try again or email doubleuptrivia@gmail.com directly.');
+    } finally {
+      setDisputeSending(false);
     }
-    setDisputeSending(false);
   };
 
   // ── Messages ──────────────────────────────────────────────────────────────
@@ -3128,6 +3131,7 @@ const QuizApp = () => {
                     <div className="col-span-1 flex flex-col items-center justify-center">
                       {alreadyDisputed
                         ? <><input type="checkbox" checked readOnly className="w-5 h-5 mb-1 cursor-not-allowed opacity-40"/><span className="text-xs text-gray-400 italic">Disputed</span></>
+                        : correct ? null
                         : <input type="checkbox" checked={disputing} onChange={e=>setDisputedQuestions(p=>({...p,[i]:e.target.checked}))} className="w-5 h-5 accent-red-500 cursor-pointer"/>}
                     </div>
                   </div>
