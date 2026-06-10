@@ -1242,9 +1242,13 @@ const QuizApp = () => {
   };
 
   const fetchUserData = async (user) => {
-    const { data: profile } = await supabase.from('profiles').select('display_name, email').eq('user_id', user.id).single();
+    const { data: profile } = await supabase.from('profiles').select('display_name, email, notify_new_quiz, notify_scored').eq('user_id', user.id).single();
     if (profile) {
       setDisplayName(profile.display_name || profile.email || user.email || '');
+      setNotifyNewQuiz(profile.notify_new_quiz || false);
+      setNotifyScored(profile.notify_scored || false);
+      setSavedNotifyNewQuiz(profile.notify_new_quiz || false);
+      setSavedNotifyScored(profile.notify_scored || false);
     } else {
       setDisplayName(user.email || '');
     }
