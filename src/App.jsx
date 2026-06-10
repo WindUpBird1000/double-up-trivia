@@ -2385,13 +2385,13 @@ const QuizApp = () => {
     const info = HELP_CONTENT[showHelpModal] || { title: 'Help', body: 'Placeholder help text.' };
     return (
       <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl">
           <div className="flex justify-between items-center p-5 border-b">
             <h2 className="text-lg font-bold text-gray-800">{info.title}</h2>
             <button onClick={()=>setShowHelpModal(null)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button>
           </div>
-          <div className="p-5">
-            <p className="text-sm text-gray-700 leading-relaxed">{info.body}</p>
+          <div className="p-5 max-h-[70vh] overflow-y-auto">
+            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{info.body}</p>
           </div>
           <div className="px-5 pb-5">
             <button onClick={()=>setShowHelpModal(null)} className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button>
@@ -2923,7 +2923,7 @@ const QuizApp = () => {
     );
   }
 
-  if (mode==='scoreboards') return <ScoreboardsListScreen currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onSelectSeason={(name)=>{setViewSeasonName(name);setMode('season-scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')} onHelp={()=>setShowHelpModal('scoreboards')} onSettings={!isAdminAuthenticated ? ()=>setMode('settings') : undefined}/>;
+  if (mode==='scoreboards') return <><HelpModal/><ScoreboardsListScreen currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onSelectQuiz={(key)=>{setViewScoringKey(key);setMode('scoreboard');}} onSelectSeason={(name)=>{setViewSeasonName(name);setMode('season-scoreboard');}} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')} onHelp={()=>setShowHelpModal('scoreboards')} onSettings={!isAdminAuthenticated ? ()=>setMode('settings') : undefined}/></>;
 
   if (mode==='season-scoreboard' && viewSeasonName) return <SeasonScoreboardScreen seasonName={viewSeasonName} currentUser={currentUser} displayName={displayName} allQuizData={allQuizData} onBack={()=>setMode('scoreboards')} onQuizzes={()=>setMode('setup')} onLogout={handleLogout} isAdminView={isAdminAuthenticated && !currentUser} onAdminDashboard={()=>setMode('admin')}/>;
 
