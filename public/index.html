@@ -206,6 +206,16 @@
       /* Full-round elements that should stay circular */
       .rounded-full { border-radius: 9999px !important; }
 
+      /* Browser autofill — keep our dark theme colors */
+      input:-webkit-autofill,
+      input:-webkit-autofill:hover,
+      input:-webkit-autofill:focus {
+        -webkit-text-fill-color: #CCC9DC !important;
+        -webkit-box-shadow: 0 0 0px 1000px #0C1821 inset !important;
+        font-size: 1rem !important;
+        transition: background-color 5000s ease-in-out 0s;
+      }
+
       /* Body background (catches any unstyled areas) */
       body { background-color: #0C1821; }
     </style>
