@@ -2418,32 +2418,30 @@ const QuizApp = () => {
     );
   };
 
-    const ForgotModal = () => showForgotModal ? (
-    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{background:"rgba(0,0,0,0.4)"}}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-2">Request Login Info</h2>
-        {forgotSent ? (
-          <>
-            <p className="text-green-700 text-sm mb-4">Your request has been sent! You'll receive your login info by email shortly.</p>
-            <button onClick={()=>{setShowForgotModal(false);setForgotSent(false);setForgotEmail('');}} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Close</button>
-          </>
-        ) : (
-          <>
-            <p className="text-gray-600 text-sm mb-4">Enter your email address and the admin will send you your login info.</p>
-            <input type="email" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="Your email address" className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 text-sm"/>
-            <div className="flex gap-3">
-              <button onClick={handleForgotSubmit} disabled={!forgotEmail.trim()||forgotSending} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40">{forgotSending?'Sending...':'Submit'}</button>
-              <button onClick={()=>{setShowForgotModal(false);setForgotEmail('');}} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  ) : null;
-
   if (mode==='login') return (
     <div className="max-w-md mx-auto p-6 bg-gray-50 min-h-screen flex flex-col justify-center">
-      <ForgotModal/>
+      {showForgotModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{background:"rgba(0,0,0,0.4)"}}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Request Login Info</h2>
+            {forgotSent ? (
+              <>
+                <p className="text-green-700 text-sm mb-4">Your request has been sent! You'll receive your login info by email shortly.</p>
+                <button onClick={()=>{setShowForgotModal(false);setForgotSent(false);setForgotEmail('');}} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Close</button>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-600 text-sm mb-4">Enter your email address and the admin will send you your login info.</p>
+                <input type="email" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="Your email address" className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 text-sm"/>
+                <div className="flex gap-3">
+                  <button onClick={handleForgotSubmit} disabled={!forgotEmail.trim()||forgotSending} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40">{forgotSending?'Sending...':'Submit'}</button>
+                  <button onClick={()=>{setShowForgotModal(false);setForgotEmail('');}} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-gray-800 tracking-tight mb-2">Double Up Trivia</h1>
         <p className="text-gray-500">Sign in to play</p>
