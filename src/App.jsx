@@ -2391,7 +2391,7 @@ const QuizApp = () => {
             <button onClick={()=>setShowHelpModal(null)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button>
           </div>
           <div className="p-5 max-h-[70vh] overflow-y-auto">
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{info.body}</p>
+            <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{__html: info.body}}/>
           </div>
           <div className="px-5 pb-5">
             <button onClick={()=>setShowHelpModal(null)} className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button>
