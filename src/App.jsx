@@ -2017,6 +2017,7 @@ const QuizApp = () => {
     const totalAttempts = attempts.length;
     const n = questions.length;
     const isDashQuiz = quiz.type === 'datadash';
+    const isMNQuiz = quiz.type === 'mysterynoun';
 
     // Fetch display names
     const userIds = attempts.map(a => a.user_id);
@@ -2062,7 +2063,18 @@ const QuizApp = () => {
       const doublesArr = attempt.doubles || [];
 
       let cells;
-      if (isDashQuiz) {
+      if (isMNQuiz) {
+        // Mystery Noun: points stored in userScores, correctness from answers directly
+        cells = questions.map((q, i) => {
+          const raw = attempt.answers[i];
+          const ans = raw && typeof raw === 'object' ? (raw.answer || '') : (raw || '');
+          const cluesUsed = raw && typeof raw === 'object' ? raw.cluesUsed : null;
+          const correct = ans.trim() !== '' && q.acceptedAnswers.some(ac => normalizeAnswer(ac) === normalizeAnswer(ans));
+          const earned = correct ? (MN_POINTS[cluesUsed - 1] ?? 0) : 0;
+          const formula = correct ? `Correct after clue ${cluesUsed} = ${earned} pts` : `✗ → 0`;
+          return { correct, token: null, earned, formula, cluesUsed };
+        });
+      } else if (isDashQuiz) {
         // Data Dash: base pts come from ddPointsByUser stored in scores
         const ddPts = scores.ddPointsByUser?.[attempt.user_id] || questions.map(() => 0);
         cells = questions.map((q, i) => {
@@ -2112,13 +2124,12 @@ const QuizApp = () => {
 
       const storedScore = (userScores.find(u => u.user_id === attempt.user_id) || {}).score;
       const recomputedTotal = Math.round(cells.reduce((s, c) => s + c.earned, 0) * 10) / 10;
-      const matches = !isDashQuiz ? storedScore === recomputedTotal : true;
+      const matches = (isDashQuiz || isMNQuiz) ? true : storedScore === recomputedTotal;
       return { user_id: attempt.user_id, displayName, cells, recomputedTotal, storedScore, matches };
     });
     userRows.sort((a, b) => b.recomputedTotal - a.recomputedTotal);
 
     setAuditData({ quizKey, quizTitle: quiz.title || quizKey, season, questions, rankingRows, userRows, n, totalAttempts, isDashQuiz, isMNQuiz });
-    fetchAuditAttempts(quizKey);
     setAuditLoading(false);
   };
 
@@ -4063,7 +4074,7 @@ const QuizApp = () => {
           <div className="space-y-6">
             {/* Quiz selector — two dropdowns: season then quiz */}
             <div className="bg-white rounded-xl shadow-md p-5">
-              <h2 className="text-lg font-bold text-gray-800 mb-3">Score Auditor</h2>
+              <h2 className="text-lg font-bold text-gray-800 mb-3">Score Auditor {auditLoading && <span className="text-sm font-normal text-gray-400 ml-2">Loading…</span>}</h2>
               <p className="text-sm text-gray-500 mb-4">Select a season and quiz to see a full breakdown of every calculation — difficulty ranking, token effects, per-user scores, and season points.</p>
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Step 1: season */}
@@ -4081,19 +4092,12 @@ const QuizApp = () => {
                 {auditSeason && (
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Quiz</label>
-                    <select value={auditQuizKey} onChange={e=>{const k=e.target.value;setAuditQuizKey(k);setAuditData(null);setAuditExpandedUser(null);setAuditAttempts([]);setConfirmDeleteAttempt(null);if(k){fetchAuditAttempts(k);const q=allQuizData[k];if(q?.status==='Scored'){setTimeout(()=>runAudit(k),100);}}}} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-64">
+                    <select value={auditQuizKey} onChange={e=>{const k=e.target.value;setAuditQuizKey(k);setAuditData(null);setAuditExpandedUser(null);setAuditAttempts([]);setConfirmDeleteAttempt(null);if(k){fetchAuditAttempts(k);const q=allQuizData[k];if(q?.status==='Scored'){runAudit(k);}}}} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-64">
                       <option value="">— Select a quiz —</option>
                       {Object.entries(allQuizData).filter(([,q])=>(q.status==='Scored'||q.status==='Active')&&q.category===auditSeason).sort((a,b)=>(a[1].title||a[0]).localeCompare(b[1].title||b[0])).map(([key,q])=>(
                         <option key={key} value={key}>{q.title||key} {q.status==='Active'?'(Active)':''}</option>
                       ))}
                     </select>
-                  </div>
-                )}
-                {auditQuizKey && (
-                  <div className="mt-4 self-end">
-                    <button onClick={()=>runAudit(auditQuizKey)} disabled={auditLoading} className="px-5 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 font-medium text-sm disabled:opacity-40">
-                      {auditLoading ? 'Loading…' : 'Run Audit'}
-                    </button>
                   </div>
                 )}
               </div>
