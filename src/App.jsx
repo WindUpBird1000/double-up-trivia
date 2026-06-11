@@ -254,7 +254,7 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
         <div className="flex gap-2">
           {isAdminView ? (
             <>
-              <button onClick={onAdminDashboard} className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm"><Settings size={16}/> Admin Dashboard</button>
+              <button onClick={onAdminDashboard} className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm">Admin Dashboard</button>
               {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
             </>
           ) : (
@@ -482,7 +482,8 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
           <div className="flex gap-2">
             {isAdminView ? (
               <>
-                <button onClick={onAdminDashboard} className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm"><Settings size={16}/> Admin Dashboard</button>
+                <button onClick={onBack} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">Scoreboards</button>
+                <button onClick={onAdminDashboard} className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm">Admin Dashboard</button>
                 {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
               </>
             ) : (
@@ -817,7 +818,8 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
           <div className="flex gap-2">
             {isAdminView ? (
               <>
-                <button onClick={onAdminDashboard} className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm"><Settings size={16}/> Admin Dashboard</button>
+                <button onClick={onBack} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">Scoreboards</button>
+                <button onClick={onAdminDashboard} className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm">Admin Dashboard</button>
                 {onLogout && <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>}
               </>
             ) : (
