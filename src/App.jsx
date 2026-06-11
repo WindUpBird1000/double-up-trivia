@@ -2434,7 +2434,7 @@ const QuizApp = () => {
       <div className="bg-white rounded-xl shadow-md p-8">
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
-          <input type="email" autoFocus value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleLogin()} placeholder="you@example.com" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"/>
+          <input type="email" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleLogin()} placeholder="you@example.com" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"/>
         </div>
         <div className="mb-2">
           <label className="block text-sm font-medium text-gray-600 mb-1">Password</label>
