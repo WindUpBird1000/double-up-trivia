@@ -2163,28 +2163,35 @@ const QuizApp = () => {
       while (usedKeys.has(key)) { key = `${base}-${suffix}`; suffix++; }
     }
 
-    // Save to Supabase
+    // Save to Supabase — preserve notification flags if already set,
+    // since buildQuizJSON() produces a fresh object that doesn't include them.
+    let finalQuizData = quizData;
+    if (editingKey) {
+      const { data: existingRow } = await supabase.from('quizzes').select('data').eq('quiz_key', key).single();
+      const preserved = {};
+      if (existingRow?.data?.activeNotificationSent) preserved.activeNotificationSent = true;
+      if (existingRow?.data?.scoredNotificationSent) preserved.scoredNotificationSent = true;
+      if (Object.keys(preserved).length > 0) finalQuizData = { ...quizData, ...preserved };
+    }
+
     const { error } = await supabase.from('quizzes').upsert({
       quiz_key: key,
-      title: quizData.title,
-      category: quizData.category,
-      status: quizData.status,
-      type: quizData.type,
-      data: quizData,
+      title: finalQuizData.title,
+      category: finalQuizData.category,
+      status: finalQuizData.status,
+      type: finalQuizData.type,
+      data: finalQuizData,
     }, { onConflict: 'quiz_key' });
 
     if (error) { alert('Error saving quiz: ' + error.message); return; }
 
     // Update local state
-    setAllQuizData(p => ({ ...p, [key]: quizData }));
+    setAllQuizData(p => ({ ...p, [key]: finalQuizData }));
     if (!knownQuizzes.quizzes.includes(key)) setKnownQuizzes(p => ({ quizzes: [...p.quizzes, key] }));
 
     // ── Notify users when quiz goes Active for the first time ──────────────
     if (newQuizStatus === 'Active') {
-      // Re-fetch from Supabase to reliably check the flag — local state may be stale
-      const { data: storedQuiz } = await supabase
-        .from('quizzes').select('data').eq('quiz_key', key).single();
-      const alreadyNotified = storedQuiz?.data?.activeNotificationSent;
+      const alreadyNotified = finalQuizData.activeNotificationSent;
       if (!alreadyNotified) {
         const { data: subscribers } = await supabase
           .from('profiles')
@@ -2194,16 +2201,16 @@ const QuizApp = () => {
           for (const sub of subscribers) {
             await sendNotification(
               sub.email,
-              `Double Up Trivia — New Quiz Posted: ${quizData.title}`,
-              `Hi ${sub.display_name || 'there'},\n\nA new quiz is available: "${quizData.title}"!\n\nLog in to Double Up Trivia to play.\n\nGood luck!`
+              `Double Up Trivia — New Quiz Posted: ${finalQuizData.title}`,
+              `Hi ${sub.display_name || 'there'},\n\nA new quiz is available: "${finalQuizData.title}"!\n\nLog in to Double Up Trivia to play.\n\nGood luck!`
             );
           }
         }
         // Persist the flag so it survives future edits
         await supabase.from('quizzes').update({
-          data: { ...quizData, activeNotificationSent: true }
+          data: { ...finalQuizData, activeNotificationSent: true }
         }).eq('quiz_key', key);
-        setAllQuizData(p => ({ ...p, [key]: { ...quizData, activeNotificationSent: true } }));
+        setAllQuizData(p => ({ ...p, [key]: { ...finalQuizData, activeNotificationSent: true } }));
       }
     }
 
@@ -2218,36 +2225,43 @@ const QuizApp = () => {
         const attemptsWithCorrectness = attempts.map(a => ({
           ...a,
           display_name: profileMap[a.user_id] || a.user_id,
-          correctness: scoreAttempt(quizData, a.answers || {}),
+          correctness: scoreAttempt(finalQuizData, a.answers || {}),
         }));
-        const { pointValues, userScores, correctnessByUser, correctCounts, ddPointsByUser, isDashQuiz } = computeQuizResults(quizData, attemptsWithCorrectness);
+        const { pointValues, userScores, correctnessByUser, correctCounts, ddPointsByUser, isDashQuiz } = computeQuizResults(finalQuizData, attemptsWithCorrectness);
         await supabase.from('quiz_results').upsert({
           quiz_key: key,
-          quiz_title: quizData.title,
+          quiz_title: finalQuizData.title,
           posted_at: new Date().toISOString(),
           scores: { pointValues, userScores, correctnessByUser, correctCounts, ...(isDashQuiz ? { ddPointsByUser } : {}) },
         }, { onConflict: 'quiz_key' });
 
         // Update season standings (no-op for Offseason quizzes)
-        await updateSeasonStandings(quizData.category, key, userScores);
+        await updateSeasonStandings(finalQuizData.category, key, userScores);
 
         // ── Notify users who took this quiz that it has been scored ─────────
-        const participantIds = attempts.map(a => a.user_id);
-        if (participantIds.length > 0) {
-          const { data: notifyProfiles } = await supabase
-            .from('profiles')
-            .select('email, display_name')
-            .eq('notify_scored', true)
-            .in('user_id', participantIds);
-          if (notifyProfiles && notifyProfiles.length > 0) {
-            for (const sub of notifyProfiles) {
-              await sendNotification(
-                sub.email,
-                `Double Up Trivia — Results Posted: ${quizData.title}`,
-                `Hi ${sub.display_name || 'there'},\n\nResults are in for "${quizData.title}"!\n\nLog in to Double Up Trivia to see how you did.`
-              );
+        if (!finalQuizData.scoredNotificationSent) {
+          const participantIds = attempts.map(a => a.user_id);
+          if (participantIds.length > 0) {
+            const { data: notifyProfiles } = await supabase
+              .from('profiles')
+              .select('email, display_name')
+              .eq('notify_scored', true)
+              .in('user_id', participantIds);
+            if (notifyProfiles && notifyProfiles.length > 0) {
+              for (const sub of notifyProfiles) {
+                await sendNotification(
+                  sub.email,
+                  `Double Up Trivia — Results Posted: ${finalQuizData.title}`,
+                  `Hi ${sub.display_name || 'there'},\n\nResults are in for "${finalQuizData.title}"!\n\nLog in to Double Up Trivia to see how you did.`
+                );
+              }
             }
           }
+          // Persist the flag so re-scoring never re-sends
+          await supabase.from('quizzes').update({
+            data: { ...finalQuizData, activeNotificationSent: finalQuizData.activeNotificationSent || false, scoredNotificationSent: true }
+          }).eq('quiz_key', key);
+          setAllQuizData(p => ({ ...p, [key]: { ...finalQuizData, scoredNotificationSent: true } }));
         }
       }
     }
@@ -2255,7 +2269,7 @@ const QuizApp = () => {
     const verb = editingKey ? 'updated' : 'saved';
     resetQuizBuilder();
     setAdminSection('list');
-    alert(`Quiz "${quizData.title}" ${verb}!${newQuizStatus === 'Scored' ? ' Scores have been calculated.' : ''}`);
+    alert(`Quiz "${finalQuizData.title}" ${verb}!${newQuizStatus === 'Scored' ? ' Scores have been calculated.' : ''}`);
   };
   const Header = ({ title, rightSlot }) => (
     <div className="flex justify-between items-center mb-8">
