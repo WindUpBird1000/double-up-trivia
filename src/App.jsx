@@ -1043,7 +1043,8 @@ const QuizApp = () => {
   const [viewSeasonName, setViewSeasonName] = useState(null);
   const [confirmDeleteKey, setConfirmDeleteKey] = useState(null);
   const [adminSeasonFilter, setAdminSeasonFilter] = useState('All');
-  const [adminStatusFilter, setAdminStatusFilter] = useState({ Active: true, Inactive: true, Scored: true });
+  const [adminTypeFilter, setAdminTypeFilter] = useState('All');
+  const [adminStatusFilter, setAdminStatusFilter] = useState('All');
   const [newSentenceInput, setNewSentenceInput] = useState('');
   const [newQuizSentences, setNewQuizSentences] = useState([]);
   const [extraWordInput, setExtraWordInput] = useState('');
@@ -3532,23 +3533,35 @@ const QuizApp = () => {
 
         {adminSection==='list'&&(
           <div className="space-y-4">
-            <div className="flex items-center gap-3 flex-wrap">
-              <label className="text-sm font-medium text-gray-600">Season:</label>
-              <select value={adminSeasonFilter} onChange={e=>setAdminSeasonFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white">
-                <option value="All">All</option>
-                <option value="Offseason">Offseason</option>
-                {Array.from(new Set(Object.values(allQuizData).map(q=>q.category).filter(c=>c&&c.trim().toLowerCase()!=='offseason'))).sort((a,b)=>a.localeCompare(b)).map(cat=><option key={cat} value={cat}>{cat}</option>)}
-              </select>
-              <div className="flex items-center gap-4 ml-2">
-                {['Active','Inactive','Scored'].map(status=>(
-                  <label key={status} className="flex items-center gap-1.5 cursor-pointer select-none">
-                    <input type="checkbox" checked={adminStatusFilter[status]} onChange={()=>setAdminStatusFilter(p=>({...p,[status]:!p[status]}))} className="w-4 h-4 rounded border-gray-300 text-blue-600"/>
-                    <span className="text-sm text-gray-600">{status}</span>
-                  </label>
-                ))}
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Season</label>
+                <select value={adminSeasonFilter} onChange={e=>setAdminSeasonFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="All">All</option>
+                  <option value="Offseason">Offseason</option>
+                  {Array.from(new Set(Object.values(allQuizData).map(q=>q.category).filter(c=>c&&c.trim().toLowerCase()!=='offseason'))).sort((a,b)=>a.localeCompare(b)).map(cat=><option key={cat} value={cat}>{cat}</option>)}
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
+                <select value={adminTypeFilter} onChange={e=>setAdminTypeFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="All">All</option>
+                  <option value="openresponse">Open Response</option>
+                  <option value="datadash">Data Dash</option>
+                  <option value="mysterynoun">Mystery Noun</option>
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+                <select value={adminStatusFilter} onChange={e=>setAdminStatusFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="All">All</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Scored">Scored</option>
+                </select>
               </div>
             </div>
-            {knownQuizzes.quizzes.filter(key=>{const q=allQuizData[key];if(!q)return false;const seasonOk=adminSeasonFilter==='All'||(q.category||'')=== adminSeasonFilter;const statusOk=adminStatusFilter[q.status||'Active'];return seasonOk&&statusOk;}).map(key=>{
+            {knownQuizzes.quizzes.filter(key=>{const q=allQuizData[key];if(!q)return false;const seasonOk=adminSeasonFilter==='All'||(q.category||'')===adminSeasonFilter;const typeOk=adminTypeFilter==='All'||(q.type||'')===adminTypeFilter;const statusOk=adminStatusFilter==='All'||(q.status||'Active')===adminStatusFilter;return seasonOk&&typeOk&&statusOk;}).map(key=>{
               const quiz=allQuizData[key];if(!quiz)return null;
               const qType=quiz.type||'fillintheblank';
               const itemCount=qType==='fillintheblank'?quiz.sentences?.length:quiz.questions?.length;
