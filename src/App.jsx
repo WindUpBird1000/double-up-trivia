@@ -1810,8 +1810,13 @@ const QuizApp = () => {
         while (j < ranked.length) {
           let k = j;
           while (k < ranked.length - 1 && ranked[k+1].diff === ranked[k].diff) k++;
-          const avg = Math.round(((ranked.slice(j,k+1).reduce((s,_,ii)=>s+(rank-ii),0))/(k-j+1))*10)/10;
-          for (let m = j; m <= k; m++) ddPointsByUser[ranked[m].user_id][qi] = avg;
+          // Blank answers (Infinity diff) earn 0 regardless of rank
+          if (ranked[j].diff === Infinity) {
+            for (let m = j; m <= k; m++) ddPointsByUser[ranked[m].user_id][qi] = 0;
+          } else {
+            const avg = Math.round(((ranked.slice(j,k+1).reduce((s,_,ii)=>s+(rank-ii),0))/(k-j+1))*10)/10;
+            for (let m = j; m <= k; m++) ddPointsByUser[ranked[m].user_id][qi] = avg;
+          }
           rank -= (k - j + 1);
           j = k + 1;
         }
