@@ -4081,7 +4081,7 @@ const QuizApp = () => {
                 {auditSeason && (
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Quiz</label>
-                    <select value={auditQuizKey} onChange={e=>{const k=e.target.value;setAuditQuizKey(k);setAuditData(null);setAuditExpandedUser(null);setAuditAttempts([]);setConfirmDeleteAttempt(null);if(k){fetchAuditAttempts(k);const q=allQuizData[k];if(q?.status==='Scored'){setTimeout(()=>runAudit(k),100);}}}}} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-64">
+                    <select value={auditQuizKey} onChange={e=>{const k=e.target.value;setAuditQuizKey(k);setAuditData(null);setAuditExpandedUser(null);setAuditAttempts([]);setConfirmDeleteAttempt(null);if(k){fetchAuditAttempts(k);const q=allQuizData[k];if(q?.status==='Scored'){setTimeout(()=>runAudit(k),100);}}}} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-64">
                       <option value="">— Select a quiz —</option>
                       {Object.entries(allQuizData).filter(([,q])=>(q.status==='Scored'||q.status==='Active')&&q.category===auditSeason).sort((a,b)=>(a[1].title||a[0]).localeCompare(b[1].title||b[0])).map(([key,q])=>(
                         <option key={key} value={key}>{q.title||key} {q.status==='Active'?'(Active)':''}</option>
