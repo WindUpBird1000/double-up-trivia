@@ -1958,44 +1958,7 @@ const QuizApp = () => {
     setAuditAttemptsLoading(false);
   };
 
-  const deleteAttempt = async (userId, quizKey) => {
-    // Delete the attempt
-    await supabase.from('quiz_attempts').delete().eq('user_id', userId).eq('quiz_key', quizKey);
-    setConfirmDeleteAttempt(null);
-    // If quiz is Scored, rescore it
-    const quiz = allQuizData[quizKey];
-    if (quiz?.status === 'Scored') {
-      const { data: remainingAttempts } = await supabase
-        .from('quiz_attempts')
-        .select('*')
-        .eq('quiz_key', quizKey)
-        .eq('status', 'submitted');
-      if (remainingAttempts && remainingAttempts.length > 0) {
-        // Re-fetch display names for scoring
-        const uids = remainingAttempts.map(a => a.user_id);
-        const { data: profs } = await supabase.from('profiles').select('user_id, display_name').in('user_id', uids);
-        const nm = {}; (profs||[]).forEach(p => { nm[p.user_id] = p.display_name; });
-        const attemptsWithNames = remainingAttempts.map(a => ({ ...a, display_name: nm[a.user_id] || a.user_id }));
-        const { pointValues, userScores, correctnessByUser, correctCounts, ddPointsByUser, isDashQuiz } = computeQuizResults(quiz, attemptsWithNames);
-        await supabase.from('quiz_results').upsert({
-          quiz_key: quizKey,
-          quiz_title: quiz.title,
-          posted_at: new Date().toISOString(),
-          scores: { pointValues, userScores, correctnessByUser, correctCounts, ...(isDashQuiz ? { ddPointsByUser } : {}) },
-        }, { onConflict: 'quiz_key' });
-        await updateSeasonStandings(quiz.category, quizKey, userScores);
-      } else {
-        // No attempts left — clear results
-        await supabase.from('quiz_results').delete().eq('quiz_key', quizKey);
-        await updateSeasonStandings(quiz.category, quizKey, []);
-      }
-    }
-    // Refresh the attempts list and audit data
-    await fetchAuditAttempts(quizKey);
-    if (auditData) runAudit(quizKey);
-  };
-
-    const runAudit = async (quizKey) => {
+  const runAudit = async (quizKey) => {
     if (!quizKey) return;
     setAuditLoading(true);
     setAuditData(null);
@@ -2131,6 +2094,47 @@ const QuizApp = () => {
 
     setAuditData({ quizKey, quizTitle: quiz.title || quizKey, season, questions, rankingRows, userRows, n, totalAttempts, isDashQuiz, isMNQuiz });
     setAuditLoading(false);
+  };
+
+  const deleteAttempt = async (userId, quizKey) => {
+    // Delete the attempt
+    await supabase.from('quiz_attempts').delete().eq('user_id', userId).eq('quiz_key', quizKey);
+    setConfirmDeleteAttempt(null);
+    // If quiz is Scored, rescore it
+    const quiz = allQuizData[quizKey];
+    if (quiz?.status === 'Scored') {
+      const { data: remainingAttempts } = await supabase
+        .from('quiz_attempts')
+        .select('*')
+        .eq('quiz_key', quizKey)
+        .eq('status', 'submitted');
+      if (remainingAttempts && remainingAttempts.length > 0) {
+        // Re-fetch display names for scoring; add .correctness so computeQuizResults works for OR/FITB
+        const uids = remainingAttempts.map(a => a.user_id);
+        const { data: profs } = await supabase.from('profiles').select('user_id, display_name').in('user_id', uids);
+        const nm = {}; (profs||[]).forEach(p => { nm[p.user_id] = p.display_name; });
+        const attemptsWithNames = remainingAttempts.map(a => ({
+          ...a,
+          display_name: nm[a.user_id] || a.user_id,
+          correctness: scoreAttempt(quiz, a.answers || {}),
+        }));
+        const { pointValues, userScores, correctnessByUser, correctCounts, ddPointsByUser, isDashQuiz } = computeQuizResults(quiz, attemptsWithNames);
+        await supabase.from('quiz_results').upsert({
+          quiz_key: quizKey,
+          quiz_title: quiz.title,
+          posted_at: new Date().toISOString(),
+          scores: { pointValues, userScores, correctnessByUser, correctCounts, ...(isDashQuiz ? { ddPointsByUser } : {}) },
+        }, { onConflict: 'quiz_key' });
+        await updateSeasonStandings(quiz.category, quizKey, userScores);
+      } else {
+        // No attempts left — clear results
+        await supabase.from('quiz_results').delete().eq('quiz_key', quizKey);
+        await updateSeasonStandings(quiz.category, quizKey, []);
+      }
+    }
+    // Refresh the attempts list and audit data
+    await fetchAuditAttempts(quizKey);
+    await runAudit(quizKey);
   };
 
     const saveQuizLocally = async () => {
