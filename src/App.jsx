@@ -97,7 +97,7 @@ const shuffleArray = (arr) => {
 const normalizeAnswer = (s) => (s || '').trim().toLowerCase();
 const emptyMCQuestion  = () => ({ prompt: '', options: ['','','','','',''], correctIndices: [], randomizeOptions: false });
 const emptyORQuestion  = () => ({ prompt: '', acceptedAnswers: [], primaryAnswerIndex: 0, showOthersCount: false, additionalContext: '' });
-const emptyDDQuestion  = () => ({ prompt: '', correctAnswer: null, additionalContext: '' }); // Data Dash: single numeric answer
+const emptyDDQuestion  = () => ({ prompt: '', correctAnswer: null, correctAnswerDisplay: '', additionalContext: '' }); // Data Dash: single numeric answer
 const emptyMNQuestion  = () => ({ clues: ['','','',''], acceptedAnswers: [], primaryAnswerIndex: 0, additionalContext: '' }); // Mystery Noun
 const emptyCombQuestion = (questionType) => ({
   questionType,
@@ -105,8 +105,9 @@ const emptyCombQuestion = (questionType) => ({
 });
 const typeLabel = (t) => t === 'MC' ? 'Multiple Choice' : t === 'openresponse' ? 'Open Response' : t === 'datadash' ? 'Data Dash' : t === 'mysterynoun' ? 'Mystery Noun' : t === 'combination' ? 'Combination' : 'Fill-in-the-blank';
 
-const renderInlineFormatting = (text) => {
-  const parts = text.split(/(\{\{(?:b|i|u):[^}]+\}\})/);
+const ddDisplay = (q) => q?.correctAnswerDisplay || (q?.correctAnswer != null ? q.correctAnswer.toString() : '—');
+
+const renderInlineFormatting = (text) => {  const parts = text.split(/(\{\{(?:b|i|u):[^}]+\}\})/);
   return parts.map((part, i) => {
     const match = part.match(/^\{\{(b|i|u):([^}]+)\}\}$/);
     if (match) {
@@ -442,7 +443,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
   const isCorrect = (q, i) => isCorrectForAnswers(q, i, myAnswers);
 
   const getCorrectDisplay = (q) => {
-    if (quiz.type === 'datadash') return q.correctAnswer?.toLocaleString() ?? '—';
+    if (quiz.type === 'datadash') return ddDisplay(q);
     if (quiz.type === 'mysterynoun') return q.acceptedAnswers[q.primaryAnswerIndex] || q.acceptedAnswers[0] || '—';
     const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
     if (qtype === 'MC') {
@@ -722,7 +723,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                         {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(20)}</span>}
                         <span>{q.prompt}</span>
                       </p>
-                      <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {q.correctAnswer?.toLocaleString()}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}</p>
+                      <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {ddDisplay(q)}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}</p>
                       {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 mt-0.5 italic">{q.additionalContext}</p>}
                       <p className="text-xs text-gray-600 mt-0.5"><span className="font-semibold">Your Answer:</span> {myRawAnswer || '—'}</p>
                       <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Difference:</span> {typeof diff === 'number' ? diff.toLocaleString() : diff}</p>
@@ -1310,7 +1311,7 @@ const QuizApp = () => {
   };
 
   const getCorrectAnswerDisplay = (q) => {
-    if (activeQuiz?.type === 'datadash') return q.correctAnswer?.toLocaleString() ?? '—';
+    if (activeQuiz?.type === 'datadash') return ddDisplay(q);
     if (activeQuiz?.type === 'mysterynoun') return q.acceptedAnswers[q.primaryAnswerIndex ?? 0] || q.acceptedAnswers[0] || '—';
     const qtype = activeQuiz?.type === 'combination' ? q.questionType : activeQuiz?.type;
     if (qtype === 'MC') {
@@ -1767,7 +1768,7 @@ const QuizApp = () => {
     } else if (newQuizType==='openresponse') {
       return { ...base, randomizeQuestions:orRandomizeQuestions, questions:orQuestions.map(q=>({ prompt:q.prompt, acceptedAnswers:q.acceptedAnswers, primaryAnswerIndex:q.primaryAnswerIndex, showOthersCount:q.showOthersCount, additionalContext:q.additionalContext||'' })) };
     } else if (newQuizType==='datadash') {
-      return { ...base, questions:ddQuestions.map(q=>({ prompt:q.prompt, correctAnswer:q.correctAnswer, additionalContext:q.additionalContext||'' })) };
+      return { ...base, questions:ddQuestions.map(q=>({ prompt:q.prompt, correctAnswer:q.correctAnswer, correctAnswerDisplay:q.correctAnswerDisplay||'', additionalContext:q.additionalContext||'' })) };
     } else if (newQuizType==='mysterynoun') {
       return { ...base, tokenSlots:['none','none','none','none','none','none'], questions:mnQuestions.map(q=>({ clues:q.clues, acceptedAnswers:q.acceptedAnswers, primaryAnswerIndex:q.primaryAnswerIndex, additionalContext:q.additionalContext||'' })) };
     } else {
@@ -3350,7 +3351,7 @@ const QuizApp = () => {
                     <div className="text-center text-sm font-medium text-gray-500">{i+1}</div>
                     <div className="text-sm text-gray-700">{getPromptPreview(q)}</div>
                     <div className="text-sm font-medium text-center text-gray-700">{myRaw || '—'}</div>
-                    <div className="text-sm text-gray-600 text-center">{q.correctAnswer?.toLocaleString() ?? '—'}</div>
+                    <div className="text-sm text-gray-600 text-center">{ddDisplay(q)}</div>
                     <div className="text-sm text-center text-gray-500">{diff}</div>
                     <div className="flex flex-col items-center justify-center">
                       {alreadyDisputed
@@ -4036,13 +4037,13 @@ const QuizApp = () => {
                         type="text"
                         value={ddAnswerInput}
                         onChange={e=>setDdAnswerInput(e.target.value)}
-                        onKeyDown={e=>{if(e.key==='Enter'){const n=parseNumber(ddAnswerInput);if(n===null){alert('Please enter a valid number.');return;}updateDDQuestion('correctAnswer',n);setDdAnswerInput('');}}}
+                        onKeyDown={e=>{if(e.key==='Enter'){const n=parseNumber(ddAnswerInput);if(n===null){alert('Please enter a valid number.');return;}updateDDQuestion('correctAnswer',n);updateDDQuestion('correctAnswerDisplay',ddAnswerInput.trim());setDdAnswerInput('');}}}
                         placeholder="e.g. 1,497.05"
                         className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${ddAnswerInput&&parseNumber(ddAnswerInput)===null?'border-red-400':'border-gray-300'}`}
                       />
-                      <button onClick={()=>{const n=parseNumber(ddAnswerInput);if(n===null){alert('Please enter a valid number (commas ok, e.g. 1,234.5).');return;}updateDDQuestion('correctAnswer',n);setDdAnswerInput('');}} className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"><Check size={18}/> Set</button>
+                      <button onClick={()=>{const n=parseNumber(ddAnswerInput);if(n===null){alert('Please enter a valid number (commas ok, e.g. 1,234.5).');return;}updateDDQuestion('correctAnswer',n);updateDDQuestion('correctAnswerDisplay',ddAnswerInput.trim());setDdAnswerInput('');}} className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"><Check size={18}/> Set</button>
                     </div>
-                    {ddQ.correctAnswer!==null&&<p className="mt-2 text-sm text-green-700 font-medium">✓ Correct answer: <span className="font-bold">{ddQ.correctAnswer.toLocaleString()}</span></p>}
+                    {ddQ.correctAnswer!==null&&<p className="mt-2 text-sm text-green-700 font-medium">✓ Correct answer: <span className="font-bold">{ddDisplay(ddQ)}</span></p>}
                     {ddAnswerInput&&parseNumber(ddAnswerInput)===null&&<p className="text-red-500 text-xs mt-1">Not a valid number</p>}
                   </div>
                   <div className="mb-4">
@@ -4285,7 +4286,7 @@ const QuizApp = () => {
                                       return null;
                                     };
                                     const getCorrectAns = (q) => {
-                                      if (isDash) return q.correctAnswer?.toLocaleString()??'—';
+                                      if (isDash) return ddDisplay(q);
                                       if (isMN||isOR) return q.acceptedAnswers[q.primaryAnswerIndex??0]||q.acceptedAnswers[0]||'—';
                                       return '—';
                                     };
