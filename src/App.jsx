@@ -577,7 +577,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                 if (token === 'doubler') { earnedPts = correct ? Math.round(pts * 2 * 10) / 10 : 0; if (correct) tokenLabel = 'doubler'; }
                 else if (token === 'insurance') { earnedPts = correct ? pts : Math.round(pts / 2 * 10) / 10; if (!correct) tokenLabel = 'insurance'; }
                 else if (token === 'sniper') { earnedPts = correct ? SNIPER_POINTS : 0; if (correct) tokenLabel = 'sniper'; }
-                else if (token === 'parasite') { earnedPts = totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0; tokenLabel = 'parasite'; }
+                else if (token === 'parasite') { earnedPts = correct ? pts : (totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0); if (!correct) tokenLabel = 'parasite'; }
                 else { earnedPts = correct ? pts : 0; }
               }
               const rawText = isMN ? (q.clues[0]||'').slice(0,80) : getRawQuestionText(q);
@@ -639,8 +639,8 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               myPts = correct ? SNIPER_POINTS : 0;
               if (correct) tokenLabel = 'sniper';
             } else if (token === 'parasite') {
-              myPts = totalUsers2 > 0 ? Math.round((correctCounts[i] * pts / totalUsers2) * 10) / 10 : 0;
-              tokenLabel = 'parasite';
+              myPts = correct ? pts : (totalUsers2 > 0 ? Math.round((correctCounts[i] * pts / totalUsers2) * 10) / 10 : 0);
+              if (!correct) tokenLabel = 'parasite';
             } else {
               myPts = correct ? pts : 0;
             }
@@ -1881,9 +1881,8 @@ const QuizApp = () => {
         } else if (token === 'sniper') {
           total += correct ? SNIPER_POINTS : 0;
         } else if (token === 'parasite') {
-          // parasite: (correctCount * pts) / totalAttempts
-          const parasiteScore = totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0;
-          total += parasiteScore;
+          // parasite: no effect if correct; if incorrect, earn (correctCount * pts) / totalAttempts
+          total += correct ? pts : (totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0);
         } else {
           total += correct ? pts : 0;
         }
@@ -2084,8 +2083,13 @@ const QuizApp = () => {
             earned = correct ? SNIPER_POINTS : 0;
             formula = correct ? `Sniper flat = ${SNIPER_POINTS}` : `✗ + Sniper → 0`;
           } else if (token === 'parasite') {
-            earned = totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0;
-            formula = `${correctCounts[i]} × ${pts} ÷ ${totalAttempts} = ${earned} (parasite)`;
+            if (correct) {
+              earned = pts;
+              formula = `${pts} (parasite, correct → no effect)`;
+            } else {
+              earned = totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0;
+              formula = `${correctCounts[i]} × ${pts} ÷ ${totalAttempts} = ${earned} (parasite)`;
+            }
           } else {
             earned = correct ? pts : 0;
             formula = correct ? `${pts}` : `✗ → 0`;
