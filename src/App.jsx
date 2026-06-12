@@ -96,9 +96,9 @@ const shuffleArray = (arr) => {
 };
 const normalizeAnswer = (s) => (s || '').trim().toLowerCase();
 const emptyMCQuestion  = () => ({ prompt: '', options: ['','','','','',''], correctIndices: [], randomizeOptions: false });
-const emptyORQuestion  = () => ({ prompt: '', acceptedAnswers: [], primaryAnswerIndex: 0, showOthersCount: false });
-const emptyDDQuestion  = () => ({ prompt: '', correctAnswer: null }); // Data Dash: single numeric answer
-const emptyMNQuestion  = () => ({ clues: ['','','',''], acceptedAnswers: [], primaryAnswerIndex: 0 }); // Mystery Noun
+const emptyORQuestion  = () => ({ prompt: '', acceptedAnswers: [], primaryAnswerIndex: 0, showOthersCount: false, additionalContext: '' });
+const emptyDDQuestion  = () => ({ prompt: '', correctAnswer: null, additionalContext: '' }); // Data Dash: single numeric answer
+const emptyMNQuestion  = () => ({ clues: ['','','',''], acceptedAnswers: [], primaryAnswerIndex: 0, additionalContext: '' }); // Mystery Noun
 const emptyCombQuestion = (questionType) => ({
   questionType,
   ...(questionType === 'MC' ? emptyMCQuestion() : questionType === 'OR' ? emptyORQuestion() : { text: '', answer: '' })
@@ -343,6 +343,8 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
   const [loading, setLoading] = React.useState(true);
   const [myAttempt, setMyAttempt] = React.useState(null);
   const [popupAnswers, setPopupAnswers] = React.useState(null);
+  const [whyOpenIndex, setWhyOpenIndex] = React.useState(null);
+  const [adminOthersPopup, setAdminOthersPopup] = React.useState(null);
   const [allAttempts, setAllAttempts] = React.useState({});
   const [selectedUserId, setSelectedUserId] = React.useState(null);
 
@@ -595,7 +597,12 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                       <p className="text-xs text-gray-500 mb-1 font-mono flex items-center gap-1">
                         {i+1}. {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(16)}</span>} {rawText}
                       </p>
-                      <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {correctDisplay}</p>
+                      <p className="text-xs text-gray-600">
+                        <span className="font-semibold">Correct Answer:</span>{' '}{correctDisplay}
+                        {(!isDash && !isMN) && q.showOthersCount && q.acceptedAnswers?.length > 1 && <button onClick={()=>setAdminOthersPopup(q)} className="ml-1 text-blue-500 underline text-xs">and {q.acceptedAnswers.length - 1} other{q.acceptedAnswers.length > 2 ? 's' : ''}</button>}
+                        {q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}
+                      </p>
+                      {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 mt-0.5 italic">{q.additionalContext}</p>}
                       <p className={`text-xs mt-0.5 ${isDash||isMN ? 'text-gray-600' : correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Their Answer:</span> {answerDisplay}</p>
                       {isDash && diff !== null && <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Difference:</span> {diff}</p>}
                       {isMN && mnCluesUsed !== null && <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Clues used:</span> {mnCluesUsed} (max {MN_POINTS[mnCluesUsed-1]} pts)</p>}
@@ -656,7 +663,8 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                   <div className="grid grid-cols-3 gap-4 p-4">
                     <div className="col-span-2">
                       <p className="text-xs text-gray-500 mb-1 font-medium">{i+1}. {(q.clues[0]||'').slice(0,80)}</p>
-                      <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {q.acceptedAnswers[q.primaryAnswerIndex]||q.acceptedAnswers[0]}</p>
+                      <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {q.acceptedAnswers[q.primaryAnswerIndex]||q.acceptedAnswers[0]}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}</p>
+                      {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 mt-0.5 italic">{q.additionalContext}</p>}
                       <p className={`text-xs mt-0.5 ${correctMN?'text-green-700':'text-red-600'}`}><span className="font-semibold">Your Answer:</span> {answer||'(no answer)'}</p>
                       <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Clues used:</span> {cluesUsed}</p>
                     </div>
@@ -682,7 +690,8 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                         {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(20)}</span>}
                         <span>{q.prompt}</span>
                       </p>
-                      <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {q.correctAnswer?.toLocaleString()}</p>
+                      <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {q.correctAnswer?.toLocaleString()}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}</p>
+                      {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 mt-0.5 italic">{q.additionalContext}</p>}
                       <p className="text-xs text-gray-600 mt-0.5"><span className="font-semibold">Your Answer:</span> {myRawAnswer || '—'}</p>
                       <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Difference:</span> {typeof diff === 'number' ? diff.toLocaleString() : diff}</p>
                     </div>
@@ -704,7 +713,10 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                       {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(20)}</span>}
                       <span>{getFullQuestion(q, i, myAnswers)}</span>
                     </p>
-                    <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {getCorrectDisplay(q)}{hasOtherAnswers && <button onClick={()=>setPopupAnswers(q.acceptedAnswers)} className="ml-2 text-blue-500 underline text-xs">and {q.acceptedAnswers.length - 1} other{q.acceptedAnswers.length > 2 ? 's' : ''}</button>}</p>
+                    <p className="text-xs text-gray-600">
+                      <span className="font-semibold">Correct Answer:</span>{' '}{getCorrectDisplay(q)}{hasOtherAnswers && <button onClick={()=>setPopupAnswers(q.acceptedAnswers)} className="ml-1 text-blue-500 underline text-xs">and {q.acceptedAnswers.length - 1} other{q.acceptedAnswers.length > 2 ? 's' : ''}</button>}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}
+                    </p>
+                    {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 mt-0.5 italic">{q.additionalContext}</p>}
                     <p className={`text-xs mt-1 ${correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Your Answer:</span> {getMyAnswerDisplay(q, i)}</p>
                   </div>
                   <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
@@ -718,6 +730,17 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               </div>
             );
           })}
+        </div>
+      )}
+      {adminOthersPopup && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{background:"rgba(0,0,0,0.4)"}} onClick={()=>setAdminOthersPopup(null)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-5" onClick={e=>e.stopPropagation()}>
+            <h3 className="font-bold text-gray-800 mb-3">All Accepted Answers</h3>
+            <ul className="space-y-1 mb-4">
+              {(adminOthersPopup.acceptedAnswers||[]).map((a,i)=><li key={i} className={`text-sm ${i===0?'font-bold text-gray-900':'text-gray-600'}`}>{a}</li>)}
+            </ul>
+            <button onClick={()=>setAdminOthersPopup(null)} className="w-full px-4 py-2 bg-gray-200 rounded-lg text-sm font-medium hover:bg-gray-300">Close</button>
+          </div>
         </div>
       )}
     </div>
@@ -1705,11 +1728,11 @@ const QuizApp = () => {
     } else if (newQuizType==='MC') {
       return { ...base, randomizeQuestions:mcRandomizeQuestions, questions:mcQuestions.map(q=>({ prompt:q.prompt, options:q.options.filter(o=>o.trim()!==''), correctIndices:q.correctIndices.filter(i=>q.options[i]&&q.options[i].trim()!=='').map(i=>q.options.filter((_,idx)=>idx<=i&&q.options[idx].trim()!=='').length-1), randomizeOptions:q.randomizeOptions||false })) };
     } else if (newQuizType==='openresponse') {
-      return { ...base, randomizeQuestions:orRandomizeQuestions, questions:orQuestions.map(q=>({ prompt:q.prompt, acceptedAnswers:q.acceptedAnswers, primaryAnswerIndex:q.primaryAnswerIndex, showOthersCount:q.showOthersCount })) };
+      return { ...base, randomizeQuestions:orRandomizeQuestions, questions:orQuestions.map(q=>({ prompt:q.prompt, acceptedAnswers:q.acceptedAnswers, primaryAnswerIndex:q.primaryAnswerIndex, showOthersCount:q.showOthersCount, additionalContext:q.additionalContext||'' })) };
     } else if (newQuizType==='datadash') {
-      return { ...base, questions:ddQuestions.map(q=>({ prompt:q.prompt, correctAnswer:q.correctAnswer })) };
+      return { ...base, questions:ddQuestions.map(q=>({ prompt:q.prompt, correctAnswer:q.correctAnswer, additionalContext:q.additionalContext||'' })) };
     } else if (newQuizType==='mysterynoun') {
-      return { ...base, tokenSlots:['none','none','none','none','none','none'], questions:mnQuestions.map(q=>({ clues:q.clues, acceptedAnswers:q.acceptedAnswers, primaryAnswerIndex:q.primaryAnswerIndex })) };
+      return { ...base, tokenSlots:['none','none','none','none','none','none'], questions:mnQuestions.map(q=>({ clues:q.clues, acceptedAnswers:q.acceptedAnswers, primaryAnswerIndex:q.primaryAnswerIndex, additionalContext:q.additionalContext||'' })) };
     } else {
       return { ...base, questions:combQuestions.map(q => {
         const qt=q.questionType;
@@ -3946,6 +3969,10 @@ const QuizApp = () => {
                     <label className="text-sm text-gray-700">Show +X in quiz results{orQ.showOthersCount&&orQ.acceptedAnswers.length>1&&<span className="ml-2 text-xs text-gray-400"></span>}</label>
                   </div>
                 )}
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Additional Context <span className="text-xs text-gray-400 font-normal">(optional — shown as "Why?" link on scoreboard)</span></label>
+                  <input type="text" value={orQ.additionalContext||''} onChange={e=>updateORQuestion('additionalContext',e.target.value)} placeholder="e.g. These are US Presidents in order." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"/>
+                </div>
               </div>
             )}
 
@@ -3980,6 +4007,10 @@ const QuizApp = () => {
                     </div>
                     {ddQ.correctAnswer!==null&&<p className="mt-2 text-sm text-green-700 font-medium">✓ Correct answer: <span className="font-bold">{ddQ.correctAnswer.toLocaleString()}</span></p>}
                     {ddAnswerInput&&parseNumber(ddAnswerInput)===null&&<p className="text-red-500 text-xs mt-1">Not a valid number</p>}
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Additional Context <span className="text-xs text-gray-400 font-normal">(optional — shown as "Why?" link on scoreboard)</span></label>
+                    <input type="text" value={ddQ.additionalContext||''} onChange={e=>updateDDQuestion('additionalContext',e.target.value)} placeholder="e.g. This is the population of Tokyo." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"/>
                   </div>
                 </>);})()}
               </div>
@@ -4035,6 +4066,10 @@ const QuizApp = () => {
                         );})}
                       </div>
                     )}
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Additional Context <span className="text-xs text-gray-400 font-normal">(optional — shown as "Why?" link on scoreboard)</span></label>
+                    <input type="text" value={mnQ.additionalContext||''} onChange={e=>updateMNQuestion('additionalContext',e.target.value)} placeholder="e.g. The answer is a type of cloud formation." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"/>
                   </div>
                 </>);})()}
               </div>
