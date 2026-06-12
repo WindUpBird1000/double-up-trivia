@@ -1143,6 +1143,7 @@ const QuizApp = () => {
     if (existing?.status === 'submitted') return;
     setActiveQuiz(quiz);
     setCurrentQuestionIndex(0);
+    setDisputedQuestions({}); setDisputeReasons({}); setSubmittedDisputes([]);
     const preparedQs = prepareActiveQuestions(quiz);
     setActiveQuestions(preparedQs);
     if (existing) {
