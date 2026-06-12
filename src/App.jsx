@@ -2108,9 +2108,12 @@ const QuizApp = () => {
     // Delete the attempt
     await supabase.from('quiz_attempts').delete().eq('user_id', userId).eq('quiz_key', quizKey);
     setConfirmDeleteAttempt(null);
-    // If quiz is Scored, rescore it
+    // Re-fetch the quiz's current status from Supabase — don't trust local state which may be stale
+    const { data: quizRow } = await supabase.from('quizzes').select('status, data').eq('quiz_key', quizKey).single();
     const quiz = allQuizData[quizKey];
-    if (quiz?.status === 'Scored') {
+    const currentStatus = quizRow?.status || quiz?.status;
+    // Only rescore if the quiz is actually Scored in the database right now
+    if (currentStatus === 'Scored') {
       const { data: remainingAttempts } = await supabase
         .from('quiz_attempts')
         .select('*')
