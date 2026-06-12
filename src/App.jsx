@@ -4431,20 +4431,10 @@ const QuizApp = () => {
                       </>
                     )}
                     {previewType==='openresponse'&&previewQ&&(
-                      <>
-                        <div className="text-lg font-semibold text-gray-800 mb-4">{renderPrompt(previewQ.prompt||'')}</div>
-                        <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-400 bg-gray-50">Student types answer here...</div>
-                        {previewQ.acceptedAnswers?.filter(a=>a.trim()).length>0&&(
-                          <p className="mt-3 text-sm text-green-700"><span className="font-semibold">Accepted answers:</span> {previewQ.acceptedAnswers.filter(a=>a.trim()).join(', ')}</p>
-                        )}
-                      </>
+                      <div className="text-lg font-semibold text-gray-800 mb-4">{renderPrompt(previewQ.prompt||'')}</div>
                     )}
                     {previewType==='datadash'&&previewQ&&(
-                      <>
-                        <div className="text-lg font-semibold text-gray-800 mb-4">{renderPrompt(previewQ.prompt||'')}</div>
-                        <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-400 bg-gray-50">Student enters a number here...</div>
-                        {previewQ.correctAnswer!==null&&<p className="mt-3 text-sm text-green-700"><span className="font-semibold">Correct answer:</span> {previewQ.correctAnswer?.toLocaleString()}</p>}
-                      </>
+                      <div className="text-lg font-semibold text-gray-800 mb-4">{renderPrompt(previewQ.prompt||'')}</div>
                     )}
                     {previewType==='mysterynoun'&&previewQ&&(
                       <>
@@ -4454,7 +4444,6 @@ const QuizApp = () => {
                             <p className="text-base text-gray-800">{previewQ.clues[ci]}</p>
                           </div>
                         ))}
-                        {previewQ.acceptedAnswers?.length>0&&<p className="mt-3 text-sm text-green-700"><span className="font-semibold">Primary answer:</span> {previewQ.acceptedAnswers[previewQ.primaryAnswerIndex]||previewQ.acceptedAnswers[0]}</p>}
                       </>
                     )}
                     {previewType==='fillintheblank'&&(
@@ -4474,7 +4463,7 @@ const QuizApp = () => {
                           </div>
                         )}
                         {combDraft.questionType==='OR'&&(
-                          <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-400 bg-gray-50">Student types answer here...</div>
+                          <div className="text-lg font-semibold text-gray-800 mb-4">{renderPrompt(combDraft.prompt||'')}</div>
                         )}
                       </>
                     )}
