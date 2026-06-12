@@ -3043,7 +3043,7 @@ const QuizApp = () => {
       </div>
       <div className="bg-white rounded-xl shadow-md p-8">
         <h1 className="text-2xl font-bold text-gray-800 mb-6">Author's Note</h1>
-        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{activeQuiz?.authorNote}</p>
+        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed" dangerouslySetInnerHTML={{__html: activeQuiz?.authorNote}}/>
         <button onClick={()=>setMode('assessment')} className="w-full mt-8 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg">Continue to Quiz</button>
       </div>
       {showResetModal&&(
