@@ -4187,7 +4187,7 @@ const QuizApp = () => {
               <div className="bg-white rounded-xl shadow-md overflow-hidden">
                 <div className="px-5 py-3 bg-gray-100 border-b flex justify-between items-center">
                   <div>
-                    <h2 className="font-bold text-gray-700">Submitted Responses</h2>
+                    <h2 className="font-bold text-gray-700">{auditData ? '1. ' : ''}Submitted Responses</h2>
                     <p className="text-xs text-gray-500 mt-0.5">Delete a user's attempt to allow them to retake the quiz. Scored quizzes will be automatically rescored.</p>
                   </div>
                   {auditAttemptsLoading && <span className="text-xs text-gray-400 italic">Loading…</span>}
@@ -4316,10 +4316,10 @@ const QuizApp = () => {
 
               return (
                 <>
-                  {/* ── Section 1: Difficulty Ranking (skipped for Data Dash) ── */}
+                  {/* ── Section 2: Difficulty Ranking (OR only) ── */}
                   {!auditData.isDashQuiz && !auditData.isMNQuiz && <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     <div className="px-5 py-3 bg-gray-100 border-b">
-                      <h2 className="font-bold text-gray-700">1. Difficulty Ranking & Point Values</h2>
+                      <h2 className="font-bold text-gray-700">2. Difficulty Ranking & Point Values</h2>
                       <p className="text-xs text-gray-500 mt-0.5">Sorted hardest → easiest (fewest correct = hardest = most points). Ties are averaged.</p>
                     </div>
                     <div className="overflow-x-auto">
@@ -4352,10 +4352,10 @@ const QuizApp = () => {
                     </div>
                   </div>}
 
-                  {/* ── Section 2: Per-user accordion ── */}
+                  {/* ── Section 2/3: Per-user accordion ── */}
                   <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     <div className="px-5 py-3 bg-gray-100 border-b">
-                      <h2 className="font-bold text-gray-700">{auditData.isDashQuiz||auditData.isMNQuiz ? '1' : '2'}. Per-User Score Breakdown</h2>
+                      <h2 className="font-bold text-gray-700">{auditData.isDashQuiz||auditData.isMNQuiz ? '2' : '3'}. Per-User Score Breakdown</h2>
                       <p className="text-xs text-gray-500 mt-0.5">{auditData.isDashQuiz||auditData.isMNQuiz ? 'Click a player to expand their per-question breakdown.' : 'Click a player to expand their full question-by-question breakdown. ✅ = recomputed total matches stored score; ❌ = mismatch.'}</p>
                     </div>
                     {/* Collapsed header row */}
