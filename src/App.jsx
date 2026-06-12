@@ -1973,12 +1973,13 @@ const QuizApp = () => {
 
     // Fetch quiz definition, results, and attempts in parallel
     const [{ data: quizRow }, { data: resultRow }, { data: attempts }] = await Promise.all([
-      supabase.from('quizzes').select('data, title, category').eq('quiz_key', quizKey).single(),
+      supabase.from('quizzes').select('data, title, category, status').eq('quiz_key', quizKey).single(),
       supabase.from('quiz_results').select('scores').eq('quiz_key', quizKey).single(),
       supabase.from('quiz_attempts').select('user_id, answers, token_assignments, doubles, status').eq('quiz_key', quizKey).eq('status', 'submitted'),
     ]);
 
     if (!quizRow || !resultRow || !attempts) { setAuditLoading(false); return; }
+    if (quizRow.status !== 'Scored') { setAuditLoading(false); return; }
 
     const quiz = quizRow.data;
     const season = quizRow.category;
@@ -2145,7 +2146,7 @@ const QuizApp = () => {
     }
     // Refresh the attempts list and audit data
     await fetchAuditAttempts(quizKey);
-    await runAudit(quizKey);
+    if (currentStatus === 'Scored') await runAudit(quizKey);
   };
 
     const saveQuizLocally = async () => {
