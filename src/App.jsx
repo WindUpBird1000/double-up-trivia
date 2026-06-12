@@ -3289,8 +3289,9 @@ const QuizApp = () => {
           /* ── Data Dash submitted view ── */
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
             <div className="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <div className="col-span-1"></div>
               <div className="col-span-1 text-center">#</div>
-              <div className="col-span-4">Question</div>
+              <div className="col-span-3">Question</div>
               <div className="col-span-2 text-center">Correct Answer</div>
               <div className="col-span-2 text-center">Your Answer</div>
               <div className="col-span-2 text-center">Difference</div>
@@ -3306,13 +3307,13 @@ const QuizApp = () => {
               return (
                 <div key={i} className="border-b last:border-b-0 bg-white">
                   <div className="grid grid-cols-12 gap-2 px-5 py-3 items-center">
-                    <div className="col-span-1 text-center text-sm font-medium text-gray-500 flex flex-col items-center gap-1">
-                      {i+1}
+                    <div className="col-span-1 flex items-center justify-center">
                       {assignedToken && TOKEN_CONFIG[assignedToken] && (
                         <span title={TOKEN_CONFIG[assignedToken].description}>{TOKEN_CONFIG[assignedToken].svgIcon(20)}</span>
                       )}
                     </div>
-                    <div className="col-span-4 text-sm text-gray-700">{getPromptPreview(q)}</div>
+                    <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}</div>
+                    <div className="col-span-3 text-sm text-gray-700">{getPromptPreview(q)}</div>
                     <div className="col-span-2 text-sm text-gray-600 text-center">{q.correctAnswer?.toLocaleString() ?? '—'}</div>
                     <div className="col-span-2 text-sm font-medium text-center text-gray-700">{myRaw || '—'}</div>
                     <div className="col-span-2 text-sm text-center text-gray-500">{diff}</div>
@@ -3335,8 +3336,9 @@ const QuizApp = () => {
           /* ── Standard submitted view ── */
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
             <div className="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <div className="col-span-1"></div>
               <div className="col-span-1 text-center">#</div>
-              <div className="col-span-6">Question</div>
+              <div className="col-span-5">Question</div>
               <div className="col-span-2 text-center leading-tight">Your Answer</div>
               <div className="col-span-2 text-center">Correct Answer</div>
               <div className="col-span-1 text-center">Dispute</div>
@@ -3349,15 +3351,13 @@ const QuizApp = () => {
               return (
                 <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
                   <div className="grid grid-cols-12 gap-2 px-5 py-3 items-center">
-                    <div className="col-span-1 text-center text-sm font-medium text-gray-500 flex flex-col items-center gap-1">
-                      {i+1}
+                    <div className="col-span-1 flex items-center justify-center">
                       {assignedToken && TOKEN_CONFIG[assignedToken] && (
-                        <span title={TOKEN_CONFIG[assignedToken].description}>
-                          {TOKEN_CONFIG[assignedToken].svgIcon(20)}
-                        </span>
+                        <span title={TOKEN_CONFIG[assignedToken].description}>{TOKEN_CONFIG[assignedToken].svgIcon(20)}</span>
                       )}
                     </div>
-                    <div className="col-span-6 text-sm text-gray-700">{getPromptPreview(q)}</div>
+                    <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}</div>
+                    <div className="col-span-5 text-sm text-gray-700">{getPromptPreview(q)}</div>
                     <div className={`col-span-2 text-sm font-medium text-center ${correct ? 'text-green-700' : 'text-red-600'}`}>{getAnswerDisplay(q, i)}</div>
                     <div className="col-span-2 text-sm text-gray-600 text-center">{getCorrectAnswerDisplay(q)}</div>
                     <div className="col-span-1 flex flex-col items-center justify-center">
