@@ -3288,14 +3288,14 @@ const QuizApp = () => {
           ) : activeQuiz?.type === 'datadash' ? (
           /* ── Data Dash submitted view ── */
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
-            <div className="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              <div className="col-span-1"></div>
-              <div className="col-span-1 text-center">#</div>
-              <div className="col-span-3">Question</div>
-              <div className="col-span-2 text-center">Correct Answer</div>
-              <div className="col-span-2 text-center">Your Answer</div>
-              <div className="col-span-2 text-center">Difference</div>
-              <div className="col-span-1 text-center">Dispute</div>
+            <div style={{display:'grid',gridTemplateColumns:'32px 36px 1fr 120px 120px 100px 72px',gap:'8px'}} className="px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <div></div>
+              <div className="text-center">#</div>
+              <div>Question</div>
+              <div className="text-center">Correct Answer</div>
+              <div className="text-center">Your Answer</div>
+              <div className="text-center">Difference</div>
+              <div className="text-center">Dispute</div>
             </div>
             {activeQuestions.map((q, i) => {
               const assignedToken = tokenAssignments[i];
@@ -3306,25 +3306,25 @@ const QuizApp = () => {
               const disputing = disputedQuestions[i] || false;
               return (
                 <div key={i} className="border-b last:border-b-0 bg-white">
-                  <div className="grid grid-cols-12 gap-2 px-5 py-3 items-center">
-                    <div className="col-span-1 flex items-center justify-center">
+                  <div style={{display:'grid',gridTemplateColumns:'32px 36px 1fr 120px 120px 100px 72px',gap:'8px'}} className="px-4 py-3 items-center">
+                    <div className="flex items-center justify-center">
                       {assignedToken && TOKEN_CONFIG[assignedToken] && (
                         <span title={TOKEN_CONFIG[assignedToken].description}>{TOKEN_CONFIG[assignedToken].svgIcon(20)}</span>
                       )}
                     </div>
-                    <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}</div>
-                    <div className="col-span-3 text-sm text-gray-700">{getPromptPreview(q)}</div>
-                    <div className="col-span-2 text-sm text-gray-600 text-center">{q.correctAnswer?.toLocaleString() ?? '—'}</div>
-                    <div className="col-span-2 text-sm font-medium text-center text-gray-700">{myRaw || '—'}</div>
-                    <div className="col-span-2 text-sm text-center text-gray-500">{diff}</div>
-                    <div className="col-span-1 flex flex-col items-center justify-center">
+                    <div className="text-center text-sm font-medium text-gray-500">{i+1}</div>
+                    <div className="text-sm text-gray-700">{getPromptPreview(q)}</div>
+                    <div className="text-sm text-gray-600 text-center">{q.correctAnswer?.toLocaleString() ?? '—'}</div>
+                    <div className="text-sm font-medium text-center text-gray-700">{myRaw || '—'}</div>
+                    <div className="text-sm text-center text-gray-500">{diff}</div>
+                    <div className="flex flex-col items-center justify-center">
                       {alreadyDisputed
                         ? <><input type="checkbox" checked readOnly className="w-5 h-5 mb-1 cursor-not-allowed opacity-40"/><span className="text-xs text-gray-400 italic">Disputed</span></>
                         : <input type="checkbox" checked={disputing} onChange={e=>setDisputedQuestions(p=>({...p,[i]:e.target.checked}))} className="w-5 h-5 accent-red-500 cursor-pointer"/>}
                     </div>
                   </div>
                   {disputing && !alreadyDisputed && (
-                    <div className="px-5 pb-3">
+                    <div className="px-4 pb-3">
                       <textarea value={disputeReasons[i]||''} onChange={e=>setDisputeReasons(p=>({...p,[i]:e.target.value}))} placeholder="Briefly explain your dispute, e.g. the correct answer should be 46, not 45." rows={2} className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-300 resize-none"/>
                     </div>
                   )}
@@ -3335,13 +3335,13 @@ const QuizApp = () => {
         ) : (
           /* ── Standard submitted view ── */
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
-            <div className="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              <div className="col-span-1"></div>
-              <div className="col-span-1 text-center">#</div>
-              <div className="col-span-5">Question</div>
-              <div className="col-span-2 text-center leading-tight">Your Answer</div>
-              <div className="col-span-2 text-center">Correct Answer</div>
-              <div className="col-span-1 text-center">Dispute</div>
+            <div style={{display:'grid',gridTemplateColumns:'32px 36px 1fr 130px 130px 72px',gap:'8px'}} className="px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <div></div>
+              <div className="text-center">#</div>
+              <div>Question</div>
+              <div className="text-center leading-tight">Your Answer</div>
+              <div className="text-center">Correct Answer</div>
+              <div className="text-center">Dispute</div>
             </div>
             {activeQuestions.map((q, i) => {
               const correct = isQuestionCorrect(q, i);
@@ -3350,17 +3350,17 @@ const QuizApp = () => {
               const disputing = disputedQuestions[i] || false;
               return (
                 <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
-                  <div className="grid grid-cols-12 gap-2 px-5 py-3 items-center">
-                    <div className="col-span-1 flex items-center justify-center">
+                  <div style={{display:'grid',gridTemplateColumns:'32px 36px 1fr 130px 130px 72px',gap:'8px'}} className="px-4 py-3 items-center">
+                    <div className="flex items-center justify-center">
                       {assignedToken && TOKEN_CONFIG[assignedToken] && (
                         <span title={TOKEN_CONFIG[assignedToken].description}>{TOKEN_CONFIG[assignedToken].svgIcon(20)}</span>
                       )}
                     </div>
-                    <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}</div>
-                    <div className="col-span-5 text-sm text-gray-700">{getPromptPreview(q)}</div>
-                    <div className={`col-span-2 text-sm font-medium text-center ${correct ? 'text-green-700' : 'text-red-600'}`}>{getAnswerDisplay(q, i)}</div>
-                    <div className="col-span-2 text-sm text-gray-600 text-center">{getCorrectAnswerDisplay(q)}</div>
-                    <div className="col-span-1 flex flex-col items-center justify-center">
+                    <div className="text-center text-sm font-medium text-gray-500">{i+1}</div>
+                    <div className="text-sm text-gray-700">{getPromptPreview(q)}</div>
+                    <div className={`text-sm font-medium text-center ${correct ? 'text-green-700' : 'text-red-600'}`}>{getAnswerDisplay(q, i)}</div>
+                    <div className="text-sm text-gray-600 text-center">{getCorrectAnswerDisplay(q)}</div>
+                    <div className="flex flex-col items-center justify-center">
                       {alreadyDisputed
                         ? <><input type="checkbox" checked readOnly className="w-5 h-5 mb-1 cursor-not-allowed opacity-40"/><span className="text-xs text-gray-400 italic">Disputed</span></>
                         : correct ? null
@@ -3368,7 +3368,7 @@ const QuizApp = () => {
                     </div>
                   </div>
                   {disputing && !alreadyDisputed && (
-                    <div className="px-5 pb-3">
+                    <div className="px-4 pb-3">
                       <textarea value={disputeReasons[i]||''} onChange={e=>setDisputeReasons(p=>({...p,[i]:e.target.value}))} placeholder="Briefly explain why you disagree, i.e., spelling error, factual error, etc." rows={2} className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-300 resize-none"/>
                     </div>
                   )}
