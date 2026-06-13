@@ -2026,6 +2026,153 @@ const QuizApp = () => {
     setAuditAttemptsLoading(false);
   };
 
+  const openScoringGrid = (quizKey) => {
+    const SUPABASE_URL = 'https://jcsoyacjqjfznsprmxcj.supabase.co';
+    const ANON_KEY = 'sb_publishable_zGvjNAiBtoaRersumsUjWA_OGLXkrJz';
+    const quiz = allQuizData[quizKey];
+    const quizTitle = quiz?.title || quizKey;
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>${quizTitle} — Scoring Grid</title>
+<style>
+  body { font-family: Inter, system-ui, sans-serif; background: #0C1821; color: #CCC9DC; margin: 0; padding: 20px; font-size: 13px; }
+  h1 { color: #fff; font-size: 1.3rem; margin-bottom: 4px; }
+  .meta { color: #8899aa; margin-bottom: 20px; font-size: 12px; }
+  #status { color: #7eb8e8; margin: 20px 0; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; white-space: nowrap; }
+  th, td { padding: 6px 10px; border: 1px solid #253a50; text-align: center; }
+  thead tr:first-child th { background: #1B2A41; color: #fff; font-size: 12px; position: sticky; top: 0; z-index: 2; }
+  thead tr:nth-child(2) th { background: #162840; color: #8899aa; font-size: 11px; position: sticky; top: 29px; z-index: 2; }
+  td:first-child, th:first-child { text-align: left; position: sticky; left: 0; z-index: 1; background: #1B2A41; min-width: 110px; font-weight: 600; color: #fff; }
+  thead th:first-child { z-index: 3; }
+  td:last-child, th:last-child { font-weight: 700; color: #fff; background: #162840; border-left: 2px solid #324A5F; }
+  .correct   { background: #0d2a1a; }
+  .incorrect { background: #2a0d0d; }
+  .blank     { background: #111e2b; color: #556677; }
+  .token { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; margin-top: 2px; }
+  .tok-doubler  { background: #7eb8e8; color: #0C1821; }
+  .tok-insurance{ background: #6ee8a0; color: #0C1821; }
+  .tok-sniper   { background: #fdba74; color: #0C1821; }
+  .tok-parasite { background: #c084fc; color: #0C1821; }
+  .pts  { font-weight: 700; font-size: 12px; display: block; }
+  .ans  { font-size: 11px; color: #8899aa; display: block; max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
+  .tick { color: #6ee8a0; font-weight: 700; }
+  .cross{ color: #e89090; font-weight: 700; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; font-size: 11px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .swatch { width: 14px; height: 14px; border-radius: 2px; border: 1px solid #324A5F; }
+</style>
+</head>
+<body>
+<h1>${quizTitle} — Scoring Grid</h1>
+<div class="meta">Loading…</div>
+<div class="legend">
+  <div class="legend-item"><div class="swatch" style="background:#0d2a1a"></div> Correct</div>
+  <div class="legend-item"><div class="swatch" style="background:#2a0d0d"></div> Incorrect</div>
+  <div class="legend-item"><div class="swatch" style="background:#111e2b"></div> Blank</div>
+  <span class="token tok-doubler">2×</span> Doubler &nbsp;
+  <span class="token tok-insurance">INS</span> Insurance &nbsp;
+  <span class="token tok-sniper">SNP</span> Sniper &nbsp;
+  <span class="token tok-parasite">PAR</span> Parasite
+</div>
+<div id="status">Loading data from Supabase…</div>
+<div class="table-wrap" id="output"></div>
+<script>
+const SUPABASE_URL = '${SUPABASE_URL}';
+const ANON_KEY = '${ANON_KEY}';
+const QUIZ_KEY = '${quizKey}';
+const SNIPER_POINTS = 8;
+async function sb(table, params) {
+  const r = await fetch(SUPABASE_URL+'/rest/v1/'+table+'?'+params, { headers: { apikey: ANON_KEY, Authorization: 'Bearer '+ANON_KEY } });
+  return r.json();
+}
+function normalize(s) { return (s||'').trim().toLowerCase(); }
+async function load() {
+  const status = document.getElementById('status');
+  const quizRows = await sb('quizzes', 'quiz_key=eq.'+QUIZ_KEY+'&select=data,title,type,status');
+  if (!quizRows.length) { status.textContent = 'Quiz not found.'; return; }
+  const quizMeta = quizRows[0];
+  const quiz = quizMeta.data;
+  const questions = quiz.questions;
+  const N = questions.length;
+  document.querySelector('.meta').textContent = 'Status: '+quizMeta.status+' · Type: '+quizMeta.type+' · '+N+' questions · Live Supabase data';
+  const attempts = await sb('quiz_attempts', 'quiz_key=eq.'+QUIZ_KEY+'&status=eq.submitted&select=user_id,answers,token_assignments,doubles');
+  if (!attempts.length) { status.textContent = 'No submitted attempts found.'; return; }
+  const uids = attempts.map(a => '"'+a.user_id+'"').join(',');
+  const profiles = await sb('profiles', 'user_id=in.('+uids+')&select=user_id,display_name');
+  const nameMap = {};
+  profiles.forEach(p => { nameMap[p.user_id] = p.display_name || p.user_id; });
+  const results = await sb('quiz_results', 'quiz_key=eq.'+QUIZ_KEY+'&select=scores');
+  const storedScores = results[0]?.scores || null;
+  const storedPointValues = storedScores?.pointValues || null;
+  const correctCounts = questions.map((q, i) => attempts.filter(a => {
+    const raw = (a.answers[i]||'').toString().trim();
+    return raw !== '' && q.acceptedAnswers.some(ac => normalize(ac) === normalize(raw));
+  }).length);
+  let pointValues = storedPointValues;
+  if (!pointValues) {
+    const sorted = correctCounts.map((c,i)=>({i,c})).sort((a,b)=>a.c-b.c||a.i-b.i);
+    pointValues = new Array(N).fill(0);
+    let rank=N, j=0;
+    while(j<sorted.length){let k=j;while(k<sorted.length-1&&sorted[k+1].c===sorted[k].c)k++;const tc=k-j+1;const avg=Math.round((Array.from({length:tc},(_,m)=>rank-m).reduce((s,v)=>s+v,0)/tc)*10)/10;for(let m=j;m<=k;m++)pointValues[sorted[m].i]=avg;rank-=tc;j=k+1;}
+  }
+  const rows = attempts.map(a => {
+    const tokenMap = a.token_assignments||{};
+    const doublesArr = a.doubles||[];
+    let total = 0;
+    const cells = questions.map((q,i) => {
+      const raw = (a.answers[i]||'').toString().trim();
+      const blank = raw==='';
+      const correct = !blank && q.acceptedAnswers.some(ac=>normalize(ac)===normalize(raw));
+      const token = tokenMap[i]||(doublesArr.includes(i)?'doubler':null);
+      const pts = pointValues[i];
+      let earned = 0;
+      if(!blank){
+        if(token==='doubler') earned=correct?Math.round(pts*2*10)/10:0;
+        else if(token==='insurance') earned=correct?pts:Math.round((pts/2)*10)/10;
+        else if(token==='sniper') earned=correct?SNIPER_POINTS:0;
+        else if(token==='parasite') earned=correct?pts:(attempts.length>0?Math.round((correctCounts[i]*pts/attempts.length)*10)/10:0);
+        else earned=correct?pts:0;
+      }
+      total=Math.round((total+earned)*10)/10;
+      return {raw,blank,correct,token,pts,earned};
+    });
+    return {uid:a.user_id,name:nameMap[a.user_id]||a.user_id,cells,total};
+  });
+  rows.sort((a,b)=>b.total-a.total);
+  const tokenLabel={doubler:'2×',insurance:'INS',sniper:'SNP',parasite:'PAR'};
+  const tokenClass={doubler:'tok-doubler',insurance:'tok-insurance',sniper:'tok-sniper',parasite:'tok-parasite'};
+  let html='<table><thead><tr><th>User</th>';
+  for(let i=0;i<N;i++) html+='<th>Q'+(i+1)+'<br><span style="color:#8899aa;font-weight:400">'+pointValues[i]+'pt</span></th>';
+  html+='<th>Total</th></tr><tr><th style="font-size:11px;color:#8899aa">correct→</th>';
+  for(let i=0;i<N;i++) html+='<th>'+correctCounts[i]+'/'+attempts.length+'</th>';
+  html+='<th></th></tr></thead><tbody>';
+  rows.forEach(row=>{
+    html+='<tr><td>'+row.name+'</td>';
+    row.cells.forEach(c=>{
+      const cls=c.blank?'blank':c.correct?'correct':'incorrect';
+      const mark=c.blank?'—':c.correct?'<span class="tick">✓</span>':'<span class="cross">✗</span>';
+      const tok=c.token?'<span class="token '+tokenClass[c.token]+'">'+tokenLabel[c.token]+'</span>':'';
+      html+='<td class="'+cls+'">'+mark+' '+tok+'<span class="pts">'+c.earned+'</span><span class="ans" title="'+c.raw+'">'+(c.blank?'':c.raw.substring(0,15))+'</span></td>';
+    });
+    html+='<td>'+row.total+'</td></tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('output').innerHTML=html;
+  status.textContent='Loaded '+rows.length+' submissions · point values '+(storedPointValues?'from stored results':'computed live');
+}
+load().catch(e=>{document.getElementById('status').textContent='Error: '+e.message;});
+<\/script>
+</body>
+</html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  };
+
   const runAudit = async (quizKey) => {
     if (!quizKey) return;
     setAuditLoading(true);
@@ -4193,7 +4340,8 @@ const QuizApp = () => {
             <div className="bg-white rounded-xl shadow-md p-5">
               <h2 className="text-lg font-bold text-gray-800 mb-3">Score Auditor {auditLoading && <span className="text-sm font-normal text-gray-400 ml-2">Loading…</span>}</h2>
               <p className="text-sm text-gray-500 mb-4">Select a season and quiz to see a full breakdown of every calculation — difficulty ranking, token effects, per-user scores, and season points.</p>
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+                <div className="flex items-center gap-3 flex-wrap">
                 {/* Step 1: season */}
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Season</label>
@@ -4212,11 +4360,17 @@ const QuizApp = () => {
                     <select value={auditQuizKey} onChange={e=>{const k=e.target.value;setAuditQuizKey(k);setAuditData(null);setAuditExpandedUser(null);setAuditAttempts([]);setConfirmDeleteAttempt(null);if(k){fetchAuditAttempts(k);const q=allQuizData[k];if(q?.status==='Scored'){runAudit(k);}}}} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-64">
                       <option value="">— Select a quiz —</option>
                       {Object.entries(allQuizData).filter(([,q])=>(q.status==='Scored'||q.status==='Active')&&q.category===auditSeason).sort((a,b)=>(a[1].title||a[0]).localeCompare(b[1].title||b[0])).map(([key,q])=>(
-                        <option key={key} value={key}>{q.title||key} {q.status==='Active'?'(Active)':''}</option>
+                        <option key={key} value={key}>{q.title||key} {q.status==='Active'?'(Active)':q.status==='Scored'?'(Scored)':''}</option>
                       ))}
                     </select>
                   </div>
                 )}
+              </div>
+                <button
+                  disabled={!auditData}
+                  onClick={()=>openScoringGrid(auditQuizKey)}
+                  className="px-4 py-2 bg-gray-700 text-white rounded-lg font-medium text-sm hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                >Scoring Grid</button>
               </div>
             </div>
 
