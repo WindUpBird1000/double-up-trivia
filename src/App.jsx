@@ -3795,7 +3795,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                 </select>
               </div>
             </div>
-            {knownQuizzes.quizzes.filter(key=>{const q=allQuizData[key];if(!q)return false;const seasonOk=adminSeasonFilter==='All'||(q.category||'')===adminSeasonFilter;const typeOk=adminTypeFilter==='All'||(q.type||'')===adminTypeFilter;const statusOk=adminStatusFilter==='All'||(q.status||'Active')===adminStatusFilter;return seasonOk&&typeOk&&statusOk;}).map(key=>{
+            {knownQuizzes.quizzes.filter(key=>{const q=allQuizData[key];if(!q)return false;const seasonOk=adminSeasonFilter==='All'||(q.category||'')===adminSeasonFilter;const typeOk=adminTypeFilter==='All'||(q.type||'')===adminTypeFilter;const statusOk=adminStatusFilter==='All'||(q.status||'Active')===adminStatusFilter;return seasonOk&&typeOk&&statusOk;}).sort((a,b)=>(allQuizData[a]?.title||a).localeCompare(allQuizData[b]?.title||b)).map(key=>{
               const quiz=allQuizData[key];if(!quiz)return null;
               const qType=quiz.type||'fillintheblank';
               const itemCount=qType==='fillintheblank'?quiz.sentences?.length:quiz.questions?.length;
