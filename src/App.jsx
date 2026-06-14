@@ -1069,6 +1069,8 @@ const QuizApp = () => {
   const [auditAttemptsLoading, setAuditAttemptsLoading] = useState(false);
   const [auditSeason, setAuditSeason] = useState('');
   const [auditExpandedUser, setAuditExpandedUser] = useState(null);
+  const [confirmAcceptAnswer, setConfirmAcceptAnswer] = useState(null);
+  const [acceptingAnswer, setAcceptingAnswer] = useState(false);
   const [auditData, setAuditData] = useState(null);
   const [auditLoading, setAuditLoading] = useState(false);
   const [newQuizTypeSelector, setNewQuizTypeSelector] = useState('openresponse');
@@ -2319,6 +2321,54 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
 
     setAuditData({ quizKey, quizTitle: quiz.title || quizKey, season, questions, rankingRows, userRows, n, totalAttempts, isDashQuiz, isMNQuiz });
     setAuditLoading(false);
+  };
+
+  const acceptDisputedAnswer = async (quizKey, qi, rawAnswer) => {
+    setAcceptingAnswer(true);
+    // Re-fetch the quiz's current data/status from Supabase — don't trust local state which may be stale
+    const { data: quizRow } = await supabase.from('quizzes').select('status, category, title, type, data').eq('quiz_key', quizKey).single();
+    if (!quizRow) { setAcceptingAnswer(false); setConfirmAcceptAnswer(null); return; }
+    const quiz = quizRow.data;
+    const q = quiz.questions[qi];
+    const trimmed = (rawAnswer || '').trim();
+    // Avoid adding a duplicate (case/whitespace-insensitive)
+    const alreadyAccepted = q.acceptedAnswers.some(ac => normalizeAnswer(ac) === normalizeAnswer(trimmed));
+    if (!alreadyAccepted && trimmed) {
+      q.acceptedAnswers = [...q.acceptedAnswers, trimmed];
+      await supabase.from('quizzes').update({ data: quiz }).eq('quiz_key', quizKey);
+      setAllQuizData(p => ({ ...p, [quizKey]: { ...quiz, status: quizRow.status, title: quizRow.title, category: quizRow.category, type: quizRow.type } }));
+    }
+    // If the quiz is already Scored, rescore everyone now that this answer counts
+    if (quizRow.status === 'Scored') {
+      const { data: remainingAttempts } = await supabase
+        .from('quiz_attempts')
+        .select('*')
+        .eq('quiz_key', quizKey)
+        .eq('status', 'submitted');
+      if (remainingAttempts && remainingAttempts.length > 0) {
+        const uids = remainingAttempts.map(a => a.user_id);
+        const { data: profs } = await supabase.from('profiles').select('user_id, display_name').in('user_id', uids);
+        const nm = {}; (profs||[]).forEach(p => { nm[p.user_id] = p.display_name; });
+        const attemptsWithNames = remainingAttempts.map(a => ({
+          ...a,
+          display_name: nm[a.user_id] || a.user_id,
+          correctness: scoreAttempt(quiz, a.answers || {}),
+        }));
+        const { pointValues, userScores, correctnessByUser, correctCounts, ddPointsByUser, isDashQuiz } = computeQuizResults(quiz, attemptsWithNames);
+        await supabase.from('quiz_results').upsert({
+          quiz_key: quizKey,
+          quiz_title: quiz.title,
+          posted_at: new Date().toISOString(),
+          scores: { pointValues, userScores, correctnessByUser, correctCounts, ...(isDashQuiz ? { ddPointsByUser } : {}) },
+        }, { onConflict: 'quiz_key' });
+        await updateSeasonStandings(quizRow.category, quizKey, userScores);
+      }
+    }
+    // Refresh the attempts list and audit data
+    await fetchAuditAttempts(quizKey);
+    if (quizRow.status === 'Scored') await runAudit(quizKey);
+    setAcceptingAnswer(false);
+    setConfirmAcceptAnswer(null);
   };
 
   const deleteAttempt = async (userId, quizKey) => {
@@ -4487,7 +4537,15 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                                               {isMN && <td className="py-2 px-3 text-center text-gray-500">{cluesUsed||'—'}</td>}
                                               {isDash && <td className="py-2 px-3 text-center text-gray-500">{q?getCorrectAns(q):'—'}</td>}
                                               <td className="py-2 px-3 text-center text-gray-700">{theirAns}</td>
-                                              {!isDash && <td className="py-2 px-3 text-center font-bold">{correct===true?<span className="text-green-600">✓</span>:correct===false?<span className="text-red-500">✗</span>:<span className="text-gray-400">—</span>}</td>}
+                                              {!isDash && <td className="py-2 px-3 text-center font-bold">{correct===true?<span className="text-green-600">✓</span>:correct===false?(
+                                                (isOR||isMN) && theirAns!=='—' ? (
+                                                  <button
+                                                    onClick={()=>setConfirmAcceptAnswer({userId:attempt.user_id, displayName:attempt.display_name, quizKey:auditQuizKey, qi, answer:theirAns, qPrompt: q?.clues?q.clues[0]:(q?.prompt||q?.text||'')})}
+                                                    className="text-red-500 hover:text-green-600 underline cursor-pointer"
+                                                    title="Mark this answer as correct for everyone"
+                                                  >✗</button>
+                                                ) : <span className="text-red-500">✗</span>
+                                              ):<span className="text-gray-400">—</span>}</td>}
                                               {isScored && <td className="py-2 px-3 text-center font-semibold text-gray-700">{pts??'—'}</td>}
                                             </tr>
                                           ))}
@@ -4729,6 +4787,22 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               <div className="px-5 pb-5 flex gap-3">
                 <button onClick={copyToClipboard} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-center">Copy to Clipboard</button>
                 <button onClick={()=>setShowExportModal(false)} className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {confirmAcceptAnswer&&(
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{background:"rgba(0,0,0,0.4)"}}>
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+              <h2 className="text-lg font-bold text-gray-800 mb-2">Mark as Correct?</h2>
+              <p className="text-gray-600 text-sm mb-1"><strong>{confirmAcceptAnswer.displayName}</strong> answered:</p>
+              <p className="text-gray-800 font-semibold mb-3">"{confirmAcceptAnswer.answer}"</p>
+              <p className="text-gray-600 text-sm mb-1">for:</p>
+              <p className="text-gray-700 text-sm mb-4 italic">{confirmAcceptAnswer.qPrompt}</p>
+              <p className="text-sm text-blue-700 mb-5">This will add "{confirmAcceptAnswer.answer}" to the accepted answers for this question — counting it correct for {confirmAcceptAnswer.displayName} <strong>and anyone else</strong> who gave the same answer{allQuizData[confirmAcceptAnswer.quizKey]?.status==='Scored' ? ', and will rescore the quiz.' : '.'}</p>
+              <div className="flex gap-3">
+                <button onClick={()=>acceptDisputedAnswer(confirmAcceptAnswer.quizKey, confirmAcceptAnswer.qi, confirmAcceptAnswer.answer)} disabled={acceptingAnswer} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-40">{acceptingAnswer?'Saving…':'Yes, Mark Correct'}</button>
+                <button onClick={()=>setConfirmAcceptAnswer(null)} disabled={acceptingAnswer} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium disabled:opacity-40">Cancel</button>
               </div>
             </div>
           </div>
