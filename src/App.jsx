@@ -1121,6 +1121,7 @@ const QuizApp = () => {
   const combPromptRef = React.useRef(null);
   const [mnQuestions, setMnQuestions] = useState([emptyMNQuestion()]);
   const [mnCurrentIndex, setMnCurrentIndex] = useState(0);
+  const mnCluePromptRefs = [React.useRef(null), React.useRef(null), React.useRef(null), React.useRef(null)];
   const [mnAnswerInput, setMnAnswerInput] = useState('');
   // MN assessment state
   const [mnCluesRevealed, setMnCluesRevealed] = useState({}); // questionIndex -> number of clues shown (1-4)
@@ -3826,7 +3827,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                     <ol className="mt-3 space-y-2 list-decimal list-inside">
                       {qType==='fillintheblank'
                         ?quiz.sentences?.map((s,i)=><li key={i} className="text-sm text-gray-700">{s.text}</li>)
-                        :quiz.questions?.map((q,i)=><li key={i} className="text-sm text-gray-700">{qType==='combination'?<span><span className={`inline-block mr-2 px-1.5 py-0.5 rounded text-xs font-bold ${q.questionType==='MC'?'bg-purple-100 text-purple-700':q.questionType==='OR'?'bg-orange-100 text-orange-700':'bg-blue-100 text-blue-700'}`}>{shortTypeLabel(q.questionType)}</span>{q.prompt||q.text}</span>:q.prompt}</li>)
+                        :quiz.questions?.map((q,i)=><li key={i} className="text-sm text-gray-700">{qType==='combination'?<span><span className={`inline-block mr-2 px-1.5 py-0.5 rounded text-xs font-bold ${q.questionType==='MC'?'bg-purple-100 text-purple-700':q.questionType==='OR'?'bg-orange-100 text-orange-700':'bg-blue-100 text-blue-700'}`}>{shortTypeLabel(q.questionType)}</span>{renderInlineFormatting(q.prompt||q.text||'')}</span>:qType==='mysterynoun'?renderInlineFormatting(q.clues?.[0]||''):renderInlineFormatting(q.prompt||'')}</li>)
                       }
                     </ol>
                   </details>
@@ -4220,7 +4221,9 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                       <label className="block text-sm font-medium text-gray-600 mb-1">
                         Clue {ci+1} {ci===0&&<span className="text-red-500">*</span>} <span className="text-xs text-gray-400 font-normal">({MN_POINTS[ci]} pts if answered here)</span>
                       </label>
+                      <FormatToolbar textareaRef={mnCluePromptRefs[ci]} value={mnQ.clues[ci]||''} onChange={v=>updateMNClue(ci,v)}/>
                       <textarea
+                        ref={mnCluePromptRefs[ci]}
                         value={mnQ.clues[ci]||''}
                         onChange={e=>updateMNClue(ci,e.target.value)}
                         placeholder={`Clue ${ci+1}...`}
@@ -4679,7 +4682,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                         {[0,1,2,3].map(ci => previewQ.clues[ci]?.trim() && (
                           <div key={ci} className="mb-3">
                             <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Clue {ci+1} · {MN_POINTS[ci]} pts</p>
-                            <p className="text-base text-gray-800">{previewQ.clues[ci]}</p>
+                            <p className="text-base text-gray-800">{renderPrompt(previewQ.clues[ci])}</p>
                           </div>
                         ))}
                       </>
