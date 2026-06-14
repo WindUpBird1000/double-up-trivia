@@ -1571,6 +1571,9 @@ const QuizApp = () => {
     const { data, error } = await supabase.auth.signUp({ email: newUserEmail.trim(), password: newUserPassword.trim() });
     if (error || !data?.user) { setUserMsg('Error: ' + (error?.message || 'unknown')); setTimeout(() => setUserMsg(''), 4000); setNewUserSaving(false); return; }
     await supabase.from('profiles').insert({ user_id: data.user.id, email: newUserEmail.trim(), display_name: newUserDisplayName.trim(), password: newUserPassword.trim() });
+    // signUp() automatically signs the new account in on this browser — sign that out
+    // immediately so it doesn't leave a leftover session for the admin.
+    await supabase.auth.signOut();
     setNewUserEmail(''); setNewUserPassword(''); setNewUserDisplayName(''); setShowAddUser(false);
     setNewUserSaving(false);
     setUserMsg('User added!'); setTimeout(() => setUserMsg(''), 2000);
