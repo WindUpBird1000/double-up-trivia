@@ -1016,12 +1016,21 @@ const QuizApp = () => {
   const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
+    // Check for an admin audit deep link (e.g. from a dispute email)
+    const params = new URLSearchParams(window.location.search);
+    const auditKey = params.get('audit');
+    const hasAuditDeepLink = !!auditKey;
+    if (hasAuditDeepLink) {
+      setPendingAuditDeepLink({ quizKey: auditKey, season: params.get('season') || '' });
+      setMode('admin');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     // Restore session on page load
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         setCurrentUser(session.user);
         await fetchUserData(session.user);
-        setMode('setup'); // session restore skips message check
+        if (!hasAuditDeepLink) setMode('setup'); // session restore skips message check
       }
     });
     // Load quizzes from Supabase
@@ -1068,6 +1077,7 @@ const QuizApp = () => {
   const [auditAttempts, setAuditAttempts] = useState([]); // raw attempts for selected quiz
   const [auditAttemptsLoading, setAuditAttemptsLoading] = useState(false);
   const [auditSeason, setAuditSeason] = useState('');
+  const [pendingAuditDeepLink, setPendingAuditDeepLink] = useState(null);
   const [auditExpandedUser, setAuditExpandedUser] = useState(null);
   const [confirmAcceptAnswer, setConfirmAcceptAnswer] = useState(null);
   const [acceptingAnswer, setAcceptingAnswer] = useState(false);
@@ -1206,6 +1216,23 @@ const QuizApp = () => {
   };
 
   useEffect(() => { if (adminSection === 'users') loadUsers(); }, [adminSection]);
+
+  // Handle pending audit deep link (from a dispute email) once admin logs in and quiz data is loaded
+  useEffect(() => {
+    if (isAdminAuthenticated && pendingAuditDeepLink && Object.keys(allQuizData).length > 0) {
+      const { quizKey, season } = pendingAuditDeepLink;
+      const quiz = allQuizData[quizKey];
+      setAdminSection('audit');
+      setAuditSeason(season || quiz?.category || '');
+      setAuditQuizKey(quizKey);
+      setAuditData(null); setAuditExpandedUser(null); setAuditAttempts([]); setConfirmDeleteAttempt(null);
+      if (quizKey) {
+        fetchAuditAttempts(quizKey);
+        if (quiz?.status === 'Scored') runAudit(quizKey);
+      }
+      setPendingAuditDeepLink(null);
+    }
+  }, [isAdminAuthenticated, pendingAuditDeepLink, allQuizData]);
 
   const usedWords = Object.values(studentAnswers);
   const selectWord = (word) => {
@@ -1351,10 +1378,11 @@ const QuizApp = () => {
       return `Q${parseInt(i)+1}: ${getPromptPreview(q)}\nYour answer: ${ans}\nCorrect answer: ${getCorrectAnswerDisplay(q)}\nReason: ${reason}`;
     }).join('\n\n');
     try {
+      const auditLink = `https://doubleuptrivia.com/?audit=${encodeURIComponent(selectedQuizKey)}&season=${encodeURIComponent(activeQuiz?.category||'')}`;
       await sendNotification(
         'doubleuptrivia@gmail.com',
         `Score Dispute — ${activeQuiz?.title} from ${displayName || currentUser?.email}`,
-        `${displayName || currentUser?.email} is disputing the following question(s) on "${activeQuiz?.title}":\n\n${disputeText}`
+        `${displayName || currentUser?.email} is disputing the following question(s) on "${activeQuiz?.title}":\n\n${disputeText}\n\nOpen this quiz in the Score Auditor: ${auditLink}`
       );
       setSubmittedDisputes(prev => [...prev, ...disputeList.map(Number)]);
       setDisputedQuestions({});
