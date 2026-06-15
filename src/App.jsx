@@ -1395,12 +1395,6 @@ const QuizApp = () => {
     const handleSendDisputes = async () => {
     setDisputeSending(true);
     const disputeList = Object.keys(disputedQuestions).filter(i => disputedQuestions[i]);
-    const disputeText = disputeList.map(i => {
-      const q = activeQuestions[parseInt(i)];
-      const reason = disputeReasons[i] || '(no reason given)';
-      const ans = activeQuiz?.type==='mysterynoun' ? (()=>{const ad=studentAnswers[parseInt(i)]||{};return typeof ad==='object'?(ad.answer||'(no answer)'):(ad||'(no answer)');})() : getAnswerDisplay(q, parseInt(i));
-      return `Q${parseInt(i)+1}: ${getPromptPreviewPlain(q)}\nYour answer: ${ans}\nCorrect answer: ${getCorrectAnswerDisplay(q)}\nReason: ${reason}`;
-    }).join('\n\n');
     const disputeRows = disputeList.map(i => {
       const idx = parseInt(i);
       const q = activeQuestions[idx];
@@ -1419,23 +1413,14 @@ const QuizApp = () => {
       };
     });
     try {
-      await supabase.from('disputes').insert(disputeRows);
-    } catch(e) {
-      console.error('Dispute table insert error:', e);
-    }
-    try {
-      const auditLink = `https://doubleuptrivia.com/?audit=${encodeURIComponent(selectedQuizKey)}&season=${encodeURIComponent(activeQuiz?.category||'')}`;
-      await sendNotification(
-        'doubleuptrivia@gmail.com',
-        `Score Dispute — ${activeQuiz?.title} from ${displayName || currentUser?.email}`,
-        `${displayName || currentUser?.email} is disputing the following question(s) on "${activeQuiz?.title}":\n\n${disputeText}\n\nOpen this quiz in the Score Auditor: ${auditLink}`
-      );
+      const { error } = await supabase.from('disputes').insert(disputeRows);
+      if (error) throw error;
       setSubmittedDisputes(prev => [...prev, ...disputeList.map(Number)]);
       setDisputedQuestions({});
       setDisputeReasons({});
       alert('Your dispute has been sent!');
     } catch(e) {
-      console.error('Dispute send error:', e);
+      console.error('Dispute insert error:', e);
       alert('Could not send disputes. Please try again or email doubleuptrivia@gmail.com directly.');
     } finally {
       setDisputeSending(false);
@@ -4945,12 +4930,12 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                 <p className="text-sm text-gray-500 mb-1"><strong>{current.display_name}</strong> — Q{current.question_index+1}</p>
                 <p className="text-gray-800 font-medium mb-3">{current.question_text}</p>
                 <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-red-500 uppercase mb-1">Their Answer</p>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Their Answer</p>
                     <p className="text-sm font-semibold text-gray-800">{current.user_answer || '(blank)'}</p>
                   </div>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-green-600 uppercase mb-1">Correct Answer</p>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Correct Answer</p>
                     <p className="text-sm font-semibold text-gray-800">{current.correct_answer_display}</p>
                   </div>
                 </div>
