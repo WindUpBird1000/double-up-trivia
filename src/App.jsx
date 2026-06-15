@@ -1,6 +1,6 @@
 // v2.1
 import React, { useState, useEffect } from 'react';
-import { Check, X, ChevronLeft, ChevronRight, Settings, BookOpen, LogOut, Plus, Trash2, Download, Edit2, Star, List } from 'lucide-react';
+import { Check, X, ChevronLeft, ChevronRight, Settings, BookOpen, LogOut, Plus, Trash2, Download, Edit2, Star, List, AlertTriangle } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -1089,8 +1089,12 @@ const QuizApp = () => {
   const [auditSeason, setAuditSeason] = useState('');
   const [pendingAuditDeepLink, setPendingAuditDeepLink] = useState(null);
   const [auditExpandedUser, setAuditExpandedUser] = useState(null);
-  const [confirmAcceptAnswer, setConfirmAcceptAnswer] = useState(null);
-  const [acceptingAnswer, setAcceptingAnswer] = useState(false);
+  const [disputeCounts, setDisputeCounts] = useState({}); // quiz_key -> pending dispute count
+  const [disputeResolutionQuizKey, setDisputeResolutionQuizKey] = useState(null);
+  const [disputeQueue, setDisputeQueue] = useState([]); // pending dispute rows for the quiz being resolved
+  const [disputeQueueIndex, setDisputeQueueIndex] = useState(0);
+  const [resolvingDispute, setResolvingDispute] = useState(false);
+  const [pendingScoredSave, setPendingScoredSave] = useState(false); // true if the Scored-gate is showing
   const [auditData, setAuditData] = useState(null);
   const [auditLoading, setAuditLoading] = useState(false);
   const [newQuizTypeSelector, setNewQuizTypeSelector] = useState('openresponse');
@@ -1226,6 +1230,7 @@ const QuizApp = () => {
   };
 
   useEffect(() => { if (adminSection === 'users') loadUsers(); }, [adminSection]);
+  useEffect(() => { if (isAdminAuthenticated) fetchDisputeCounts(); }, [isAdminAuthenticated]);
 
   // Handle pending audit deep link (from a dispute email) once admin logs in and quiz data is loaded
   useEffect(() => {
@@ -1396,6 +1401,28 @@ const QuizApp = () => {
       const ans = activeQuiz?.type==='mysterynoun' ? (()=>{const ad=studentAnswers[parseInt(i)]||{};return typeof ad==='object'?(ad.answer||'(no answer)'):(ad||'(no answer)');})() : getAnswerDisplay(q, parseInt(i));
       return `Q${parseInt(i)+1}: ${getPromptPreviewPlain(q)}\nYour answer: ${ans}\nCorrect answer: ${getCorrectAnswerDisplay(q)}\nReason: ${reason}`;
     }).join('\n\n');
+    const disputeRows = disputeList.map(i => {
+      const idx = parseInt(i);
+      const q = activeQuestions[idx];
+      const reason = disputeReasons[i] || '(no reason given)';
+      const ans = activeQuiz?.type==='mysterynoun' ? (()=>{const ad=studentAnswers[idx]||{};return typeof ad==='object'?(ad.answer||''):(ad||'');})() : (getAnswerDisplay(q, idx)==='—' ? '' : getAnswerDisplay(q, idx));
+      return {
+        quiz_key: selectedQuizKey,
+        user_id: currentUser?.id,
+        display_name: displayName || currentUser?.email,
+        question_index: idx,
+        question_text: getPromptPreviewPlain(q),
+        user_answer: ans,
+        correct_answer_display: getCorrectAnswerDisplay(q),
+        reason,
+        status: 'pending',
+      };
+    });
+    try {
+      await supabase.from('disputes').insert(disputeRows);
+    } catch(e) {
+      console.error('Dispute table insert error:', e);
+    }
     try {
       const auditLink = `https://doubleuptrivia.com/?audit=${encodeURIComponent(selectedQuizKey)}&season=${encodeURIComponent(activeQuiz?.category||'')}`;
       await sendNotification(
@@ -2376,52 +2403,89 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
     setAuditLoading(false);
   };
 
-  const acceptDisputedAnswer = async (quizKey, qi, rawAnswer) => {
-    setAcceptingAnswer(true);
-    // Re-fetch the quiz's current data/status from Supabase — don't trust local state which may be stale
-    const { data: quizRow } = await supabase.from('quizzes').select('status, category, title, type, data').eq('quiz_key', quizKey).single();
-    if (!quizRow) { setAcceptingAnswer(false); setConfirmAcceptAnswer(null); return; }
-    const quiz = quizRow.data;
-    const q = quiz.questions[qi];
-    const trimmed = (rawAnswer || '').trim();
-    // Avoid adding a duplicate (case/whitespace-insensitive)
-    const alreadyAccepted = q.acceptedAnswers.some(ac => normalizeAnswer(ac) === normalizeAnswer(trimmed));
-    if (!alreadyAccepted && trimmed) {
-      q.acceptedAnswers = [...q.acceptedAnswers, trimmed];
-      await supabase.from('quizzes').update({ data: quiz }).eq('quiz_key', quizKey);
-      setAllQuizData(p => ({ ...p, [quizKey]: { ...quiz, status: quizRow.status, title: quizRow.title, category: quizRow.category, type: quizRow.type } }));
-    }
-    // If the quiz is already Scored, rescore everyone now that this answer counts
-    if (quizRow.status === 'Scored') {
-      const { data: remainingAttempts } = await supabase
-        .from('quiz_attempts')
-        .select('*')
-        .eq('quiz_key', quizKey)
-        .eq('status', 'submitted');
-      if (remainingAttempts && remainingAttempts.length > 0) {
-        const uids = remainingAttempts.map(a => a.user_id);
-        const { data: profs } = await supabase.from('profiles').select('user_id, display_name').in('user_id', uids);
-        const nm = {}; (profs||[]).forEach(p => { nm[p.user_id] = p.display_name; });
-        const attemptsWithNames = remainingAttempts.map(a => ({
-          ...a,
-          display_name: nm[a.user_id] || a.user_id,
-          correctness: scoreAttempt(quiz, a.answers || {}),
-        }));
-        const { pointValues, userScores, correctnessByUser, correctCounts, ddPointsByUser, isDashQuiz } = computeQuizResults(quiz, attemptsWithNames);
-        await supabase.from('quiz_results').upsert({
-          quiz_key: quizKey,
-          quiz_title: quiz.title,
-          posted_at: new Date().toISOString(),
-          scores: { pointValues, userScores, correctnessByUser, correctCounts, ...(isDashQuiz ? { ddPointsByUser } : {}) },
-        }, { onConflict: 'quiz_key' });
-        await updateSeasonStandings(quizRow.category, quizKey, userScores);
+  // Fetch pending dispute counts for all quizzes (used for the admin list badge)
+  const fetchDisputeCounts = async () => {
+    const { data } = await supabase.from('disputes').select('quiz_key').eq('status', 'pending');
+    const counts = {};
+    (data || []).forEach(d => { counts[d.quiz_key] = (counts[d.quiz_key] || 0) + 1; });
+    setDisputeCounts(counts);
+  };
+
+  // Open the dispute resolution popup for a quiz — loads all pending disputes
+  const openDisputeResolution = async (quizKey) => {
+    const { data } = await supabase.from('disputes').select('*').eq('quiz_key', quizKey).eq('status', 'pending').order('created_at', { ascending: true });
+    if (!data || data.length === 0) { setDisputeCounts(p => ({ ...p, [quizKey]: 0 })); return; }
+    setDisputeResolutionQuizKey(quizKey);
+    setDisputeQueue(data);
+    setDisputeQueueIndex(0);
+  };
+
+  // Resolve the current dispute in the queue (and any identical pending disputes for the same question)
+  const resolveDispute = async (resolution) => { // 'accepted' | 'denied'
+    const current = disputeQueue[disputeQueueIndex];
+    if (!current) return;
+    setResolvingDispute(true);
+
+    const quizKey = current.quiz_key;
+    const qi = current.question_index;
+    const userAnswerNorm = normalizeAnswer(current.user_answer);
+
+    // Find all still-pending disputes for this quiz+question with an identical (normalized) answer
+    const matchingIds = disputeQueue
+      .filter(d => d.status !== 'resolved' && d.quiz_key === quizKey && d.question_index === qi && normalizeAnswer(d.user_answer) === userAnswerNorm)
+      .map(d => d.id);
+    // Always include the current one even if it's somehow not in the filtered set
+    if (!matchingIds.includes(current.id)) matchingIds.push(current.id);
+
+    // If accepting, add the answer to acceptedAnswers (once, for the quiz)
+    if (resolution === 'accepted') {
+      const { data: quizRow } = await supabase.from('quizzes').select('status, category, title, type, data').eq('quiz_key', quizKey).single();
+      if (quizRow) {
+        const quiz = quizRow.data;
+        const q = quiz.questions[qi];
+        const trimmed = (current.user_answer || '').trim();
+        const alreadyAccepted = q.acceptedAnswers.some(ac => normalizeAnswer(ac) === normalizeAnswer(trimmed));
+        if (!alreadyAccepted && trimmed) {
+          q.acceptedAnswers = [...q.acceptedAnswers, trimmed];
+          await supabase.from('quizzes').update({ data: quiz }).eq('quiz_key', quizKey);
+          setAllQuizData(p => ({ ...p, [quizKey]: { ...quiz, status: quizRow.status, title: quizRow.title, category: quizRow.category, type: quizRow.type } }));
+        }
+        // Defensive: if the quiz is somehow already Scored, rescore now that this answer counts
+        if (quizRow.status === 'Scored') {
+          const { data: remainingAttempts } = await supabase.from('quiz_attempts').select('*').eq('quiz_key', quizKey).eq('status', 'submitted');
+          if (remainingAttempts && remainingAttempts.length > 0) {
+            const uids = remainingAttempts.map(a => a.user_id);
+            const { data: profs } = await supabase.from('profiles').select('user_id, display_name').in('user_id', uids);
+            const nm = {}; (profs||[]).forEach(p => { nm[p.user_id] = p.display_name; });
+            const attemptsWithNames = remainingAttempts.map(a => ({ ...a, display_name: nm[a.user_id] || a.user_id, correctness: scoreAttempt(quiz, a.answers || {}) }));
+            const { pointValues, userScores, correctnessByUser, correctCounts, ddPointsByUser, isDashQuiz } = computeQuizResults(quiz, attemptsWithNames);
+            await supabase.from('quiz_results').upsert({ quiz_key: quizKey, quiz_title: quiz.title, posted_at: new Date().toISOString(), scores: { pointValues, userScores, correctnessByUser, correctCounts, ...(isDashQuiz ? { ddPointsByUser } : {}) } }, { onConflict: 'quiz_key' });
+            await updateSeasonStandings(quizRow.category, quizKey, userScores);
+          }
+        }
       }
     }
-    // Refresh the attempts list and audit data
-    await fetchAuditAttempts(quizKey);
-    if (quizRow.status === 'Scored') await runAudit(quizKey);
-    setAcceptingAnswer(false);
-    setConfirmAcceptAnswer(null);
+
+    // Mark all matching disputes (including cascaded duplicates) as resolved
+    await supabase.from('disputes').update({ status: 'resolved', resolution, resolved_at: new Date().toISOString() }).in('id', matchingIds);
+
+    // Remove resolved disputes from the local queue and advance
+    const remainingQueue = disputeQueue.filter(d => !matchingIds.includes(d.id));
+    setDisputeQueue(remainingQueue);
+    setDisputeCounts(p => ({ ...p, [quizKey]: remainingQueue.length }));
+    if (remainingQueue.length === 0) {
+      setDisputeResolutionQuizKey(null);
+      setDisputeQueueIndex(0);
+    } else if (disputeQueueIndex >= remainingQueue.length) {
+      setDisputeQueueIndex(remainingQueue.length - 1);
+    }
+    setResolvingDispute(false);
+  };
+
+  const closeDisputeResolution = () => {
+    setDisputeResolutionQuizKey(null);
+    setDisputeQueue([]);
+    setDisputeQueueIndex(0);
   };
 
   const deleteAttempt = async (userId, quizKey) => {
@@ -2471,6 +2535,22 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
     const saveQuizLocally = async () => {
     if (!validateQuizBuilder()) return;
     const quizData = buildQuizJSON();
+
+    // Gate: cannot mark a quiz Scored while it has unresolved disputes
+    if (editingKey && quizData.status === 'Scored') {
+      const { data: pendingDisputes } = await supabase.from('disputes').select('id').eq('quiz_key', editingKey).eq('status', 'pending');
+      const pendingCount = (pendingDisputes || []).length;
+      if (pendingCount > 0) {
+        setDisputeCounts(p => ({ ...p, [editingKey]: pendingCount }));
+        const resolveNow = window.confirm(`You cannot change the status of this quiz to Scored; there ${pendingCount===1?'is':'are'} ${pendingCount} unresolved dispute${pendingCount!==1?'s':''}. Resolve ${pendingCount===1?'it':'them'} now?`);
+        if (resolveNow) {
+          openDisputeResolution(editingKey);
+        } else {
+          setNewQuizStatus('Active');
+        }
+        return;
+      }
+    }
 
     // For new quizzes, auto-generate a unique slug from the title.
     // For edits, keep the existing key unchanged forever.
@@ -3910,6 +3990,11 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="text-xl font-bold text-gray-800">{quiz.title}</h3>
+                      {disputeCounts[key] > 0 && (
+                        <button onClick={()=>openDisputeResolution(key)} className="flex items-center gap-1.5 mt-1 mb-1 px-2 py-1 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100">
+                          <AlertTriangle size={14}/> {disputeCounts[key]} unresolved dispute{disputeCounts[key]!==1?'s':''}
+                        </button>
+                      )}
                       <p className="text-sm text-gray-500 mt-1 flex items-center gap-2 flex-wrap">
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${(quiz.status||'Active')==='Active'?'bg-green-100 text-green-700':(quiz.status||'Active')==='Scored'?'bg-purple-100 text-purple-700':'bg-gray-200 text-gray-500'}`}>{quiz.status||'Active'}</span>
                         {quiz.category&&<span className="inline-block bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-medium">{quiz.category}</span>}
@@ -4588,15 +4673,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                                               {isMN && <td className="py-2 px-3 text-center text-gray-500">{cluesUsed||'—'}</td>}
                                               {isDash && <td className="py-2 px-3 text-center text-gray-500">{q?getCorrectAns(q):'—'}</td>}
                                               <td className="py-2 px-3 text-center text-gray-700">{theirAns}</td>
-                                              {!isDash && <td className="py-2 px-3 text-center font-bold">{correct===true?<span className="text-green-600">✓</span>:correct===false?(
-                                                (isOR||isMN) && theirAns!=='—' ? (
-                                                  <button
-                                                    onClick={()=>setConfirmAcceptAnswer({userId:attempt.user_id, displayName:attempt.display_name, quizKey:auditQuizKey, qi, answer:theirAns, qPrompt: q?.clues?q.clues[0]:(q?.prompt||q?.text||'')})}
-                                                    className="text-red-500 hover:text-green-600 underline cursor-pointer"
-                                                    title="Mark this answer as correct for everyone"
-                                                  >✗</button>
-                                                ) : <span className="text-red-500">✗</span>
-                                              ):<span className="text-gray-400">—</span>}</td>}
+                                              {!isDash && <td className="py-2 px-3 text-center font-bold">{correct===true?<span className="text-green-600">✓</span>:correct===false?<span className="text-red-500">✗</span>:<span className="text-gray-400">—</span>}</td>}
                                               {isScored && <td className="py-2 px-3 text-center font-semibold text-gray-700">{pts??'—'}</td>}
                                             </tr>
                                           ))}
@@ -4842,22 +4919,6 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             </div>
           </div>
         )}
-        {confirmAcceptAnswer&&(
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{background:"rgba(0,0,0,0.4)"}}>
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-              <h2 className="text-lg font-bold text-gray-800 mb-2">Mark as Correct?</h2>
-              <p className="text-gray-600 text-sm mb-1"><strong>{confirmAcceptAnswer.displayName}</strong> answered:</p>
-              <p className="text-gray-800 font-semibold mb-3">"{confirmAcceptAnswer.answer}"</p>
-              <p className="text-gray-600 text-sm mb-1">for:</p>
-              <p className="text-gray-700 text-sm mb-4 italic">{confirmAcceptAnswer.qPrompt}</p>
-              <p className="text-sm text-blue-700 mb-5">This will add "{confirmAcceptAnswer.answer}" to the accepted answers for this question — counting it correct for {confirmAcceptAnswer.displayName} <strong>and anyone else</strong> who gave the same answer{allQuizData[confirmAcceptAnswer.quizKey]?.status==='Scored' ? ', and will rescore the quiz.' : '.'}</p>
-              <div className="flex gap-3">
-                <button onClick={()=>acceptDisputedAnswer(confirmAcceptAnswer.quizKey, confirmAcceptAnswer.qi, confirmAcceptAnswer.answer)} disabled={acceptingAnswer} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-40">{acceptingAnswer?'Saving…':'Yes, Mark Correct'}</button>
-                <button onClick={()=>setConfirmAcceptAnswer(null)} disabled={acceptingAnswer} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium disabled:opacity-40">Cancel</button>
-              </div>
-            </div>
-          </div>
-        )}
         {confirmDeleteKey&&(
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{background:"rgba(0,0,0,0.4)"}}>
             <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
@@ -4871,6 +4932,44 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             </div>
           </div>
         )}
+        {disputeResolutionQuizKey && disputeQueue.length > 0 && (()=>{
+          const current = disputeQueue[disputeQueueIndex] || disputeQueue[0];
+          const dupCount = disputeQueue.filter(d => d.id!==current.id && d.question_index===current.question_index && normalizeAnswer(d.user_answer)===normalizeAnswer(current.user_answer)).length;
+          return (
+            <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{background:"rgba(0,0,0,0.4)"}}>
+              <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="text-lg font-bold text-gray-800">Resolve Dispute</h2>
+                  <span className="text-sm text-gray-400">{disputeQueueIndex+1} of {disputeQueue.length}</span>
+                </div>
+                <p className="text-sm text-gray-500 mb-1"><strong>{current.display_name}</strong> — Q{current.question_index+1}</p>
+                <p className="text-gray-800 font-medium mb-3">{current.question_text}</p>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-red-500 uppercase mb-1">Their Answer</p>
+                    <p className="text-sm font-semibold text-gray-800">{current.user_answer || '(blank)'}</p>
+                  </div>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-green-600 uppercase mb-1">Correct Answer</p>
+                    <p className="text-sm font-semibold text-gray-800">{current.correct_answer_display}</p>
+                  </div>
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                  <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Reason Given</p>
+                  <p className="text-sm text-gray-700">{current.reason}</p>
+                </div>
+                {dupCount > 0 && (
+                  <p className="text-xs text-blue-600 mb-3">{dupCount} other pending dispute{dupCount!==1?'s':''} on this question {dupCount!==1?'have':'has'} the same answer and will be resolved the same way automatically.</p>
+                )}
+                <div className="flex gap-3 mb-3">
+                  <button onClick={()=>resolveDispute('accepted')} disabled={resolvingDispute} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-40">Accept Answer</button>
+                  <button onClick={()=>resolveDispute('denied')} disabled={resolvingDispute} className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium disabled:opacity-40">Deny</button>
+                </div>
+                <button onClick={closeDisputeResolution} disabled={resolvingDispute} className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm disabled:opacity-40">Close (resolve later)</button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     );
   }
