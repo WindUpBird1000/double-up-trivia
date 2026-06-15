@@ -94,7 +94,17 @@ const shuffleArray = (arr) => {
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
 };
-const normalizeAnswer = (s) => (s || '').trim().toLowerCase();
+const normalizeAnswer = (s) => {
+  let t = (s || '').trim().toLowerCase();
+  // Protect decimal points between digits (e.g. "3.14") before stripping punctuation
+  t = t.replace(/(\d)\.(\d)/g, '$1\u0000$2');
+  // Strip common punctuation: periods, commas, apostrophes, quotes, hyphens, colons, semicolons
+  t = t.replace(/[.,'"`’‘“”\-–—:;!?]/g, '');
+  // Restore protected decimal points
+  t = t.replace(/\u0000/g, '.');
+  // Collapse multiple spaces left behind by stripping
+  return t.replace(/\s+/g, ' ').trim();
+};
 const emptyMCQuestion  = () => ({ prompt: '', options: ['','','','','',''], correctIndices: [], randomizeOptions: false });
 const emptyORQuestion  = () => ({ prompt: '', acceptedAnswers: [], primaryAnswerIndex: 0, showOthersCount: false, additionalContext: '' });
 const emptyDDQuestion  = () => ({ prompt: '', correctAnswer: null, correctAnswerDisplay: '', additionalContext: '' }); // Data Dash: single numeric answer
@@ -433,7 +443,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
       const sel = ans || [];
       return sel.length === correctOpts.length && correctOpts.every(o => sel.includes(o));
     } else if (qtype === 'OR' || qtype === 'openresponse') {
-      return ans && q.acceptedAnswers.some(a => (a||'').trim().toLowerCase() === (ans||'').trim().toLowerCase());
+      return ans && q.acceptedAnswers.some(a => normalizeAnswer(a) === normalizeAnswer(ans));
     } else {
       const correct = q.text?.match(/\[([^\]]+)\]/)?.[1];
       return ans === correct;
@@ -2132,7 +2142,13 @@ async function sb(table, params) {
   const r = await fetch(SUPABASE_URL+'/rest/v1/'+table+'?'+params, { headers: { apikey: ANON_KEY, Authorization: 'Bearer '+ANON_KEY } });
   return r.json();
 }
-function normalize(s) { return (s||'').trim().toLowerCase(); }
+function normalize(s) {
+  let t = (s||'').trim().toLowerCase();
+  t = t.replace(/(\\d)\\.(\\d)/g, '$1\\u0000$2');
+  t = t.replace(/[.,'"\\\`\\u2019\\u2018\\u201c\\u201d\\-\\u2013\\u2014:;!?]/g, '');
+  t = t.replace(/\\u0000/g, '.');
+  return t.replace(/\\s+/g, ' ').trim();
+}
 async function load() {
   const status = document.getElementById('status');
   const quizRows = await sb('quizzes', 'quiz_key=eq.'+QUIZ_KEY+'&select=data,title,type,status');
