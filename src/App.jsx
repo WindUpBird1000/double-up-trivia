@@ -1278,10 +1278,19 @@ const QuizApp = () => {
   };
 
   const getPromptPreview = (q) => {
-    if (q.clues) { const raw = q.clues[0] || ''; return raw.length > 90 ? raw.slice(0,90)+'…' : raw; }
-    const raw = q.prompt || q.text || '';
-    const cleaned = raw.replace(/\{\{[^}]+\}\}/g, '').replace(/\[[^\]]+\]/g, '____').trim();
-    return cleaned.length > 90 ? cleaned.slice(0, 90) + '…' : cleaned;
+    if (q.clues) {
+      const raw = (q.clues[0] || '').replace(/\{\{image:[^}]+\}\}/g, '');
+      const plain = raw.replace(/\{\{(b|i|u):([^}]+)\}\}/g, '$2');
+      return plain.length > 90 ? plain.slice(0,90)+'…' : raw;
+    }
+    const raw = (q.prompt || q.text || '').replace(/\{\{image:[^}]+\}\}/g, '').replace(/\[[^\]]+\]/g, '____');
+    const plain = raw.replace(/\{\{(b|i|u):([^}]+)\}\}/g, '$2');
+    return plain.length > 90 ? plain.slice(0,90)+'…' : raw;
+  };
+
+  const getPromptPreviewPlain = (q) => {
+    const raw = getPromptPreview(q);
+    return raw.replace(/\{\{(b|i|u):([^}]+)\}\}/g, '$2');
   };
 
   const submitQuiz = () => { if (activeQuiz?.type === 'mysterynoun') { handleFinalSubmission(); } else { setMode('summary'); } };
@@ -1375,7 +1384,7 @@ const QuizApp = () => {
       const q = activeQuestions[parseInt(i)];
       const reason = disputeReasons[i] || '(no reason given)';
       const ans = activeQuiz?.type==='mysterynoun' ? (()=>{const ad=studentAnswers[parseInt(i)]||{};return typeof ad==='object'?(ad.answer||'(no answer)'):(ad||'(no answer)');})() : getAnswerDisplay(q, parseInt(i));
-      return `Q${parseInt(i)+1}: ${getPromptPreview(q)}\nYour answer: ${ans}\nCorrect answer: ${getCorrectAnswerDisplay(q)}\nReason: ${reason}`;
+      return `Q${parseInt(i)+1}: ${getPromptPreviewPlain(q)}\nYour answer: ${ans}\nCorrect answer: ${getCorrectAnswerDisplay(q)}\nReason: ${reason}`;
     }).join('\n\n');
     try {
       const auditLink = `https://doubleuptrivia.com/?audit=${encodeURIComponent(selectedQuizKey)}&season=${encodeURIComponent(activeQuiz?.category||'')}`;
@@ -2869,7 +2878,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
           <p className="text-2xl text-gray-800 leading-relaxed font-medium">{parts[0]}{currentAnswer?<span className="text-blue-600 font-bold">{currentAnswer}</span>:<span className="inline-block border-b-2 border-gray-400 w-28 mx-1 align-bottom"/>}{parts[1]}</p>
         </div>
         <NavBar current={currentQuestionIndex} total={total} label="Sentence"/>
-        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
+        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2">Review Answers and Assign Bonuses ({answeredCount}/{total} answered)</button>
         <ExitModal/>
       </div>
     );
@@ -2891,7 +2900,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
           <div className="space-y-3 mt-4">{q.displayOptions.map((optObj,i)=><button key={i} onClick={()=>toggleMCAnswer(currentQuestionIndex,optObj.opt)} className={`w-full text-left px-5 py-3 rounded-lg border-2 font-medium transition-all ${sels.includes(optObj.opt)?'bg-green-600 text-white border-green-600':'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}>{optObj.opt}</button>)}</div>
         </div>
         <NavBar current={currentQuestionIndex} total={total} label="Question"/>
-        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
+        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2">Review Answers and Assign Bonuses ({answeredCount}/{total} answered)</button>
         <ExitModal/>
       </div>
     );
@@ -2929,7 +2938,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             submitQuiz();
           }}
           className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"
-        ><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
+        >Review Answers and Assign Bonuses ({answeredCount}/{total} answered)</button>
         <ExitModal/>
       </div>
     );
@@ -3042,7 +3051,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
           <input type="text" value={studentAnswers[currentQuestionIndex]||''} onChange={e=>setStudentAnswers(p=>({...p,[currentQuestionIndex]:e.target.value}))} placeholder="Type your answer here..." className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-800 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
         </div>
         <NavBar current={currentQuestionIndex} total={total} label="Question"/>
-        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
+        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2">Review Answers and Assign Bonuses ({answeredCount}/{total} answered)</button>
         <ExitModal/>
       </div>
     );
@@ -3074,7 +3083,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         {q.questionType==='MC' && (()=>{const sels=studentAnswers[currentQuestionIndex]||[];const multi=qWithDisplay.displayOptions.filter(o=>o.correct).length>1;return(<div className="bg-white rounded-xl shadow-md p-8 mb-6"><div className="text-xl text-gray-800 font-semibold mb-2">{renderPrompt(q.prompt)}</div>{multi&&<p className="text-sm text-blue-600 mb-4 font-medium">Select all that apply.</p>}<div className="space-y-3 mt-4">{qWithDisplay.displayOptions.map((optObj,i)=><button key={i} onClick={()=>toggleMCAnswer(currentQuestionIndex,optObj.opt)} className={`w-full text-left px-5 py-3 rounded-lg border-2 font-medium transition-all ${sels.includes(optObj.opt)?'bg-green-600 text-white border-green-600':'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}>{optObj.opt}</button>)}</div></div>);})()}
         {q.questionType==='OR' && (<div className="bg-white rounded-xl shadow-md p-8 mb-6"><div className="text-xl text-gray-800 font-semibold mb-6">{renderPrompt(q.prompt)}</div><input type="text" value={studentAnswers[currentQuestionIndex]||''} onChange={e=>setStudentAnswers(p=>({...p,[currentQuestionIndex]:e.target.value}))} placeholder="Type your answer here..." className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-800 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/></div>)}
         <NavBar current={currentQuestionIndex} total={total} label="Question"/>
-        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2"><Check size={20}/> Answers Complete ({answeredCount}/{total} answered)</button>
+        <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2">Review Answers and Assign Bonuses ({answeredCount}/{total} answered)</button>
         <ExitModal/>
       </div>
     );
@@ -3421,7 +3430,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                   ${tapSelected && !assigned ? 'cursor-pointer' : ''}`}
               >
                 <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}</div>
-                <div className="col-span-7 text-sm text-gray-700 pr-3">{getPromptPreview(q)}</div>
+                <div className="col-span-7 text-sm text-gray-700 pr-3">{renderInlineFormatting(getPromptPreview(q))}</div>
                 <div className="col-span-2 text-sm text-blue-700 font-medium text-center">{getAnswerDisplay(q, i)}</div>
                 <div className="col-span-2 flex justify-center items-center min-h-[40px]">
                   {assigned && cfg ? (
@@ -3447,8 +3456,8 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         <div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:40}}>
         <div style={{maxWidth:'48rem',margin:'0 auto'}}>
         <div className="bg-white border-t border-gray-200 shadow-lg px-5 pt-4 pb-4 text-center rounded-t-2xl" onClick={handleTapBin}>
-          <p className="text-sm font-semibold text-gray-700 mb-1">Your tokens — click/tap to select, then click/tap a question to assign</p>
-          <p className="text-xs text-gray-400 mb-3">Hover over a token to see what it does. Click/tap an assigned token to pick it back up.</p>
+          <p className="text-sm font-semibold text-gray-700 mb-1">Available bonuses — click/tap to select, then click/tap a question to assign</p>
+          <p className="text-xs text-gray-400 mb-3">Hover over a bonus to see what it does. Click/tap an assigned bonus to pick it back up.</p>
           {binTokensList.length > 0 ? (
             <div className="flex flex-wrap gap-3 items-center justify-center">
               {binTokensList.map((tok) => (
@@ -3463,20 +3472,18 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="text-sm text-gray-400 italic">All tokens assigned ✓</p>
-          )}
+          ) : null}
           <p className={`text-sm font-medium mt-2 ${allAssigned ? 'text-green-700' : 'text-gray-500'}`}>
             {allAssigned
-              ? `✓ All ${totalTokens} token${totalTokens !== 1 ? 's' : ''} assigned.`
-              : `${assignedCount} of ${totalTokens} token${totalTokens !== 1 ? 's' : ''} assigned.`}
+              ? `All ${totalTokens} bonus${totalTokens !== 1 ? 'es' : ''} assigned.`
+              : `${assignedCount} of ${totalTokens} bonus${totalTokens !== 1 ? 'es' : ''} assigned.`}
           </p>
           <button
             onClick={e => { e.stopPropagation(); handleFinalSubmission(); }}
             disabled={!allAssigned}
             className="mt-3 w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
-            <Check size={20}/> Final Submission
+            Submit Answers and Bonuses - Final Submission
           </button>
         </div>
         </div>
@@ -3578,7 +3585,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                       )}
                     </div>
                     <div className="text-center text-sm font-medium text-gray-500">{i+1}</div>
-                    <div className="text-sm text-gray-700">{getPromptPreview(q)}</div>
+                    <div className="text-sm text-gray-700">{renderInlineFormatting(getPromptPreview(q))}</div>
                     <div className="text-sm font-medium text-center text-gray-700">{myRaw || '—'}</div>
                     <div className="text-sm text-gray-600 text-center">{ddDisplay(q)}</div>
                     <div className="text-sm text-center text-gray-500">{diff}</div>
@@ -3622,7 +3629,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                       )}
                     </div>
                     <div className="text-center text-sm font-medium text-gray-500">{i+1}</div>
-                    <div className="text-sm text-gray-700">{getPromptPreview(q)}</div>
+                    <div className="text-sm text-gray-700">{renderInlineFormatting(getPromptPreview(q))}</div>
                     <div className={`text-sm font-medium text-center ${correct ? 'text-green-700' : 'text-red-600'}`}>{getAnswerDisplay(q, i)}</div>
                     <div className="text-sm text-gray-600 text-center">{getCorrectAnswerDisplay(q)}</div>
                     <div className="flex flex-col items-center justify-center">
