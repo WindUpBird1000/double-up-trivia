@@ -2999,7 +2999,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               onClick={goToNext}
               className="mt-4 w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg"
             >
-              {mnCurrentQ < total - 1 ? 'Go to Next Question →' : 'Finish Quiz'}
+              {mnCurrentQ < total - 1 ? 'Go to Next Question →' : 'Submit Answers - Final Submission'}
             </button>
           </div>
         ) : (
