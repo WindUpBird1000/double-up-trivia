@@ -3974,7 +3974,16 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                 <div key={key} className="bg-white rounded-xl shadow-md p-6">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="text-xl font-bold text-gray-800">{quiz.title}</h3>
+                      <h3 className="text-xl font-bold text-gray-800">
+                        {quiz.title}
+                        {(quiz.status||'Active')==='Active' && quiz.closingDate && (()=>{
+                          const [m,d,y] = quiz.closingDate.split('/').map(Number);
+                          const closing = new Date(y, m-1, d);
+                          const today = new Date(); today.setHours(0,0,0,0);
+                          const isPast = closing <= today;
+                          return <span className={`ml-2 text-sm font-normal ${isPast ? 'text-red-500' : 'text-gray-400'}`}>(Closes {quiz.closingDate})</span>;
+                        })()}
+                      </h3>
                       {disputeCounts[key] > 0 && (
                         <button onClick={()=>openDisputeResolution(key)} className="flex items-center gap-1.5 mt-1 mb-1 px-2 py-1 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100">
                           <AlertTriangle size={14}/> {disputeCounts[key]} unresolved dispute{disputeCounts[key]!==1?'s':''}
