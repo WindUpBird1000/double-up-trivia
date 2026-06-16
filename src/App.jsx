@@ -3981,7 +3981,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                           const closing = new Date(y, m-1, d);
                           const today = new Date(); today.setHours(0,0,0,0);
                           const isPast = closing <= today;
-                          return <span className={`ml-2 text-sm font-normal ${isPast ? 'text-red-500' : 'text-gray-400'}`}>(Closes {quiz.closingDate})</span>;
+                          return <span className={`ml-2 text-sm font-normal ${isPast ? 'text-red-500' : 'text-gray-500'}`}>(Closes {quiz.closingDate})</span>;
                         })()}
                       </h3>
                       {disputeCounts[key] > 0 && (
