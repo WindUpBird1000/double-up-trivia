@@ -1805,8 +1805,8 @@ const QuizApp = () => {
       if (!mnQuestions[0]?.clues[0].trim()) { alert('Please add at least one question with at least Clue 1.'); return false; }
       for(let i=0;i<mnQuestions.length;i++){ if(!mnQuestions[i].acceptedAnswers.length){alert(`Q${i+1} needs at least one correct answer.`);return false;} }
     }
-    // Check token count doesn't exceed question count (skip for MN — no tokens)
-    if (newQuizType !== 'mysterynoun') {
+    // Check token count doesn't exceed question count (only when Active — skip for MN and Inactive/Scored drafts)
+    if (newQuizStatus === 'Active' && newQuizType !== 'mysterynoun') {
       const activeTokenCount = newQuizTokenSlots.filter(t => t !== 'none').length;
       const questionCount = newQuizType === 'fillintheblank' ? newQuizSentences.length
         : newQuizType === 'MC' ? mcQuestions.filter(q => q.prompt?.trim()).length
