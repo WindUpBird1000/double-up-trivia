@@ -4356,6 +4356,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               <div className="bg-white rounded-xl shadow-md p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-800">Question {mcCurrentIndex+1} of {mcQuestions.length}</h2>
+                  {mcQuestions.length > 1 && <select value="" onChange={e=>{const t=parseInt(e.target.value);if(isNaN(t))return;const qs=[...mcQuestions];[qs[mcCurrentIndex],qs[t]]=[qs[t],qs[mcCurrentIndex]];setMcQuestions(qs);setMcCurrentIndex(t);}} className="text-xs px-2 py-1 border border-gray-300 rounded-lg bg-white text-gray-600"><option value="">Swap with…</option>{mcQuestions.map((_,i)=>i!==mcCurrentIndex&&<option key={i} value={i}>Q{i+1}</option>)}</select>}
                   <div className="flex items-center gap-2">
                     <button onClick={()=>setMcCurrentIndex(i=>(i-1+mcQuestions.length)%mcQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronLeft size={18}/></button>
                     <button onClick={()=>setMcCurrentIndex(i=>(i+1)%mcQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronRight size={18}/></button>
@@ -4379,6 +4380,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               <div className="bg-white rounded-xl shadow-md p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-800">Question {orCurrentIndex+1} of {orQuestions.length}</h2>
+                  {orQuestions.length > 1 && <select value="" onChange={e=>{const t=parseInt(e.target.value);if(isNaN(t))return;const qs=[...orQuestions];[qs[orCurrentIndex],qs[t]]=[qs[t],qs[orCurrentIndex]];setOrQuestions(qs);setOrCurrentIndex(t);}} className="text-xs px-2 py-1 border border-gray-300 rounded-lg bg-white text-gray-600"><option value="">Swap with…</option>{orQuestions.map((_,i)=>i!==orCurrentIndex&&<option key={i} value={i}>Q{i+1}</option>)}</select>}
                   <div className="flex items-center gap-2">
                     <button onClick={()=>setOrCurrentIndex(i=>(i-1+orQuestions.length)%orQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronLeft size={18}/></button>
                     <button onClick={()=>setOrCurrentIndex(i=>(i+1)%orQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronRight size={18}/></button>
@@ -4422,6 +4424,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               <div className="bg-white rounded-xl shadow-md p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-800">Question {ddCurrentIndex+1} of {ddQuestions.length}</h2>
+                  {ddQuestions.length > 1 && <select value="" onChange={e=>{const t=parseInt(e.target.value);if(isNaN(t))return;const qs=[...ddQuestions];[qs[ddCurrentIndex],qs[t]]=[qs[t],qs[ddCurrentIndex]];setDdQuestions(qs);setDdCurrentIndex(t);}} className="text-xs px-2 py-1 border border-gray-300 rounded-lg bg-white text-gray-600"><option value="">Swap with…</option>{ddQuestions.map((_,i)=>i!==ddCurrentIndex&&<option key={i} value={i}>Q{i+1}</option>)}</select>}
                   <div className="flex items-center gap-2">
                     <button onClick={()=>setDdCurrentIndex(i=>(i-1+ddQuestions.length)%ddQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronLeft size={18}/></button>
                     <button onClick={()=>setDdCurrentIndex(i=>(i+1)%ddQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronRight size={18}/></button>
@@ -4463,6 +4466,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               <div className="bg-white rounded-xl shadow-md p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-800">Question {mnCurrentIndex+1} of {mnQuestions.length}</h2>
+                  {mnQuestions.length > 1 && <select value="" onChange={e=>{const t=parseInt(e.target.value);if(isNaN(t))return;const qs=[...mnQuestions];[qs[mnCurrentIndex],qs[t]]=[qs[t],qs[mnCurrentIndex]];setMnQuestions(qs);setMnCurrentIndex(t);}} className="text-xs px-2 py-1 border border-gray-300 rounded-lg bg-white text-gray-600"><option value="">Swap with…</option>{mnQuestions.map((_,i)=>i!==mnCurrentIndex&&<option key={i} value={i}>Q{i+1}</option>)}</select>}
                   <div className="flex items-center gap-2">
                     <button onClick={()=>setMnCurrentIndex(i=>(i-1+mnQuestions.length)%mnQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronLeft size={18}/></button>
                     <button onClick={()=>setMnCurrentIndex(i=>(i+1)%mnQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronRight size={18}/></button>
