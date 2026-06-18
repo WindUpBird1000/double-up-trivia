@@ -4327,8 +4327,8 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-800">Question {mcCurrentIndex+1} of {mcQuestions.length}</h2>
                   <div className="flex items-center gap-2">
-                    <button onClick={()=>setMcCurrentIndex(i=>Math.max(0,i-1))} disabled={mcCurrentIndex===0} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronLeft size={18}/></button>
-                    <button onClick={()=>setMcCurrentIndex(i=>Math.min(mcQuestions.length-1,i+1))} disabled={mcCurrentIndex===mcQuestions.length-1} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronRight size={18}/></button>
+                    <button onClick={()=>setMcCurrentIndex(i=>(i-1+mcQuestions.length)%mcQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronLeft size={18}/></button>
+                    <button onClick={()=>setMcCurrentIndex(i=>(i+1)%mcQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronRight size={18}/></button>
                     <button onClick={()=>removeMCQuestion(mcCurrentIndex)} className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200 ml-1"><Trash2 size={16}/></button>
                   </div>
                 </div>
@@ -4350,8 +4350,8 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-800">Question {orCurrentIndex+1} of {orQuestions.length}</h2>
                   <div className="flex items-center gap-2">
-                    <button onClick={()=>setOrCurrentIndex(i=>Math.max(0,i-1))} disabled={orCurrentIndex===0} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronLeft size={18}/></button>
-                    <button onClick={()=>setOrCurrentIndex(i=>Math.min(orQuestions.length-1,i+1))} disabled={orCurrentIndex===orQuestions.length-1} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronRight size={18}/></button>
+                    <button onClick={()=>setOrCurrentIndex(i=>(i-1+orQuestions.length)%orQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronLeft size={18}/></button>
+                    <button onClick={()=>setOrCurrentIndex(i=>(i+1)%orQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronRight size={18}/></button>
                     <button onClick={()=>removeORQuestion(orCurrentIndex)} className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200 ml-1"><Trash2 size={16}/></button>
                   </div>
                 </div>
@@ -4393,8 +4393,8 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-800">Question {ddCurrentIndex+1} of {ddQuestions.length}</h2>
                   <div className="flex items-center gap-2">
-                    <button onClick={()=>setDdCurrentIndex(i=>Math.max(0,i-1))} disabled={ddCurrentIndex===0} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronLeft size={18}/></button>
-                    <button onClick={()=>setDdCurrentIndex(i=>Math.min(ddQuestions.length-1,i+1))} disabled={ddCurrentIndex===ddQuestions.length-1} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronRight size={18}/></button>
+                    <button onClick={()=>setDdCurrentIndex(i=>(i-1+ddQuestions.length)%ddQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronLeft size={18}/></button>
+                    <button onClick={()=>setDdCurrentIndex(i=>(i+1)%ddQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronRight size={18}/></button>
                     <button onClick={()=>removeDDQuestion(ddCurrentIndex)} className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200 ml-1"><Trash2 size={16}/></button>
                   </div>
                 </div>
@@ -4434,8 +4434,8 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-800">Question {mnCurrentIndex+1} of {mnQuestions.length}</h2>
                   <div className="flex items-center gap-2">
-                    <button onClick={()=>setMnCurrentIndex(i=>Math.max(0,i-1))} disabled={mnCurrentIndex===0} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronLeft size={18}/></button>
-                    <button onClick={()=>setMnCurrentIndex(i=>Math.min(mnQuestions.length-1,i+1))} disabled={mnCurrentIndex===mnQuestions.length-1} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40"><ChevronRight size={18}/></button>
+                    <button onClick={()=>setMnCurrentIndex(i=>(i-1+mnQuestions.length)%mnQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronLeft size={18}/></button>
+                    <button onClick={()=>setMnCurrentIndex(i=>(i+1)%mnQuestions.length)} className="p-1 rounded bg-gray-200 hover:bg-gray-300"><ChevronRight size={18}/></button>
                     <button onClick={()=>removeMNQuestion(mnCurrentIndex)} className="p-1 rounded bg-red-100 text-red-500 hover:bg-red-200 ml-1"><Trash2 size={16}/></button>
                   </div>
                 </div>
