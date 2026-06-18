@@ -1095,6 +1095,7 @@ const QuizApp = () => {
   const [disputeQueueIndex, setDisputeQueueIndex] = useState(0);
   const [resolvingDispute, setResolvingDispute] = useState(false);
   const [pendingScoredSave, setPendingScoredSave] = useState(false); // true if the Scored-gate is showing
+  const [disputeAdminReason, setDisputeAdminReason] = useState('');
   const [auditData, setAuditData] = useState(null);
   const [auditLoading, setAuditLoading] = useState(false);
   const [newQuizTypeSelector, setNewQuizTypeSelector] = useState('openresponse');
@@ -1542,10 +1543,23 @@ const QuizApp = () => {
       .not('published_at', 'is', null)
       .gt('published_at', lastLogin)
       .order('published_at', { ascending: true });
-    if (msgs && msgs.length > 0) {
-      setUnreadMessages(msgs);
+    // Check for unread dispute resolutions since last login
+    const { data: resols } = await supabase
+      .from('resolutions')
+      .select('*')
+      .eq('user_id', loginUser.id)
+      .gt('resolved_at', lastLogin)
+      .order('resolved_at', { ascending: true });
+    // Merge: normalize resolutions to the same shape as messages (title, body, published_at)
+    const normalizedResols = (resols || []).map(r => ({ ...r, published_at: r.resolved_at }));
+    const allUnread = [
+      ...(msgs || []),
+      ...normalizedResols,
+    ].sort((a, b) => new Date(a.published_at) - new Date(b.published_at));
+    if (allUnread.length > 0) {
+      setUnreadMessages(allUnread);
       setMsgPageIndex(0);
-      setAllMsgViewed(msgs.length === 1);
+      setAllMsgViewed(allUnread.length === 1);
       setMode('messages');
     } else {
       setMode('setup');
@@ -2403,6 +2417,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
     setDisputeResolutionQuizKey(quizKey);
     setDisputeQueue(data);
     setDisputeQueueIndex(0);
+    setDisputeAdminReason('');
   };
 
   // Resolve the current dispute in the queue (and any identical pending disputes for the same question)
@@ -2414,50 +2429,75 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
     const quizKey = current.quiz_key;
     const qi = current.question_index;
     const userAnswerNorm = normalizeAnswer(current.user_answer);
+    const adminReason = disputeAdminReason.trim();
 
     // Find all still-pending disputes for this quiz+question with an identical (normalized) answer
-    const matchingIds = disputeQueue
-      .filter(d => d.status !== 'resolved' && d.quiz_key === quizKey && d.question_index === qi && normalizeAnswer(d.user_answer) === userAnswerNorm)
-      .map(d => d.id);
-    // Always include the current one even if it's somehow not in the filtered set
-    if (!matchingIds.includes(current.id)) matchingIds.push(current.id);
+    const matchingDisputes = disputeQueue
+      .filter(d => d.status !== 'resolved' && d.quiz_key === quizKey && d.question_index === qi && normalizeAnswer(d.user_answer) === userAnswerNorm);
+    if (!matchingDisputes.find(d => d.id === current.id)) matchingDisputes.push(current);
+    const matchingIds = matchingDisputes.map(d => d.id);
 
-    // If accepting, add the answer to acceptedAnswers (once, for the quiz)
-    if (resolution === 'accepted') {
-      const { data: quizRow } = await supabase.from('quizzes').select('status, category, title, type, data').eq('quiz_key', quizKey).single();
-      if (quizRow) {
-        const quiz = quizRow.data;
-        const q = quiz.questions[qi];
-        const trimmed = (current.user_answer || '').trim();
-        const alreadyAccepted = q.acceptedAnswers.some(ac => normalizeAnswer(ac) === normalizeAnswer(trimmed));
-        if (!alreadyAccepted && trimmed) {
-          q.acceptedAnswers = [...q.acceptedAnswers, trimmed];
-          await supabase.from('quizzes').update({ data: quiz }).eq('quiz_key', quizKey);
-          setAllQuizData(p => ({ ...p, [quizKey]: { ...quiz, status: quizRow.status, title: quizRow.title, category: quizRow.category, type: quizRow.type } }));
-        }
-        // Defensive: if the quiz is somehow already Scored, rescore now that this answer counts
-        if (quizRow.status === 'Scored') {
-          const { data: remainingAttempts } = await supabase.from('quiz_attempts').select('*').eq('quiz_key', quizKey).eq('status', 'submitted');
-          if (remainingAttempts && remainingAttempts.length > 0) {
-            const uids = remainingAttempts.map(a => a.user_id);
-            const { data: profs } = await supabase.from('profiles').select('user_id, display_name').in('user_id', uids);
-            const nm = {}; (profs||[]).forEach(p => { nm[p.user_id] = p.display_name; });
-            const attemptsWithNames = remainingAttempts.map(a => ({ ...a, display_name: nm[a.user_id] || a.user_id, correctness: scoreAttempt(quiz, a.answers || {}) }));
-            const { pointValues, userScores, correctnessByUser, correctCounts, ddPointsByUser, isDashQuiz } = computeQuizResults(quiz, attemptsWithNames);
-            await supabase.from('quiz_results').upsert({ quiz_key: quizKey, quiz_title: quiz.title, posted_at: new Date().toISOString(), scores: { pointValues, userScores, correctnessByUser, correctCounts, ...(isDashQuiz ? { ddPointsByUser } : {}) } }, { onConflict: 'quiz_key' });
-            await updateSeasonStandings(quizRow.category, quizKey, userScores);
-          }
+    // Fetch quiz data once (needed for accept path and for message body)
+    const { data: quizRow } = await supabase.from('quizzes').select('status, category, title, type, data').eq('quiz_key', quizKey).single();
+
+    // If accepting, add the answer to acceptedAnswers
+    if (resolution === 'accepted' && quizRow) {
+      const quiz = quizRow.data;
+      const q = quiz.questions[qi];
+      const trimmed = (current.user_answer || '').trim();
+      const alreadyAccepted = q.acceptedAnswers.some(ac => normalizeAnswer(ac) === normalizeAnswer(trimmed));
+      if (!alreadyAccepted && trimmed) {
+        q.acceptedAnswers = [...q.acceptedAnswers, trimmed];
+        await supabase.from('quizzes').update({ data: quiz }).eq('quiz_key', quizKey);
+        setAllQuizData(p => ({ ...p, [quizKey]: { ...quiz, status: quizRow.status, title: quizRow.title, category: quizRow.category, type: quizRow.type } }));
+      }
+      // Defensive: if the quiz is somehow already Scored, rescore
+      if (quizRow.status === 'Scored') {
+        const { data: remainingAttempts } = await supabase.from('quiz_attempts').select('*').eq('quiz_key', quizKey).eq('status', 'submitted');
+        if (remainingAttempts && remainingAttempts.length > 0) {
+          const uids = remainingAttempts.map(a => a.user_id);
+          const { data: profs } = await supabase.from('profiles').select('user_id, display_name').in('user_id', uids);
+          const nm = {}; (profs||[]).forEach(p => { nm[p.user_id] = p.display_name; });
+          const attemptsWithNames = remainingAttempts.map(a => ({ ...a, display_name: nm[a.user_id] || a.user_id, correctness: scoreAttempt(quiz, a.answers || {}) }));
+          const { pointValues, userScores, correctnessByUser, correctCounts, ddPointsByUser, isDashQuiz } = computeQuizResults(quiz, attemptsWithNames);
+          await supabase.from('quiz_results').upsert({ quiz_key: quizKey, quiz_title: quiz.title, posted_at: new Date().toISOString(), scores: { pointValues, userScores, correctnessByUser, correctCounts, ...(isDashQuiz ? { ddPointsByUser } : {}) } }, { onConflict: 'quiz_key' });
+          await updateSeasonStandings(quizRow.category, quizKey, userScores);
         }
       }
     }
 
-    // Mark all matching disputes (including cascaded duplicates) as resolved
-    await supabase.from('disputes').update({ status: 'resolved', resolution, resolved_at: new Date().toISOString() }).in('id', matchingIds);
+    // Mark all matching disputes as resolved
+    const now = new Date().toISOString();
+    await supabase.from('disputes').update({ status: 'resolved', resolution, resolved_at: now }).in('id', matchingIds);
+
+    // Build resolution message body
+    const quizTitle = quizRow?.title || quizKey;
+    const primaryCorrect = current.correct_answer_display;
+    const resolvedText = resolution === 'accepted'
+      ? `Your dispute about Question ${qi+1} on ${quizTitle}, where you submitted "${current.user_answer}" — your answer has been approved and added to the list of correct answers.`
+      : `Your dispute about Question ${qi+1} on ${quizTitle}, where you submitted "${current.user_answer}" but the correct answer was listed as "${primaryCorrect}" — your dispute has been denied.`;
+    const fullBody = adminReason ? `${resolvedText}\n\nReason: ${adminReason}` : resolvedText;
+
+    // Insert a resolution message for each matching dispute's user
+    const resolutionRows = matchingDisputes.map(d => ({
+      user_id: d.user_id,
+      title: 'Dispute Resolution',
+      body: adminReason
+        ? (resolution === 'accepted'
+          ? `Your dispute about Question ${d.question_index+1} on ${quizTitle}, where you submitted "${d.user_answer}" — your answer has been approved and added to the list of correct answers.\n\nReason: ${adminReason}`
+          : `Your dispute about Question ${d.question_index+1} on ${quizTitle}, where you submitted "${d.user_answer}" but the correct answer was listed as "${d.correct_answer_display}" — your dispute has been denied.\n\nReason: ${adminReason}`)
+        : (resolution === 'accepted'
+          ? `Your dispute about Question ${d.question_index+1} on ${quizTitle}, where you submitted "${d.user_answer}" — your answer has been approved and added to the list of correct answers.`
+          : `Your dispute about Question ${d.question_index+1} on ${quizTitle}, where you submitted "${d.user_answer}" but the correct answer was listed as "${d.correct_answer_display}" — your dispute has been denied.`),
+      resolved_at: now,
+    }));
+    await supabase.from('resolutions').insert(resolutionRows);
 
     // Remove resolved disputes from the local queue and advance
     const remainingQueue = disputeQueue.filter(d => !matchingIds.includes(d.id));
     setDisputeQueue(remainingQueue);
     setDisputeCounts(p => ({ ...p, [quizKey]: remainingQueue.length }));
+    setDisputeAdminReason('');
     if (remainingQueue.length === 0) {
       setDisputeResolutionQuizKey(null);
       setDisputeQueueIndex(0);
@@ -2471,6 +2511,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
     setDisputeResolutionQuizKey(null);
     setDisputeQueue([]);
     setDisputeQueueIndex(0);
+    setDisputeAdminReason('');
   };
 
   const deleteAttempt = async (userId, quizKey) => {
@@ -4955,6 +4996,10 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                 {dupCount > 0 && (
                   <p className="text-xs text-blue-600 mb-3">{dupCount} other pending dispute{dupCount!==1?'s':''} on this question {dupCount!==1?'have':'has'} the same answer and will be resolved the same way automatically.</p>
                 )}
+                <div className="mb-4">
+                  <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Your Reason <span className="font-normal text-gray-300">(optional — shown to user)</span></label>
+                  <textarea value={disputeAdminReason} onChange={e=>setDisputeAdminReason(e.target.value)} placeholder="Explain your decision..." rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 resize-none"/>
+                </div>
                 <div className="flex gap-3 mb-3">
                   <button onClick={()=>resolveDispute('accepted')} disabled={resolvingDispute} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-40">Accept Answer</button>
                   <button onClick={()=>resolveDispute('denied')} disabled={resolvingDispute} className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium disabled:opacity-40">Deny</button>
