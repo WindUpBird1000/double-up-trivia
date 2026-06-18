@@ -1213,10 +1213,34 @@ const QuizApp = () => {
     setActiveQuestions(preparedQs);
     if (existing) {
       const { data: freshAttempt } = await supabase.from('quiz_attempts').select('*').eq('id', existing.id).single();
-      setStudentAnswers(freshAttempt?.answers || {});
+      const rawAnswers = freshAttempt?.answers || {};
+      // Strip out MN metadata keys before setting studentAnswers so scoring never sees them
+      const { __mnCluesRevealed, __mnCurrentQ, ...cleanAnswers } = rawAnswers;
+      setStudentAnswers(cleanAnswers);
       setDoubleSelections(freshAttempt?.doubles || []);
       setTokenAssignments(freshAttempt?.token_assignments || {});
       setCurrentAttemptId(existing.id);
+      // Restore MN-specific state if present
+      if (quiz.type === 'mysterynoun') {
+        if (__mnCluesRevealed) setMnCluesRevealed(__mnCluesRevealed);
+        if (__mnCurrentQ != null) setMnCurrentQ(__mnCurrentQ);
+        // Rebuild mnAnswered from previously submitted answers so the UI knows which questions are done
+        const preparedQs = prepareActiveQuestions(quiz);
+        const rebuiltAnswered = {};
+        Object.entries(cleanAnswers).forEach(([idxStr, val]) => {
+          const idx = parseInt(idxStr);
+          if (isNaN(idx)) return;
+          const ans = typeof val === 'object' ? (val.answer || '') : (val || '');
+          const cluesUsed = typeof val === 'object' ? (val.cluesUsed || 1) : 1;
+          const q2 = preparedQs[idx];
+          if (ans.trim() && q2) {
+            const correct = q2.acceptedAnswers.some(a => normalizeAnswer(a) === normalizeAnswer(ans));
+            const pts = correct ? MN_POINTS[Math.min(cluesUsed - 1, 3)] : 0;
+            rebuiltAnswered[idx] = { answer: ans, cluesUsed, correct, pts };
+          }
+        });
+        setMnAnswered(rebuiltAnswered);
+      }
     } else {
       setStudentAnswers({});
       setDoubleSelections([]);
@@ -1314,7 +1338,11 @@ const QuizApp = () => {
   const saveProgress = async () => {
     if (!currentAttemptId || !currentUser) return;
     const doubles = Object.entries(tokenAssignments).filter(([,t])=>t==='doubler').map(([i])=>Number(i));
-    const { error } = await supabase.from('quiz_attempts').update({ answers: studentAnswers, doubles, token_assignments: tokenAssignments }).eq('id', currentAttemptId);
+    // For MN quizzes, embed clues-revealed and current question index into the answers object
+    const answersToSave = activeQuiz?.type === 'mysterynoun'
+      ? { ...studentAnswers, __mnCluesRevealed: mnCluesRevealed, __mnCurrentQ: mnCurrentQ }
+      : studentAnswers;
+    const { error } = await supabase.from('quiz_attempts').update({ answers: answersToSave, doubles, token_assignments: tokenAssignments }).eq('id', currentAttemptId);
     if (error) console.log('saveProgress error:', error);
   };
 
@@ -1322,8 +1350,10 @@ const QuizApp = () => {
     if (currentAttemptId) {
       const now = new Date().toISOString();
       const doubles = Object.entries(tokenAssignments).filter(([,t])=>t==='doubler').map(([i])=>Number(i));
+      // Strip any MN metadata keys before final submission so scoring sees only real answers
+      const { __mnCluesRevealed: _cr, __mnCurrentQ: _cq, ...cleanAnswers } = studentAnswers;
       await supabase.from('quiz_attempts').update({
-        status: 'submitted', answers: studentAnswers, submitted_at: now, doubles, token_assignments: tokenAssignments
+        status: 'submitted', answers: cleanAnswers, submitted_at: now, doubles, token_assignments: tokenAssignments
       }).eq('id', currentAttemptId);
       setUserAttempts(p => ({ ...p, [selectedQuizKey]: { ...p[selectedQuizKey], status: 'submitted' } }));
     }
