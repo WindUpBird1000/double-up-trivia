@@ -2440,8 +2440,8 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
     // Fetch quiz data once (needed for accept path and for message body)
     const { data: quizRow } = await supabase.from('quizzes').select('status, category, title, type, data').eq('quiz_key', quizKey).single();
 
-    // If accepting, add the answer to acceptedAnswers
-    if (resolution === 'accepted' && quizRow) {
+    // If accepting, add the answer to acceptedAnswers (OR/MN only — DD uses rank-based scoring, no acceptedAnswers)
+    if (resolution === 'accepted' && quizRow && quizRow.type !== 'datadash') {
       const quiz = quizRow.data;
       const q = quiz.questions[qi];
       const trimmed = (current.user_answer || '').trim();
