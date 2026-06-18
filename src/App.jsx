@@ -1292,6 +1292,7 @@ const QuizApp = () => {
   const [disputedQuestions, setDisputedQuestions] = useState({});
   const [disputeReasons, setDisputeReasons] = useState({});
   const [submittedDisputes, setSubmittedDisputes] = useState([]);
+  const [imagePopupUrls, setImagePopupUrls] = useState(null); // array of image paths, or null
   const [disputeSending, setDisputeSending] = useState(false);
 
   const toggleDouble = (i) => {
@@ -1331,6 +1332,11 @@ const QuizApp = () => {
   const getPromptPreviewPlain = (q) => {
     const raw = getPromptPreview(q);
     return raw.replace(/\{\{(b|i|u):([^}]+)\}\}/g, '$2');
+  };
+
+  const extractImages = (text) => {
+    const matches = [...(text||'').matchAll(/\{\{image:([^}]+)\}\}/g)];
+    return matches.map(m => `/images/${m[1].trim()}`);
   };
 
   const submitQuiz = () => { if (activeQuiz?.type === 'mysterynoun') { handleFinalSubmission(); } else { setMode('summary'); } };
@@ -3669,8 +3675,9 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         </div>
           {activeQuiz?.type === 'mysterynoun' ? (
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
-            <div style={{display:'grid',gridTemplateColumns:'36px 1fr 90px 120px 120px 72px 72px',gap:'8px'}} className="px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <div style={{display:'grid',gridTemplateColumns:'36px 32px 1fr 90px 120px 120px 72px 72px',gap:'8px'}} className="px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
               <div className="text-center">#</div>
+              <div className="text-center">Image</div>
               <div>Question (first clue)</div>
               <div className="text-center">Clues Used</div>
               <div className="text-center">Your Answer</div>
@@ -3687,11 +3694,13 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               const primary = q.acceptedAnswers[q.primaryAnswerIndex] || q.acceptedAnswers[0] || '';
               const alreadyDisputed = submittedDisputes.includes(i);
               const disputing = disputedQuestions[i] || false;
+              const imgs = extractImages((q.clues||[]).join(' '));
               return (
                 <div key={i} className={`border-b last:border-b-0 ${correct?'bg-green-50':'bg-red-50'}`}>
-                  <div style={{display:'grid',gridTemplateColumns:'36px 1fr 90px 120px 120px 72px 72px',gap:'8px'}} className="px-4 py-3 items-center">
+                  <div style={{display:'grid',gridTemplateColumns:'36px 32px 1fr 90px 120px 120px 72px 72px',gap:'8px'}} className="px-4 py-3 items-center">
                     <div className="text-center text-sm font-medium text-gray-500">{i+1}</div>
-                    <div className="text-sm text-gray-700">{(q.clues[0]||'').slice(0,90)}{q.clues[0]?.length>90?'…':''}</div>
+                    <div className="flex items-center justify-center">{imgs.length>0&&<button onClick={()=>setImagePopupUrls(imgs)} title="View image" style={{background:'none',border:'none',cursor:'pointer',padding:'2px',color:'#7eb8e8'}}><i className="ti ti-photo" style={{fontSize:'18px'}}/></button>}</div>
+                    <div className="text-sm text-gray-700">{(q.clues[0]||'').replace(/\{\{image:[^}]+\}\}/g,'').slice(0,90)}{q.clues[0]?.replace(/\{\{image:[^}]+\}\}/g,'').length>90?'…':''}</div>
                     <div className="text-center text-sm text-gray-600">{cluesUsed}</div>
                     <div className={`text-center text-sm font-medium ${correct?'text-green-700':'text-red-600'}`}>{answer||'—'}</div>
                     <div className="text-center text-sm text-gray-600">{primary}</div>
@@ -3715,9 +3724,10 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
           ) : activeQuiz?.type === 'datadash' ? (
           /* ── Data Dash submitted view ── */
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
-            <div style={{display:'grid',gridTemplateColumns:'32px 36px 1fr 120px 120px 100px 72px',gap:'8px'}} className="px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <div style={{display:'grid',gridTemplateColumns:'32px 36px 32px 1fr 120px 120px 100px 72px',gap:'8px'}} className="px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
               <div></div>
               <div className="text-center">#</div>
+              <div className="text-center">Image</div>
               <div>Question</div>
               <div className="text-center">Your Answer</div>
               <div className="text-center">Correct Answer</div>
@@ -3731,15 +3741,17 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               const diff = isNaN(myVal) ? '—' : Math.abs(myVal - q.correctAnswer).toLocaleString();
               const alreadyDisputed = submittedDisputes.includes(i);
               const disputing = disputedQuestions[i] || false;
+              const imgs = extractImages(q.prompt||'');
               return (
                 <div key={i} className="border-b last:border-b-0 bg-white">
-                  <div style={{display:'grid',gridTemplateColumns:'32px 36px 1fr 120px 120px 100px 72px',gap:'8px'}} className="px-4 py-3 items-center">
+                  <div style={{display:'grid',gridTemplateColumns:'32px 36px 32px 1fr 120px 120px 100px 72px',gap:'8px'}} className="px-4 py-3 items-center">
                     <div className="flex items-center justify-center">
                       {assignedToken && TOKEN_CONFIG[assignedToken] && (
                         <span title={TOKEN_CONFIG[assignedToken].description}>{TOKEN_CONFIG[assignedToken].svgIcon(20)}</span>
                       )}
                     </div>
                     <div className="text-center text-sm font-medium text-gray-500">{i+1}</div>
+                    <div className="flex items-center justify-center">{imgs.length>0&&<button onClick={()=>setImagePopupUrls(imgs)} title="View image" style={{background:'none',border:'none',cursor:'pointer',padding:'2px',color:'#7eb8e8'}}><i className="ti ti-photo" style={{fontSize:'18px'}}/></button>}</div>
                     <div className="text-sm text-gray-700">{renderInlineFormatting(getPromptPreview(q))}</div>
                     <div className="text-sm font-medium text-center text-gray-700">{myRaw || '—'}</div>
                     <div className="text-sm text-gray-600 text-center">{ddDisplay(q)}</div>
@@ -3762,9 +3774,10 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         ) : (
           /* ── Standard submitted view ── */
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
-            <div style={{display:'grid',gridTemplateColumns:'32px 36px 1fr 130px 130px 72px',gap:'8px'}} className="px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <div style={{display:'grid',gridTemplateColumns:'32px 36px 32px 1fr 130px 130px 72px',gap:'8px'}} className="px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
               <div></div>
               <div className="text-center">#</div>
+              <div className="text-center">Image</div>
               <div>Question</div>
               <div className="text-center leading-tight">Your Answer</div>
               <div className="text-center">Correct Answer</div>
@@ -3775,15 +3788,17 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               const assignedToken = tokenAssignments[i];
               const alreadyDisputed = submittedDisputes.includes(i);
               const disputing = disputedQuestions[i] || false;
+              const imgs = extractImages(q.prompt||q.text||'');
               return (
                 <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
-                  <div style={{display:'grid',gridTemplateColumns:'32px 36px 1fr 130px 130px 72px',gap:'8px'}} className="px-4 py-3 items-center">
+                  <div style={{display:'grid',gridTemplateColumns:'32px 36px 32px 1fr 130px 130px 72px',gap:'8px'}} className="px-4 py-3 items-center">
                     <div className="flex items-center justify-center">
                       {assignedToken && TOKEN_CONFIG[assignedToken] && (
                         <span title={TOKEN_CONFIG[assignedToken].description}>{TOKEN_CONFIG[assignedToken].svgIcon(20)}</span>
                       )}
                     </div>
                     <div className="text-center text-sm font-medium text-gray-500">{i+1}</div>
+                    <div className="flex items-center justify-center">{imgs.length>0&&<button onClick={()=>setImagePopupUrls(imgs)} title="View image" style={{background:'none',border:'none',cursor:'pointer',padding:'2px',color:'#7eb8e8'}}><i className="ti ti-photo" style={{fontSize:'18px'}}/></button>}</div>
                     <div className="text-sm text-gray-700">{renderInlineFormatting(getPromptPreview(q))}</div>
                     <div className={`text-sm font-medium text-center ${correct ? 'text-green-700' : 'text-red-600'}`}>{getAnswerDisplay(q, i)}</div>
                     <div className="text-sm text-gray-600 text-center">{getCorrectAnswerDisplay(q)}</div>
@@ -3805,8 +3820,18 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
           </div>
         )}
         <button onClick={handleSendDisputes} disabled={!hasDisputes||disputeSending} className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold disabled:opacity-40 disabled:cursor-not-allowed">{disputeSending?'Sending...':'Send Disputes'}</button>
-      </div></>
-    );
+      </div>
+      {imagePopupUrls && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{background:"rgba(0,0,0,0.7)"}} onClick={()=>setImagePopupUrls(null)}>
+          <div className="rounded-xl overflow-hidden shadow-2xl" style={{maxWidth:'580px',width:'100%',background:'#1B2A41',padding:'16px'}} onClick={e=>e.stopPropagation()}>
+            {imagePopupUrls.map((url,idx)=>(
+              <img key={idx} src={url} alt="" style={{width:'100%',maxWidth:'500px',display:'block',margin:idx>0?'12px auto 0':'0 auto',borderRadius:'8px'}}/>
+            ))}
+            <button onClick={()=>setImagePopupUrls(null)} style={{marginTop:'12px',width:'100%',padding:'8px',background:'#324A5F',color:'#CCC9DC',border:'none',borderRadius:'6px',cursor:'pointer',fontSize:'13px'}}>Close</button>
+          </div>
+        </div>
+      )}
+      </>    );
   }
 
   if (mode==='results' && activeQuiz?.type==='fillintheblank') {
