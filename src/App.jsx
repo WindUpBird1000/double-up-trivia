@@ -3677,7 +3677,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
             <div style={{display:'grid',gridTemplateColumns:'36px 32px 1fr 90px 120px 120px 72px 72px',gap:'8px'}} className="px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
               <div className="text-center">#</div>
-              <div className="text-center">Image</div>
+              <div className="text-center"><i className="ti ti-photo" style={{fontSize:"14px"}}/></div>
               <div>Question (first clue)</div>
               <div className="text-center">Clues Used</div>
               <div className="text-center">Your Answer</div>
@@ -3727,7 +3727,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             <div style={{display:'grid',gridTemplateColumns:'32px 36px 32px 1fr 120px 120px 100px 72px',gap:'8px'}} className="px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
               <div></div>
               <div className="text-center">#</div>
-              <div className="text-center">Image</div>
+              <div className="text-center"><i className="ti ti-photo" style={{fontSize:"14px"}}/></div>
               <div>Question</div>
               <div className="text-center">Your Answer</div>
               <div className="text-center">Correct Answer</div>
@@ -3777,7 +3777,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             <div style={{display:'grid',gridTemplateColumns:'32px 36px 32px 1fr 130px 130px 72px',gap:'8px'}} className="px-4 py-2 bg-gray-100 border-b text-xs font-semibold text-gray-500 uppercase tracking-wider">
               <div></div>
               <div className="text-center">#</div>
-              <div className="text-center">Image</div>
+              <div className="text-center"><i className="ti ti-photo" style={{fontSize:"14px"}}/></div>
               <div>Question</div>
               <div className="text-center leading-tight">Your Answer</div>
               <div className="text-center">Correct Answer</div>
