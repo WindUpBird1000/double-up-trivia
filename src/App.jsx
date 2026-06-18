@@ -132,15 +132,19 @@ const renderInlineFormatting = (text) => {  const parts = text.split(/(\{\{(?:b|
 
 const renderPrompt = (text) => {
   if (!text) return null;
-  const parts = text.split(/(\{\{image:[^}]+\}\})/);
+  const parts = text.split(/(\{\{(?:image|center):[^}]+\}\})/);
   return parts.map((part, i) => {
-    const match = part.match(/^\{\{image:([^}]+)\}\}$/);
-    if (match) {
+    const imgMatch = part.match(/^\{\{image:([^}]+)\}\}$/);
+    if (imgMatch) {
       return (
         <div key={i} style={{margin:'1rem 0', textAlign:'center'}}>
-          <img src={`/images/${match[1].trim()}`} alt="" style={{maxWidth:'100%', borderRadius:'0.5rem', display:'inline-block'}}/>
+          <img src={`/images/${imgMatch[1].trim()}`} alt="" style={{maxWidth:'100%', borderRadius:'0.5rem', display:'inline-block'}}/>
         </div>
       );
+    }
+    const centerMatch = part.match(/^\{\{center:([^}]+)\}\}$/);
+    if (centerMatch) {
+      return <div key={i} style={{textAlign:'center'}}>{renderInlineFormatting(centerMatch[1])}</div>;
     }
     return <span key={i}>{renderInlineFormatting(part)}</span>;
   });
@@ -1320,11 +1324,11 @@ const QuizApp = () => {
 
   const getPromptPreview = (q) => {
     if (q.clues) {
-      const raw = (q.clues[0] || '').replace(/\{\{image:[^}]+\}\}/g, '');
+      const raw = (q.clues[0] || '').replace(/\{\{image:[^}]+\}\}/g, '').replace(/\{\{center:([^}]+)\}\}/g, '$1');
       const plain = raw.replace(/\{\{(b|i|u):([^}]+)\}\}/g, '$2');
       return plain.length > 90 ? plain.slice(0,90)+'…' : raw;
     }
-    const raw = (q.prompt || q.text || '').replace(/\{\{image:[^}]+\}\}/g, '').replace(/\[[^\]]+\]/g, '____');
+    const raw = (q.prompt || q.text || '').replace(/\{\{image:[^}]+\}\}/g, '').replace(/\{\{center:([^}]+)\}\}/g, '$1').replace(/\[[^\]]+\]/g, '____');
     const plain = raw.replace(/\{\{(b|i|u):([^}]+)\}\}/g, '$2');
     return plain.length > 90 ? plain.slice(0,90)+'…' : raw;
   };
