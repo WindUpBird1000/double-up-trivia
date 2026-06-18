@@ -2470,25 +2470,28 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
     const now = new Date().toISOString();
     await supabase.from('disputes').update({ status: 'resolved', resolution, resolved_at: now }).in('id', matchingIds);
 
-    // Build resolution message body
+    // Build resolution message body and insert one row per matching dispute's user
     const quizTitle = quizRow?.title || quizKey;
-    const primaryCorrect = current.correct_answer_display;
-    const resolvedText = resolution === 'accepted'
-      ? `Your dispute about Question ${qi+1} on ${quizTitle}, where you submitted "${current.user_answer}" — your answer has been approved and added to the list of correct answers.`
-      : `Your dispute about Question ${qi+1} on ${quizTitle}, where you submitted "${current.user_answer}" but the correct answer was listed as "${primaryCorrect}" — your dispute has been denied.`;
-    const fullBody = adminReason ? `${resolvedText}\n\nReason: ${adminReason}` : resolvedText;
+    const isDDQuiz = quizRow?.type === 'datadash';
+
+    const buildBody = (d) => {
+      const q1 = `Your dispute about Question ${d.question_index+1} on ${quizTitle}, where you submitted "${d.user_answer}"`;
+      let outcome;
+      if (resolution === 'accepted') {
+        outcome = isDDQuiz
+          ? `${q1}, has been approved. A precise resolution will be communicated later.`
+          : `${q1}, has been approved and added to the list of correct answers.`;
+      } else {
+        outcome = `${q1} but the correct answer was listed as "${d.correct_answer_display}", has been denied.`;
+      }
+      return adminReason ? `${outcome}\n\nReason: ${adminReason}` : outcome;
+    };
 
     // Insert a resolution message for each matching dispute's user
     const resolutionRows = matchingDisputes.map(d => ({
       user_id: d.user_id,
       title: 'Dispute Resolution',
-      body: adminReason
-        ? (resolution === 'accepted'
-          ? `Your dispute about Question ${d.question_index+1} on ${quizTitle}, where you submitted "${d.user_answer}" — your answer has been approved and added to the list of correct answers.\n\nReason: ${adminReason}`
-          : `Your dispute about Question ${d.question_index+1} on ${quizTitle}, where you submitted "${d.user_answer}" but the correct answer was listed as "${d.correct_answer_display}" — your dispute has been denied.\n\nReason: ${adminReason}`)
-        : (resolution === 'accepted'
-          ? `Your dispute about Question ${d.question_index+1} on ${quizTitle}, where you submitted "${d.user_answer}" — your answer has been approved and added to the list of correct answers.`
-          : `Your dispute about Question ${d.question_index+1} on ${quizTitle}, where you submitted "${d.user_answer}" but the correct answer was listed as "${d.correct_answer_display}" — your dispute has been denied.`),
+      body: buildBody(d),
       resolved_at: now,
     }));
     await supabase.from('resolutions').insert(resolutionRows);
