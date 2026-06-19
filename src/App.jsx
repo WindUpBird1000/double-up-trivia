@@ -107,7 +107,7 @@ const normalizeAnswer = (s) => {
   return t.replace(/\s+/g, ' ').trim();
 };
 const emptyMCQuestion  = () => ({ prompt: '', options: ['','','','','',''], correctIndices: [], randomizeOptions: false });
-const emptyORQuestion  = () => ({ prompt: '', acceptedAnswers: [], primaryAnswerIndex: 0, showOthersCount: false, additionalContext: '', hasBonusPoints: false, bonusPoints: 1, bonusPrompt: '', bonusAcceptedAnswers: [] });
+const emptyORQuestion  = () => ({ prompt: '', acceptedAnswers: [], primaryAnswerIndex: 0, showOthersCount: false, additionalContext: '', hasBonusPoints: false, bonusPoints: 1, bonusPrompt: '', bonusAcceptedAnswers: [], bonusPrimaryAnswerIndex: 0 });
 const emptyDDQuestion  = () => ({ prompt: '', correctAnswer: null, correctAnswerDisplay: '', additionalContext: '' }); // Data Dash: single numeric answer
 const emptyMNQuestion  = () => ({ clues: ['','','',''], acceptedAnswers: [], primaryAnswerIndex: 0, additionalContext: '' }); // Mystery Noun
 const emptyCombQuestion = (questionType) => ({
@@ -774,6 +774,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                         <span className="font-semibold text-blue-700">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span>{' '}
                         <span className="text-gray-500">{q.bonusPrompt}</span>{' — '}
                         <span className={bpCorrect?'text-green-700 font-medium':'text-red-600 font-medium'}>{bpAns||'(blank)'}</span>
+                        {!bpCorrect && <span className="text-gray-500">{' '}(correct: {q.bonusAcceptedAnswers?.[q.bonusPrimaryAnswerIndex||0]||q.bonusAcceptedAnswers?.[0]||'—'})</span>}
                       </p>
                     )}
                   </div>
@@ -1817,10 +1818,11 @@ const QuizApp = () => {
     const t = orBonusAnswerInput.trim(); if (!t) return;
     const cur = orQuestions[orCurrentIndex];
     if ((cur.bonusAcceptedAnswers||[]).map(normalizeAnswer).includes(normalizeAnswer(t))) { alert('That bonus answer is already included.'); return; }
-    setOrQuestions(p => p.map((q,i) => i!==orCurrentIndex ? q : { ...q, bonusAcceptedAnswers:[...(q.bonusAcceptedAnswers||[]),t] }));
+    setOrQuestions(p => p.map((q,i) => i!==orCurrentIndex ? q : { ...q, bonusAcceptedAnswers:[...(q.bonusAcceptedAnswers||[]),t], bonusPrimaryAnswerIndex: (q.bonusAcceptedAnswers||[]).length===0?0:(q.bonusPrimaryAnswerIndex||0) }));
     setOrBonusAnswerInput('');
   };
-  const removeORBonusAnswer = (ai) => setOrQuestions(p => p.map((q,i) => i!==orCurrentIndex ? q : { ...q, bonusAcceptedAnswers:(q.bonusAcceptedAnswers||[]).filter((_,j)=>j!==ai) }));
+  const removeORBonusAnswer = (ai) => setOrQuestions(p => p.map((q,i) => { if(i!==orCurrentIndex) return q; const na=(q.bonusAcceptedAnswers||[]).filter((_,j)=>j!==ai); const curPrimary=q.bonusPrimaryAnswerIndex||0; const np=ai===curPrimary?0:ai<curPrimary?curPrimary-1:curPrimary; return {...q,bonusAcceptedAnswers:na,bonusPrimaryAnswerIndex:na.length>0?np:0}; }));
+  const setORBonusPrimary = (ai) => setOrQuestions(p => p.map((q,i) => i===orCurrentIndex ? {...q,bonusPrimaryAnswerIndex:ai} : q));
   const updateDDQuestion = (field, value) => setDdQuestions(p => p.map((q,i) => i===ddCurrentIndex ? {...q,[field]:value} : q));
   const updateMNQuestion = (field, value) => setMnQuestions(p => p.map((q,i) => i===mnCurrentIndex ? {...q,[field]:value} : q));
   const removeMNAnswer = (ai) => setMnQuestions(p => p.map((q,i) => { if(i!==mnCurrentIndex) return q; const na=q.acceptedAnswers.filter((_,j)=>j!==ai); const np=ai===q.primaryAnswerIndex?0:ai<q.primaryAnswerIndex?q.primaryAnswerIndex-1:q.primaryAnswerIndex; return {...q,acceptedAnswers:na,primaryAnswerIndex:na.length>0?np:0}; }));
@@ -1925,7 +1927,7 @@ const QuizApp = () => {
     } else if (newQuizType==='MC') {
       return { ...base, randomizeQuestions:mcRandomizeQuestions, questions:mcQuestions.map(q=>({ prompt:q.prompt, options:q.options.filter(o=>o.trim()!==''), correctIndices:q.correctIndices.filter(i=>q.options[i]&&q.options[i].trim()!=='').map(i=>q.options.filter((_,idx)=>idx<=i&&q.options[idx].trim()!=='').length-1), randomizeOptions:q.randomizeOptions||false })) };
     } else if (newQuizType==='openresponse') {
-      return { ...base, randomizeQuestions:orRandomizeQuestions, questions:orQuestions.map(q=>({ prompt:q.prompt, acceptedAnswers:q.acceptedAnswers, primaryAnswerIndex:q.primaryAnswerIndex, showOthersCount:q.showOthersCount, additionalContext:q.additionalContext||'', hasBonusPoints:q.hasBonusPoints||false, bonusPoints:q.bonusPoints||1, bonusPrompt:q.bonusPrompt||'', bonusAcceptedAnswers:q.bonusAcceptedAnswers||[] })) };
+      return { ...base, randomizeQuestions:orRandomizeQuestions, questions:orQuestions.map(q=>({ prompt:q.prompt, acceptedAnswers:q.acceptedAnswers, primaryAnswerIndex:q.primaryAnswerIndex, showOthersCount:q.showOthersCount, additionalContext:q.additionalContext||'', hasBonusPoints:q.hasBonusPoints||false, bonusPoints:q.bonusPoints||1, bonusPrompt:q.bonusPrompt||'', bonusAcceptedAnswers:q.bonusAcceptedAnswers||[], bonusPrimaryAnswerIndex:q.bonusPrimaryAnswerIndex||0 })) };
     } else if (newQuizType==='datadash') {
       return { ...base, questions:ddQuestions.map(q=>({ prompt:q.prompt, correctAnswer:q.correctAnswer, correctAnswerDisplay:q.correctAnswerDisplay||'', additionalContext:q.additionalContext||'' })) };
     } else if (newQuizType==='mysterynoun') {
@@ -3906,6 +3908,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                         <span className="font-semibold text-blue-700 ml-12">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span>
                         <span className="text-gray-500 flex-1">{q.bonusPrompt}</span>
                         <span className={`font-medium ${bpCorrect?'text-green-700':'text-red-600'}`}>{bpAns||'(blank)'}</span>
+                        {!bpCorrect && <span className="text-gray-500">(correct: {q.bonusAcceptedAnswers?.[q.bonusPrimaryAnswerIndex||0]||q.bonusAcceptedAnswers?.[0]||'—'})</span>}
                       </div>
                     );
                   })()}
@@ -4567,16 +4570,21 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                           <button onClick={addORBonusAnswer} className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><Plus size={16}/> Include</button>
                         </div>
                       </div>
-                      {(orQ.bonusAcceptedAnswers||[]).length>0&&(
-                        <div className="bg-white border border-gray-200 rounded-lg p-2 space-y-1">
-                          {orQ.bonusAcceptedAnswers.map((ans,ai)=>(
-                            <div key={ai} className="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-50">
-                              <span className="flex-1 text-sm text-gray-700">{ans}</span>
-                              <button onClick={()=>removeORBonusAnswer(ai)} className="text-red-400 hover:text-red-600"><X size={14}/></button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Bonus Answers Included <span className="text-gray-400 font-normal">(click to set as primary)</span></label>
+                        {(orQ.bonusAcceptedAnswers||[]).length===0?<div className="bg-white border border-gray-200 rounded-lg p-3 text-sm text-gray-400 text-center">No bonus answers added yet.</div>:(
+                          <div className="bg-white border border-gray-200 rounded-lg p-2 space-y-1">
+                            {orQ.bonusAcceptedAnswers.map((ans,ai)=>{const isPrimary=ai===(orQ.bonusPrimaryAnswerIndex||0);return(
+                              <div key={ai} onClick={()=>setORBonusPrimary(ai)} className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer border-2 transition-all ${isPrimary?'bg-yellow-50 border-yellow-400':'bg-gray-50 border-transparent hover:border-blue-300'}`}>
+                                <Star size={13} className={isPrimary?'text-yellow-500 fill-yellow-500':'text-gray-300'}/>
+                                <span className={`flex-1 text-sm ${isPrimary?'font-semibold text-gray-800':'text-gray-700'}`}>{ans}</span>
+                                {isPrimary&&<span className="text-xs text-yellow-600 font-medium">Primary</span>}
+                                <button onClick={e=>{e.stopPropagation();removeORBonusAnswer(ai);}} className="text-red-400 hover:text-red-600 ml-1"><X size={14}/></button>
+                              </div>
+                            );})}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
