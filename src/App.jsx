@@ -107,7 +107,7 @@ const normalizeAnswer = (s) => {
   return t.replace(/\s+/g, ' ').trim();
 };
 const emptyMCQuestion  = () => ({ prompt: '', options: ['','','','','',''], correctIndices: [], randomizeOptions: false });
-const emptyORQuestion  = () => ({ prompt: '', acceptedAnswers: [], primaryAnswerIndex: 0, showOthersCount: false, additionalContext: '' });
+const emptyORQuestion  = () => ({ prompt: '', acceptedAnswers: [], primaryAnswerIndex: 0, showOthersCount: false, additionalContext: '', hasBonusPoints: false, bonusPoints: 1, bonusPrompt: '', bonusAcceptedAnswers: [] });
 const emptyDDQuestion  = () => ({ prompt: '', correctAnswer: null, correctAnswerDisplay: '', additionalContext: '' }); // Data Dash: single numeric answer
 const emptyMNQuestion  = () => ({ clues: ['','','',''], acceptedAnswers: [], primaryAnswerIndex: 0, additionalContext: '' }); // Mystery Noun
 const emptyCombQuestion = (questionType) => ({
@@ -752,6 +752,9 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
             }
             const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
             const hasOtherAnswers = (qtype === 'OR' || qtype === 'openresponse') && q.showOthersCount && q.acceptedAnswers?.length > 1;
+            const bpAns = q.hasBonusPoints ? (myAnswers[`bp_${i}`] || '') : '';
+            const bpCorrect = q.hasBonusPoints && bpAns.trim()!=='' && (q.bonusAcceptedAnswers||[]).some(a=>normalizeAnswer(a)===normalizeAnswer(bpAns));
+            const bpEarned = bpCorrect ? (q.bonusPoints||0) : 0;
             return (
               <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
                 <div className="grid grid-cols-3 gap-4 p-4">
@@ -766,6 +769,13 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                     </p>
                     {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 mt-0.5 italic">{q.additionalContext}</p>}
                     <p className={`text-xs mt-1 ${correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Your Answer:</span> {getMyAnswerDisplay(q, i)}</p>
+                    {q.hasBonusPoints && (
+                      <p className="text-xs mt-1 pt-1 border-t border-dashed border-gray-300">
+                        <span className="font-semibold text-blue-700">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span>{' '}
+                        <span className="text-gray-500">{q.bonusPrompt}</span>{' — '}
+                        <span className={bpCorrect?'text-green-700 font-medium':'text-red-600 font-medium'}>{bpAns||'(blank)'}</span>
+                      </p>
+                    )}
                   </div>
                   <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
                     <p><span className="font-semibold">{correctCounts?.[i] ?? '—'}/{totalUsers}</span> Correct</p>
@@ -773,6 +783,9 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                     <p className={`font-semibold ${correct || token === 'insurance' ? 'text-green-700' : 'text-red-600'}`}>
                       Your Score: {myPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}
                     </p>
+                    {q.hasBonusPoints && (
+                      <p className={`font-semibold ${bpCorrect?'text-green-700':'text-gray-400'}`}>Bonus: +{bpEarned} pts</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1148,6 +1161,7 @@ const QuizApp = () => {
   const [orCurrentIndex, setOrCurrentIndex] = useState(0);
   const [orRandomizeQuestions, setOrRandomizeQuestions] = useState(false);
   const [orAnswerInput, setOrAnswerInput] = useState('');
+  const [orBonusAnswerInput, setOrBonusAnswerInput] = useState('');
   const orPromptRef = React.useRef(null);
   const [ddQuestions, setDdQuestions] = useState([emptyDDQuestion()]);
   const [ddCurrentIndex, setDdCurrentIndex] = useState(0);
@@ -1799,6 +1813,14 @@ const QuizApp = () => {
   };
   const removeORAnswer = (ai) => setOrQuestions(p => p.map((q,i) => { if(i!==orCurrentIndex) return q; const na=q.acceptedAnswers.filter((_,j)=>j!==ai); const np=ai===q.primaryAnswerIndex?0:ai<q.primaryAnswerIndex?q.primaryAnswerIndex-1:q.primaryAnswerIndex; return {...q,acceptedAnswers:na,primaryAnswerIndex:na.length>0?np:0}; }));
   const setORPrimary = (ai) => setOrQuestions(p => p.map((q,i) => i===orCurrentIndex ? {...q,primaryAnswerIndex:ai} : q));
+  const addORBonusAnswer = () => {
+    const t = orBonusAnswerInput.trim(); if (!t) return;
+    const cur = orQuestions[orCurrentIndex];
+    if ((cur.bonusAcceptedAnswers||[]).map(normalizeAnswer).includes(normalizeAnswer(t))) { alert('That bonus answer is already included.'); return; }
+    setOrQuestions(p => p.map((q,i) => i!==orCurrentIndex ? q : { ...q, bonusAcceptedAnswers:[...(q.bonusAcceptedAnswers||[]),t] }));
+    setOrBonusAnswerInput('');
+  };
+  const removeORBonusAnswer = (ai) => setOrQuestions(p => p.map((q,i) => i!==orCurrentIndex ? q : { ...q, bonusAcceptedAnswers:(q.bonusAcceptedAnswers||[]).filter((_,j)=>j!==ai) }));
   const updateDDQuestion = (field, value) => setDdQuestions(p => p.map((q,i) => i===ddCurrentIndex ? {...q,[field]:value} : q));
   const updateMNQuestion = (field, value) => setMnQuestions(p => p.map((q,i) => i===mnCurrentIndex ? {...q,[field]:value} : q));
   const removeMNAnswer = (ai) => setMnQuestions(p => p.map((q,i) => { if(i!==mnCurrentIndex) return q; const na=q.acceptedAnswers.filter((_,j)=>j!==ai); const np=ai===q.primaryAnswerIndex?0:ai<q.primaryAnswerIndex?q.primaryAnswerIndex-1:q.primaryAnswerIndex; return {...q,acceptedAnswers:na,primaryAnswerIndex:na.length>0?np:0}; }));
@@ -1860,7 +1882,13 @@ const QuizApp = () => {
       for(let i=0;i<mcQuestions.length;i++){if(mcQuestions[i].options.filter(o=>o.trim()).length<2){alert(`Q${i+1} needs 2+ options.`);return false;}if(mcQuestions[i].correctIndices.length===0){alert(`Q${i+1} needs a correct answer.`);return false;}}
     } else if (newQuizType==='openresponse') {
       if (!orQuestions[0]?.prompt.trim()) { alert('Please add at least one question.'); return false; }
-      for(let i=0;i<orQuestions.length;i++){if(orQuestions[i].acceptedAnswers.length===0){alert(`Q${i+1} needs at least one accepted answer.`);return false;}}
+      for(let i=0;i<orQuestions.length;i++){
+        if(orQuestions[i].acceptedAnswers.length===0){alert(`Q${i+1} needs at least one accepted answer.`);return false;}
+        if(orQuestions[i].hasBonusPoints){
+          if(!orQuestions[i].bonusPrompt?.trim()){alert(`Q${i+1} has Bonus Points enabled but is missing a bonus prompt.`);return false;}
+          if(!(orQuestions[i].bonusAcceptedAnswers||[]).length){alert(`Q${i+1} has Bonus Points enabled but needs at least one accepted bonus answer.`);return false;}
+        }
+      }
     } else if (newQuizType==='combination') {
       if (combQuestions.length===0) { alert('Please add at least one question.'); return false; }
       if (combDraft) { alert('You are in the middle of editing a question. Click "Update Question" or "Cancel Edit" first.'); return false; }
@@ -1897,7 +1925,7 @@ const QuizApp = () => {
     } else if (newQuizType==='MC') {
       return { ...base, randomizeQuestions:mcRandomizeQuestions, questions:mcQuestions.map(q=>({ prompt:q.prompt, options:q.options.filter(o=>o.trim()!==''), correctIndices:q.correctIndices.filter(i=>q.options[i]&&q.options[i].trim()!=='').map(i=>q.options.filter((_,idx)=>idx<=i&&q.options[idx].trim()!=='').length-1), randomizeOptions:q.randomizeOptions||false })) };
     } else if (newQuizType==='openresponse') {
-      return { ...base, randomizeQuestions:orRandomizeQuestions, questions:orQuestions.map(q=>({ prompt:q.prompt, acceptedAnswers:q.acceptedAnswers, primaryAnswerIndex:q.primaryAnswerIndex, showOthersCount:q.showOthersCount, additionalContext:q.additionalContext||'' })) };
+      return { ...base, randomizeQuestions:orRandomizeQuestions, questions:orQuestions.map(q=>({ prompt:q.prompt, acceptedAnswers:q.acceptedAnswers, primaryAnswerIndex:q.primaryAnswerIndex, showOthersCount:q.showOthersCount, additionalContext:q.additionalContext||'', hasBonusPoints:q.hasBonusPoints||false, bonusPoints:q.bonusPoints||1, bonusPrompt:q.bonusPrompt||'', bonusAcceptedAnswers:q.bonusAcceptedAnswers||[] })) };
     } else if (newQuizType==='datadash') {
       return { ...base, questions:ddQuestions.map(q=>({ prompt:q.prompt, correctAnswer:q.correctAnswer, correctAnswerDisplay:q.correctAnswerDisplay||'', additionalContext:q.additionalContext||'' })) };
     } else if (newQuizType==='mysterynoun') {
@@ -2079,7 +2107,20 @@ const QuizApp = () => {
           total += correct ? pts : 0;
         }
       });
-      return { user_id: a.user_id, display_name: a.display_name, score: Math.round(total * 10) / 10, questionsCorrect };
+      // ── Bonus Points (OR only): flat, fixed values, fully independent of tokens/difficulty ──
+      let bonusEarned = 0;
+      const bonusCorrectness = [];
+      if (quiz.type === 'openresponse') {
+        questions.forEach((q, i) => {
+          if (!q.hasBonusPoints) { bonusCorrectness.push(null); return; }
+          const bpAns = normalizeAnswer((a.answers && a.answers[`bp_${i}`]) || '');
+          const bpCorrect = bpAns !== '' && (q.bonusAcceptedAnswers || []).some(ac => normalizeAnswer(ac) === bpAns);
+          bonusCorrectness.push(bpCorrect);
+          if (bpCorrect) bonusEarned += (q.bonusPoints || 0);
+        });
+      }
+      total += bonusEarned;
+      return { user_id: a.user_id, display_name: a.display_name, score: Math.round(total * 10) / 10, questionsCorrect, bonusEarned, bonusCorrectness };
     });
     return { pointValues, userScores, correctnessByUser, correctCounts };
   };
@@ -2274,8 +2315,15 @@ async function load() {
         else if(token==='parasite') earned=correct?pts:(attempts.length>0?Math.round((correctCounts[i]*pts/attempts.length)*10)/10:0);
         else earned=correct?pts:0;
       }
+      let bp = 0;
+      if (quiz.type === 'openresponse' && q.hasBonusPoints) {
+        const bpRaw = (a.answers['bp_'+i]||'').toString().trim();
+        const bpCorrect = bpRaw!=='' && (q.bonusAcceptedAnswers||[]).some(ac=>normalize(ac)===normalize(bpRaw));
+        if (bpCorrect) bp = q.bonusPoints||0;
+      }
+      earned = Math.round((earned+bp)*10)/10;
       total=Math.round((total+earned)*10)/10;
-      return {raw,blank,correct,token,pts,earned};
+      return {raw,blank,correct,token,pts,earned,bp};
     });
     return {uid:a.user_id,name:nameMap[a.user_id]||a.user_id,cells,total};
   });
@@ -2293,7 +2341,8 @@ async function load() {
       const cls=c.blank?'blank':c.correct?'correct':'incorrect';
       const mark=c.blank?'—':c.correct?'<span class="tick">✓</span>':'<span class="cross">✗</span>';
       const tok=c.token?'<span class="token '+tokenClass[c.token]+'">'+tokenLabel[c.token]+'</span>':'';
-      html+='<td class="'+cls+'">'+mark+' '+tok+'<span class="pts">'+c.earned+'</span><span class="ans" title="'+c.raw+'">'+(c.blank?'':c.raw.substring(0,15))+'</span></td>';
+      const bpNote=c.bp>0?' <span style="color:#7eb8e8;font-weight:700;">(BP = '+c.bp+')</span>':'';
+      html+='<td class="'+cls+'">'+mark+' '+tok+'<span class="pts">'+c.earned+'</span>'+bpNote+'<span class="ans" title="'+c.raw+'">'+(c.blank?'':c.raw.substring(0,15))+'</span></td>';
     });
     html+='<td>'+row.total+'</td></tr>';
   });
@@ -2439,7 +2488,14 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             earned = correct ? pts : 0;
             formula = correct ? `${pts}` : `✗ → 0`;
           }
-          return { correct, token, earned, formula };
+          // Bonus Points (OR only): flat, independent of tokens
+          let bp = 0;
+          if (quiz.type === 'openresponse' && q.hasBonusPoints) {
+            const bpAns = normalizeAnswer((attempt.answers && attempt.answers[`bp_${i}`]) || '');
+            const bpCorrect = bpAns !== '' && (q.bonusAcceptedAnswers || []).some(ac => normalizeAnswer(ac) === bpAns);
+            if (bpCorrect) { bp = q.bonusPoints || 0; }
+          }
+          return { correct, token, earned: earned + bp, formula, bp };
         });
       }
 
@@ -3216,7 +3272,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
 
   if (mode==='assessment' && activeQuiz?.type==='openresponse') {
     const q=activeQuestions[currentQuestionIndex]; const total=activeQuestions.length;
-    const answeredCount=Object.keys(studentAnswers).filter(k=>(studentAnswers[k]||'').trim()!=='').length;
+    const answeredCount=Object.keys(studentAnswers).filter(k=>!k.startsWith('bp_')&&(studentAnswers[k]||'').trim()!=='').length;
     return (
       <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
         <div className="flex justify-between items-center mb-8">
@@ -3226,6 +3282,12 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         <div className="bg-white rounded-xl shadow-md p-8 mb-6">
           <div className="text-xl text-gray-800 font-semibold mb-6">{renderPrompt(q.prompt)}</div>
           <input type="text" value={studentAnswers[currentQuestionIndex]||''} onChange={e=>setStudentAnswers(p=>({...p,[currentQuestionIndex]:e.target.value}))} placeholder="Type your answer here..." className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-800 text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
+          {q.hasBonusPoints && (
+            <div className="mt-5 pt-5 border-t border-dashed border-gray-300">
+              <p className="text-sm font-semibold text-blue-700 mb-2">Bonus Question ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}): <span className="font-normal text-gray-700">{renderPrompt(q.bonusPrompt)}</span></p>
+              <input type="text" value={studentAnswers[`bp_${currentQuestionIndex}`]||''} onChange={e=>setStudentAnswers(p=>({...p,[`bp_${currentQuestionIndex}`]:e.target.value}))} placeholder="Type your bonus answer here..." className="w-full px-4 py-3 border-2 border-blue-200 rounded-lg text-gray-800 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
+            </div>
+          )}
         </div>
         <NavBar current={currentQuestionIndex} total={total} label="Question"/>
         <button onClick={submitQuiz} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg flex items-center justify-center gap-2">Review Answers and Assign Bonuses ({answeredCount}/{total} answered)</button>
@@ -3599,28 +3661,36 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             const cfg = assigned ? TOKEN_CONFIG[assigned] : null;
             const isBeingMoved = tapSelected?.fromQuestion === i;
             return (
-              <div
-                key={i}
-                onClick={() => handleTapQuestion(i)}
-                className={`grid grid-cols-12 gap-2 px-4 py-3 border-b last:border-b-0 items-center transition-colors
-                  ${assigned && !isBeingMoved ? 'bg-yellow-50' : 'bg-white'}
-                  ${tapSelected && !assigned ? 'cursor-pointer' : ''}`}
-              >
-                <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}</div>
-                <div className="col-span-7 text-sm text-gray-700 pr-3">{renderInlineFormatting(getPromptPreview(q))}</div>
-                <div className="col-span-2 text-sm text-blue-700 font-medium text-center">{getAnswerDisplay(q, i)}</div>
-                <div className="col-span-2 flex justify-center items-center min-h-[40px]">
-                  {assigned && cfg ? (
-                    <TokenChip
-                      tokenType={assigned}
-                      size={36}
-                      isSelected={isBeingMoved}
-                      onClick={e => { e.stopPropagation(); handleTapToken(assigned, i, `q-${i}`); }}
-                    />
-                  ) : (
-                    <div style={{ width:36, height:36, borderRadius:'50%', border: '2px dashed #d1d5db', background: 'transparent' }} />
-                  )}
+              <div key={i}>
+                <div
+                  onClick={() => handleTapQuestion(i)}
+                  className={`grid grid-cols-12 gap-2 px-4 py-3 border-b last:border-b-0 items-center transition-colors
+                    ${assigned && !isBeingMoved ? 'bg-yellow-50' : 'bg-white'}
+                    ${tapSelected && !assigned ? 'cursor-pointer' : ''}`}
+                >
+                  <div className="col-span-1 text-center text-sm font-medium text-gray-500">{i+1}</div>
+                  <div className="col-span-7 text-sm text-gray-700 pr-3">{renderInlineFormatting(getPromptPreview(q))}</div>
+                  <div className="col-span-2 text-sm text-blue-700 font-medium text-center">{getAnswerDisplay(q, i)}</div>
+                  <div className="col-span-2 flex justify-center items-center min-h-[40px]">
+                    {assigned && cfg ? (
+                      <TokenChip
+                        tokenType={assigned}
+                        size={36}
+                        isSelected={isBeingMoved}
+                        onClick={e => { e.stopPropagation(); handleTapToken(assigned, i, `q-${i}`); }}
+                      />
+                    ) : (
+                      <div style={{ width:36, height:36, borderRadius:'50%', border: '2px dashed #d1d5db', background: 'transparent' }} />
+                    )}
+                  </div>
                 </div>
+                {q.hasBonusPoints && (
+                  <div className="px-4 py-2 border-b last:border-b-0 bg-blue-50 flex items-center gap-2">
+                    <span className="text-xs font-semibold text-blue-700 ml-6">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span>
+                    <span className="text-xs text-gray-600 flex-1">{renderInlineFormatting(q.bonusPrompt)}</span>
+                    <span className="text-xs text-blue-700 font-medium">{studentAnswers[`bp_${i}`] || '—'}</span>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -3635,6 +3705,9 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         <div className="bg-white border-t border-gray-200 shadow-lg px-5 pt-4 pb-4 text-center rounded-t-2xl" onClick={handleTapBin}>
           <p className="text-sm font-semibold text-gray-700 mb-1">Available bonuses — click/tap to select, then click/tap a question to assign</p>
           <p className="text-xs text-gray-400 mb-3">Hover over a bonus to see what it does. Click/tap an assigned bonus to pick it back up.</p>
+          {activeQuestions.some(q=>q.hasBonusPoints) && (
+            <p className="text-xs text-blue-600 italic mb-3">Note: This quiz includes Bonus Point questions. Doubler, Insurance, and Sniper only affect your score on the main question — Bonus Points are always scored separately.</p>
+          )}
           {binTokensList.length > 0 ? (
             <div className="flex flex-wrap gap-3 items-center justify-center">
               {binTokensList.map((tok) => (
@@ -3825,6 +3898,17 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                         : <input type="checkbox" checked={disputing} onChange={e=>setDisputedQuestions(p=>({...p,[i]:e.target.checked}))} className="w-5 h-5 accent-red-500 cursor-pointer"/>}
                     </div>
                   </div>
+                  {q.hasBonusPoints && (()=>{
+                    const bpAns = studentAnswers[`bp_${i}`]||'';
+                    const bpCorrect = bpAns.trim()!=='' && (q.bonusAcceptedAnswers||[]).some(a=>normalizeAnswer(a)===normalizeAnswer(bpAns));
+                    return (
+                      <div className="px-4 pb-2 flex items-center gap-2 text-xs">
+                        <span className="font-semibold text-blue-700 ml-12">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span>
+                        <span className="text-gray-500 flex-1">{q.bonusPrompt}</span>
+                        <span className={`font-medium ${bpCorrect?'text-green-700':'text-red-600'}`}>{bpAns||'(blank)'}</span>
+                      </div>
+                    );
+                  })()}
                   {disputing && !alreadyDisputed && (
                     <div className="px-4 pb-3">
                       <textarea value={disputeReasons[i]||''} onChange={e=>setDisputeReasons(p=>({...p,[i]:e.target.value}))} placeholder="Briefly explain why you disagree, i.e., spelling error, factual error, etc." rows={2} className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-300 resize-none"/>
@@ -4122,7 +4206,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                     <ol className="mt-3 space-y-2 list-decimal list-inside">
                       {qType==='fillintheblank'
                         ?quiz.sentences?.map((s,i)=><li key={i} className="text-sm text-gray-700">{s.text}</li>)
-                        :quiz.questions?.map((q,i)=><li key={i} className="text-sm text-gray-700">{qType==='combination'?<span><span className={`inline-block mr-2 px-1.5 py-0.5 rounded text-xs font-bold ${q.questionType==='MC'?'bg-purple-100 text-purple-700':q.questionType==='OR'?'bg-orange-100 text-orange-700':'bg-blue-100 text-blue-700'}`}>{shortTypeLabel(q.questionType)}</span>{renderInlineFormatting(q.prompt||q.text||'')}</span>:qType==='mysterynoun'?renderInlineFormatting(q.clues?.[0]||''):renderInlineFormatting(q.prompt||'')}</li>)
+                        :quiz.questions?.map((q,i)=><li key={i} className="text-sm text-gray-700">{qType==='combination'?<span><span className={`inline-block mr-2 px-1.5 py-0.5 rounded text-xs font-bold ${q.questionType==='MC'?'bg-purple-100 text-purple-700':q.questionType==='OR'?'bg-orange-100 text-orange-700':'bg-blue-100 text-blue-700'}`}>{shortTypeLabel(q.questionType)}</span>{renderInlineFormatting(q.prompt||q.text||'')}</span>:qType==='mysterynoun'?renderInlineFormatting(q.clues?.[0]||''):<span>{renderInlineFormatting(q.prompt||'')}{q.hasBonusPoints&&<span className="ml-1 text-xs font-semibold text-blue-600">+ BP</span>}</span>}</li>)
                       }
                     </ol>
                   </details>
@@ -4454,6 +4538,48 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                     <label className="text-sm text-gray-700">Show +X in quiz results{orQ.showOthersCount&&orQ.acceptedAnswers.length>1&&<span className="ml-2 text-xs text-gray-400"></span>}</label>
                   </div>
                 )}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-3 mb-3">
+                    <label className="text-sm font-medium text-gray-600">Bonus Points?</label>
+                    <select value={orQ.hasBonusPoints?'yes':'no'} onChange={e=>updateORQuestion('hasBonusPoints',e.target.value==='yes')} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white">
+                      <option value="no">No</option>
+                      <option value="yes">Yes</option>
+                    </select>
+                    {orQ.hasBonusPoints&&(
+                      <>
+                        <label className="text-sm font-medium text-gray-600 ml-2"># of pts</label>
+                        <select value={orQ.bonusPoints||1} onChange={e=>updateORQuestion('bonusPoints',parseInt(e.target.value))} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white">
+                          {[1,2,3,4].map(n=><option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </>
+                    )}
+                  </div>
+                  {orQ.hasBonusPoints&&(
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Bonus Prompt</label>
+                        <input type="text" value={orQ.bonusPrompt||''} onChange={e=>updateORQuestion('bonusPrompt',e.target.value)} placeholder="e.g. What first name is shared by both?" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"/>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Bonus Answer</label>
+                        <div className="flex gap-2">
+                          <input type="text" value={orBonusAnswerInput} onChange={e=>setOrBonusAnswerInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addORBonusAnswer()} placeholder="Type an accepted bonus answer..." className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"/>
+                          <button onClick={addORBonusAnswer} className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><Plus size={16}/> Include</button>
+                        </div>
+                      </div>
+                      {(orQ.bonusAcceptedAnswers||[]).length>0&&(
+                        <div className="bg-white border border-gray-200 rounded-lg p-2 space-y-1">
+                          {orQ.bonusAcceptedAnswers.map((ans,ai)=>(
+                            <div key={ai} className="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-50">
+                              <span className="flex-1 text-sm text-gray-700">{ans}</span>
+                              <button onClick={()=>removeORBonusAnswer(ai)} className="text-red-400 hover:text-red-600"><X size={14}/></button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div className="mt-3">
                   <label className="block text-sm font-medium text-gray-600 mb-1">Additional Context <span className="text-xs text-gray-400 font-normal">(optional — shown as "Why?" link on scoreboard)</span></label>
                   <input type="text" value={orQ.additionalContext||''} onChange={e=>updateORQuestion('additionalContext',e.target.value)} placeholder="e.g. These are US Presidents in order." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"/>
@@ -4915,7 +5041,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                                           : <td className={`py-2 px-3 text-center font-bold text-base ${cell.correct ? 'text-green-600' : 'text-red-500'}`}>{cell.correct ? '✓' : '✗'}</td>}
                                         <td className="py-2 px-3 text-center text-xs text-gray-600">{cell.token ? tokenLabel(cell.token) : <span className="text-gray-300">—</span>}</td>
                                         <td className="py-2 px-3 text-center text-gray-500">{ptsByQIndex[i]} pts</td>
-                                        <td className="py-2 px-3 text-center font-semibold text-gray-800">{cell.earned} pts</td>
+                                        <td className="py-2 px-3 text-center font-semibold text-gray-800">{cell.earned} pts{cell.bp>0&&<span className="block text-xs font-normal text-blue-600">(BP: +{cell.bp})</span>}</td>
                                         <td className="py-2 px-3 text-center text-xs text-gray-500">{cell.formula}</td>
                                       </tr>
                                     ))}
