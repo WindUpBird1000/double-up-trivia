@@ -1044,7 +1044,10 @@ const QuizApp = () => {
       if (session?.user) {
         setCurrentUser(session.user);
         await fetchUserData(session.user);
-        if (!hasAuditDeepLink) setMode('setup'); // session restore skips message check
+        if (!hasAuditDeepLink) {
+          const hasUnread = await checkUnreadMessagesAndAdvance(session.user);
+          if (!hasUnread) setMode('setup');
+        }
       }
     });
     // Load quizzes from Supabase
@@ -1552,21 +1555,10 @@ const QuizApp = () => {
     }
   };
 
-  const handleLogin = async () => {
-    setLoginError('');
-    const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
-    if (error) { setLoginError('Invalid email or password.'); return; }
-    // Clear all quiz session state before loading the new user
-    setSelectedCategory(''); setSelectedQuizKey('');
-    setActiveQuiz(null); setActiveQuestions([]);
-    setStudentAnswers({}); setTokenAssignments({});
-    setCurrentQuestionIndex(0);
-    setMnCluesRevealed({}); setMnAnswered({}); setMnCurrentQ(0);
-    setDisputedQuestions({}); setDisputeReasons({}); setSubmittedDisputes([]);
-    setUserAttempts({}); setCurrentAttemptId(null);
-    const loginUser = data.user;
-    setCurrentUser(loginUser);
-    await fetchUserData(loginUser);
+  // Shared by both explicit login and silent session restore: checks for unread
+  // broadcast messages and dispute resolutions since the user's last_login_at,
+  // shows the interstitial if any exist, and always advances last_login_at to now.
+  const checkUnreadMessagesAndAdvance = async (loginUser) => {
     // Read last_login_at from profiles BEFORE updating it
     const { data: profileForLogin } = await supabase
       .from('profiles')
@@ -1601,9 +1593,28 @@ const QuizApp = () => {
       setMsgPageIndex(0);
       setAllMsgViewed(allUnread.length === 1);
       setMode('messages');
-    } else {
-      setMode('setup');
+      return true;
     }
+    return false;
+  };
+
+  const handleLogin = async () => {
+    setLoginError('');
+    const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
+    if (error) { setLoginError('Invalid email or password.'); return; }
+    // Clear all quiz session state before loading the new user
+    setSelectedCategory(''); setSelectedQuizKey('');
+    setActiveQuiz(null); setActiveQuestions([]);
+    setStudentAnswers({}); setTokenAssignments({});
+    setCurrentQuestionIndex(0);
+    setMnCluesRevealed({}); setMnAnswered({}); setMnCurrentQ(0);
+    setDisputedQuestions({}); setDisputeReasons({}); setSubmittedDisputes([]);
+    setUserAttempts({}); setCurrentAttemptId(null);
+    const loginUser = data.user;
+    setCurrentUser(loginUser);
+    await fetchUserData(loginUser);
+    const hasUnread = await checkUnreadMessagesAndAdvance(loginUser);
+    if (!hasUnread) setMode('setup');
   };
 
   const saveNotificationSettings = async () => {
