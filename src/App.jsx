@@ -4146,8 +4146,8 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                 <button
                   onClick={()=>setShowMsgPreview(true)}
                   disabled={!msgBody.trim()}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium disabled:opacity-40"
-                ><BookOpen size={18}/> Preview</button>
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium disabled:opacity-40"
+                >Preview</button>
                 {!editingMsgPublished && (
                   <button
                     onClick={()=>saveMessage(false)}
