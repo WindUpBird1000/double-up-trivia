@@ -2402,7 +2402,7 @@ async function load() {
 
   // ── Render table (shared across all three types) ──
   let html='<table><thead><tr><th>User</th>';
-  for(let i=0;i<N;i++) html+='<th>Q'+(i+1)+'<br><span style="color:#8899aa;font-weight:400">'+(quizType==='mysterynoun'?'max '+pointValues[i]:pointValues[i])+'pt</span></th>';
+  for(let i=0;i<N;i++) html+='<th>Q'+(i+1)+(quizType==='datadash'?'':'<br><span style="color:#8899aa;font-weight:400">'+(quizType==='mysterynoun'?'max '+pointValues[i]:pointValues[i])+'pt</span>')+'</th>';
   html+='<th>Total</th></tr>';
   if (correctCounts) {
     html+='<tr><th style="font-size:11px;color:#8899aa">correct→</th>';
