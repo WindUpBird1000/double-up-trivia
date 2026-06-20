@@ -1,6 +1,6 @@
 // v2.1
 import React, { useState, useEffect } from 'react';
-import { Check, X, ChevronLeft, ChevronRight, Settings, BookOpen, LogOut, Plus, Trash2, Download, Edit2, Star, List, AlertTriangle } from 'lucide-react';
+import { Check, X, ChevronLeft, ChevronRight, Settings, BookOpen, LogOut, Plus, Trash2, Download, Edit2, Star, List, AlertTriangle, Archive } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 
@@ -1130,6 +1130,7 @@ const QuizApp = () => {
   const [adminSeasonFilter, setAdminSeasonFilter] = useState('All');
   const [adminTypeFilter, setAdminTypeFilter] = useState('All');
   const [adminStatusFilter, setAdminStatusFilter] = useState('All');
+  const [showArchived, setShowArchived] = useState(false);
   const [newSentenceInput, setNewSentenceInput] = useState('');
   const [newQuizSentences, setNewQuizSentences] = useState([]);
   const [extraWordInput, setExtraWordInput] = useState('');
@@ -1527,6 +1528,16 @@ const QuizApp = () => {
     setAllQuizData(p => { const n = {...p}; delete n[key]; return n; });
     setKnownQuizzes(p => ({ quizzes: p.quizzes.filter(k => k !== key) }));
     setConfirmDeleteKey(null);
+  };
+
+  const toggleArchiveQuiz = async (key) => {
+    const quiz = allQuizData[key];
+    if (!quiz) return;
+    const newArchived = !quiz.archived;
+    const { data: row } = await supabase.from('quizzes').select('data').eq('quiz_key', key).single();
+    const updatedData = { ...(row?.data || {}), archived: newArchived };
+    await supabase.from('quizzes').update({ data: updatedData }).eq('quiz_key', key);
+    setAllQuizData(p => ({ ...p, [key]: { ...p[key], archived: newArchived } }));
   };
 
   const fetchUserData = async (user) => {
@@ -2772,7 +2783,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
       while (usedKeys.has(key)) { key = `${base}-${suffix}`; suffix++; }
     }
 
-    // Save to Supabase — preserve notification flags if already set,
+    // Save to Supabase — preserve notification flags and archived status if already set,
     // since buildQuizJSON() produces a fresh object that doesn't include them.
     let finalQuizData = quizData;
     if (editingKey) {
@@ -2780,6 +2791,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
       const preserved = {};
       if (existingRow?.data?.activeNotificationSent) preserved.activeNotificationSent = true;
       if (existingRow?.data?.scoredNotificationSent) preserved.scoredNotificationSent = true;
+      if (existingRow?.data?.archived) preserved.archived = true;
       if (Object.keys(preserved).length > 0) finalQuizData = { ...quizData, ...preserved };
     }
 
@@ -4183,7 +4195,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         {adminSection==='list'&&(
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="flex-1">
+              <div className="flex-1" style={{maxWidth:'160px'}}>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Season</label>
                 <select value={adminSeasonFilter} onChange={e=>setAdminSeasonFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white">
                   <option value="All">All</option>
@@ -4191,7 +4203,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                   {Array.from(new Set(Object.values(allQuizData).map(q=>q.category).filter(c=>c&&c.trim().toLowerCase()!=='offseason'))).sort((a,b)=>a.localeCompare(b)).map(cat=><option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
-              <div className="flex-1">
+              <div className="flex-1" style={{maxWidth:'160px'}}>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
                 <select value={adminTypeFilter} onChange={e=>setAdminTypeFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white">
                   <option value="All">All</option>
@@ -4200,7 +4212,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                   <option value="mysterynoun">Mystery Noun</option>
                 </select>
               </div>
-              <div className="flex-1">
+              <div className="flex-1" style={{maxWidth:'160px'}}>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
                 <select value={adminStatusFilter} onChange={e=>setAdminStatusFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white">
                   <option value="All">All</option>
@@ -4209,8 +4221,14 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                   <option value="Scored">Scored</option>
                 </select>
               </div>
+              <div className="flex items-center pt-5">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" checked={showArchived} onChange={e=>setShowArchived(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600"/>
+                  <span className="text-sm text-gray-600">Show Archives?</span>
+                </label>
+              </div>
             </div>
-            {knownQuizzes.quizzes.filter(key=>{const q=allQuizData[key];if(!q)return false;const seasonOk=adminSeasonFilter==='All'||(q.category||'')===adminSeasonFilter;const typeOk=adminTypeFilter==='All'||(q.type||'')===adminTypeFilter;const statusOk=adminStatusFilter==='All'||(q.status||'Active')===adminStatusFilter;return seasonOk&&typeOk&&statusOk;}).sort((a,b)=>(allQuizData[a]?.title||a).localeCompare(allQuizData[b]?.title||b)).map(key=>{
+            {knownQuizzes.quizzes.filter(key=>{const q=allQuizData[key];if(!q)return false;const seasonOk=adminSeasonFilter==='All'||(q.category||'')===adminSeasonFilter;const typeOk=adminTypeFilter==='All'||(q.type||'')===adminTypeFilter;const statusOk=adminStatusFilter==='All'||(q.status||'Active')===adminStatusFilter;const archivedOk=showArchived?true:!q.archived;return seasonOk&&typeOk&&statusOk&&archivedOk;}).sort((a,b)=>(allQuizData[a]?.title||a).localeCompare(allQuizData[b]?.title||b)).map(key=>{
               const quiz=allQuizData[key];if(!quiz)return null;
               const qType=quiz.type||'fillintheblank';
               const itemCount=qType==='fillintheblank'?quiz.sentences?.length:quiz.questions?.length;
@@ -4236,14 +4254,16 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                       )}
                       <p className="text-sm text-gray-500 mt-1 flex items-center gap-2 flex-wrap">
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${(quiz.status||'Active')==='Active'?'bg-green-100 text-green-700':(quiz.status||'Active')==='Scored'?'bg-purple-100 text-purple-700':'bg-gray-200 text-gray-500'}`}>{quiz.status||'Active'}</span>
+                        {quiz.archived && <span className="inline-block bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-medium">Archived</span>}
                         {quiz.category&&<span className="inline-block bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-medium">{quiz.category}</span>}
                         <span className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">{typeLabel(qType)}</span>
                         {itemCount} {itemLabel}{itemCount!==1?'s':''}
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={()=>startEditQuiz(key)} className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium"><Edit2 size={16}/> Edit</button>
-                      {(quiz.status||'Active')==='Scored' && <button onClick={()=>{setViewScoringKey(key);setMode('scoreboard');}} className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium"><Star size={16}/> View Scoring</button>}
+                      <button onClick={()=>startEditQuiz(key)} className="flex items-center px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600" title="Edit"><Edit2 size={16}/></button>
+                      {(quiz.status||'Active')==='Scored' && <button onClick={()=>{setViewScoringKey(key);setMode('scoreboard');}} className="flex items-center px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700" title="View Scoring"><Star size={16}/></button>}
+                      <button onClick={()=>toggleArchiveQuiz(key)} className={`flex items-center px-3 py-2 rounded-lg ${quiz.archived?'bg-amber-500 text-white hover:bg-amber-600':'bg-gray-200 text-gray-600 hover:bg-gray-300'}`} title={quiz.archived?'Unarchive':'Archive'}><Archive size={16}/></button>
                       <button onClick={()=>setConfirmDeleteKey(key)} className="flex items-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm font-medium"><Trash2 size={16}/></button>
                     </div>
                   </div>
@@ -4794,7 +4814,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                     <label className="block text-xs font-medium text-gray-500 mb-1">Quiz</label>
                     <select value={auditQuizKey} onChange={e=>{const k=e.target.value;setAuditQuizKey(k);setAuditData(null);setAuditExpandedUser(null);setAuditAttempts([]);setConfirmDeleteAttempt(null);if(k){fetchAuditAttempts(k);const q=allQuizData[k];if(q?.status==='Scored'){runAudit(k);}}}} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-64">
                       <option value="">— Select a quiz —</option>
-                      {Object.entries(allQuizData).filter(([,q])=>(q.status==='Scored'||q.status==='Active')&&q.category===auditSeason).sort((a,b)=>(a[1].title||a[0]).localeCompare(b[1].title||b[0])).map(([key,q])=>(
+                      {Object.entries(allQuizData).filter(([,q])=>(q.status==='Scored'||q.status==='Active')&&q.category===auditSeason&&!q.archived).sort((a,b)=>(a[1].title||a[0]).localeCompare(b[1].title||b[0])).map(([key,q])=>(
                         <option key={key} value={key}>{q.title||key} {q.status==='Active'?'(Active)':q.status==='Scored'?'(Scored)':''}</option>
                       ))}
                     </select>
