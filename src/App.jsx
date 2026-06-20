@@ -712,18 +712,24 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               const cluesUsed = typeof ad==='object' ? (ad.cluesUsed||1) : 1;
               const correctMN = answer.trim()!=='' && q.acceptedAnswers.some(a=>normalizeAnswer(a)===normalizeAnswer(answer));
               const ptsMN = correctMN ? MN_POINTS[Math.min(cluesUsed-1,3)] : 0;
+              const mnImgs = extractImages((q.clues||[]).join(' '));
               return (
                 <div key={i} className={`border-b last:border-b-0 ${correctMN?'bg-green-50':'bg-red-50'}`}>
-                  <div className="grid grid-cols-3 gap-4 p-4">
-                    <div className="col-span-2">
-                      <p className="text-xs text-gray-500 mb-1 font-medium">{i+1}. {renderInlineFormatting((q.clues[0]||'').replace(/\{\{image:[^}]+\}\}/g,'').slice(0,80))}</p>
-                      <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {q.acceptedAnswers[q.primaryAnswerIndex]||q.acceptedAnswers[0]}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}</p>
-                      {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 mt-0.5 italic">{q.additionalContext}</p>}
-                      <p className={`text-xs mt-0.5 ${correctMN?'text-green-700':'text-red-600'}`}><span className="font-semibold">Your Answer:</span> {answer||'(no answer)'}</p>
-                      <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Clues used:</span> {cluesUsed}</p>
+                  <div className="flex items-center p-4 gap-3">
+                    <div className="flex-shrink-0 w-6 flex justify-center">
+                      {mnImgs.length>0 && <button onClick={()=>setImagePopupUrls(mnImgs)} title="View image" style={{background:'none',border:'none',cursor:'pointer',padding:0,color:'#7eb8e8'}}><i className="ti ti-photo" style={{fontSize:'18px'}}/></button>}
                     </div>
-                    <div className="col-span-1 text-right text-xs text-gray-600">
-                      <p className={`font-semibold ${correctMN?'text-green-700':'text-red-600'}`}>{ptsMN} pts</p>
+                    <div className="flex-1 grid grid-cols-3 gap-4">
+                      <div className="col-span-2">
+                        <p className="text-xs text-gray-500 font-medium">{i+1}. {renderInlineFormatting((q.clues[0]||'').replace(/\{\{image:[^}]+\}\}/g,'').slice(0,80))}</p>
+                      </div>
+                      <div className="col-span-1 text-right text-xs text-gray-600 space-y-0.5">
+                        <p><span className="font-semibold">Correct Answer:</span> {q.acceptedAnswers[q.primaryAnswerIndex]||q.acceptedAnswers[0]}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}</p>
+                        {whyOpenIndex===i && q.additionalContext && <p className="text-gray-500 italic">{q.additionalContext}</p>}
+                        <p className={correctMN?'text-green-700':'text-red-600'}><span className="font-semibold">Your Answer:</span> {answer||'(no answer)'}</p>
+                        <p><span className="font-semibold">Clues used:</span> {cluesUsed}</p>
+                        <p className={`font-semibold ${correctMN?'text-green-700':'text-red-600'}`}>{ptsMN} pts</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -735,22 +741,29 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               const myNumVal = parseFloat(myRawAnswer);
               const diff = isNaN(myNumVal) ? 'N/A' : Math.abs(myNumVal - q.correctAnswer);
               const ddPts = results.scores?.ddPointsByUser?.[currentUser?.id]?.[i] ?? pts;
+              const ddImgs = extractImages(q.prompt || '');
               return (
                 <div key={i} className="border-b last:border-b-0 bg-white">
-                  <div className="grid grid-cols-3 gap-4 p-4">
-                    <div className="col-span-2">
-                      <p className="text-sm text-gray-800 mb-2 flex items-center gap-1 flex-wrap">
-                        <span>{i+1}.</span>
-                        {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(20)}</span>}
-                        <span>{renderInlineFormatting((q.prompt||'').replace(/\{\{image:[^}]+\}\}/g,''))}</span>
-                      </p>
-                      <p className="text-xs text-gray-600"><span className="font-semibold">Correct Answer:</span> {ddDisplay(q)}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}</p>
-                      {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 mt-0.5 italic">{q.additionalContext}</p>}
-                      <p className="text-xs text-gray-600 mt-0.5"><span className="font-semibold">Your Answer:</span> {myRawAnswer || '—'}</p>
-                      <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Difference:</span> {typeof diff === 'number' ? diff.toLocaleString() : diff}</p>
+                  <div className="flex items-center p-4 gap-3">
+                    <div className="flex-shrink-0 w-6 flex justify-center">
+                      {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(20)}</span>}
                     </div>
-                    <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
-                      <p className="font-semibold text-gray-800">{ddPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}</p>
+                    <div className="flex-shrink-0 w-6 flex justify-center">
+                      {ddImgs.length>0 && <button onClick={()=>setImagePopupUrls(ddImgs)} title="View image" style={{background:'none',border:'none',cursor:'pointer',padding:0,color:'#7eb8e8'}}><i className="ti ti-photo" style={{fontSize:'18px'}}/></button>}
+                    </div>
+                    <div className="flex-1 grid grid-cols-3 gap-4">
+                      <div className="col-span-2">
+                        <p className="text-sm text-gray-800">
+                          {i+1}. {renderInlineFormatting((q.prompt||'').replace(/\{\{image:[^}]+\}\}/g,''))}
+                        </p>
+                      </div>
+                      <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
+                        <p><span className="font-semibold">Correct Answer:</span> {ddDisplay(q)}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}</p>
+                        {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 italic">{q.additionalContext}</p>}
+                        <p><span className="font-semibold">Your Answer:</span> {myRawAnswer || '—'}</p>
+                        <p><span className="font-semibold">Difference:</span> {typeof diff === 'number' ? diff.toLocaleString() : diff}</p>
+                        <p className="font-semibold text-gray-800">{ddPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -759,28 +772,29 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
             const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
             const hasOtherAnswers = (qtype === 'OR' || qtype === 'openresponse') && q.showOthersCount && q.acceptedAnswers?.length > 1;
             const rowImgs = extractImages(q.prompt || q.text || '');
+            const qTextClean = (q.prompt || q.text || '').replace(/\{\{image:[^}]+\}\}/g, '');
             return (
               <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
-                <div className="flex p-4 gap-3">
-                  <div className="flex-shrink-0 w-6 flex justify-center pt-0.5">
+                <div className="flex items-center p-4 gap-3">
+                  <div className="flex-shrink-0 w-6 flex justify-center">
                     {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(20)}</span>}
                   </div>
-                  <div className="flex-shrink-0 w-6 flex justify-center pt-0.5">
+                  <div className="flex-shrink-0 w-6 flex justify-center">
                     {rowImgs.length>0 && <button onClick={()=>setImagePopupUrls(rowImgs)} title="View image" style={{background:'none',border:'none',cursor:'pointer',padding:0,color:'#7eb8e8'}}><i className="ti ti-photo" style={{fontSize:'18px'}}/></button>}
                   </div>
                   <div className="flex-1 grid grid-cols-3 gap-4">
                     <div className="col-span-2">
-                      <p className="text-sm text-gray-800 mb-2">
-                        {i+1}. {renderInlineFormatting(getFullQuestion(q, i, myAnswers))}
+                      <p className="text-sm text-gray-800">
+                        {i+1}. {renderInlineFormatting(qTextClean)}
                       </p>
-                      <p className="text-xs text-gray-600">
-                        <span className="font-semibold">Correct Answer:</span>{' '}{getCorrectDisplay(q)}{hasOtherAnswers && <button onClick={()=>setPopupAnswers(q.acceptedAnswers)} className="ml-1 text-blue-500 underline text-xs">and {q.acceptedAnswers.length - 1} other{q.acceptedAnswers.length > 2 ? 's' : ''}</button>}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}
-                      </p>
-                      {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 mt-0.5 italic">{q.additionalContext}</p>}
-                      <p className={`text-xs mt-1 ${correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Your Answer:</span> {getMyAnswerDisplay(q, i)}</p>
                     </div>
                     <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
                       <p><span className="font-semibold">{correctCounts?.[i] ?? '—'}/{totalUsers}</span> Correct</p>
+                      <p>
+                        <span className="font-semibold">Correct Answer:</span>{' '}{getCorrectDisplay(q)}{hasOtherAnswers && <button onClick={()=>setPopupAnswers(q.acceptedAnswers)} className="ml-1 text-blue-500 underline text-xs">and {q.acceptedAnswers.length - 1} other{q.acceptedAnswers.length > 2 ? 's' : ''}</button>}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}
+                      </p>
+                      {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 italic">{q.additionalContext}</p>}
+                      <p className={correct ? 'text-green-700' : 'text-red-600'}><span className="font-semibold">Your Answer:</span> {getMyAnswerDisplay(q, i)}</p>
                       <p>Question Value: <span className="font-semibold">{pts} pts</span></p>
                       <p className={`font-semibold ${correct || token === 'insurance' ? 'text-green-700' : 'text-red-600'}`}>
                         Your Score: {myPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}
