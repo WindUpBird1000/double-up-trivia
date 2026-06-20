@@ -1119,6 +1119,7 @@ const QuizApp = () => {
   const [msgBody, setMsgBody] = useState('');
   const [editingMsgId, setEditingMsgId] = useState(null);
   const [editingMsgPublished, setEditingMsgPublished] = useState(false);
+  const [msgImportant, setMsgImportant] = useState(false);
   const [msgSaving, setMsgSaving] = useState(false);
   const [confirmDeleteMsgId, setConfirmDeleteMsgId] = useState(null);
   const [sysMessagesOpen, setSysMessagesOpen] = useState(false);
@@ -1528,12 +1529,13 @@ const QuizApp = () => {
   };
 
   const startNewMessage = () => {
-    setMsgTitle(''); setMsgBody(''); setEditingMsgId(null); setEditingMsgPublished(false);
+    setMsgTitle(''); setMsgBody(''); setEditingMsgId(null); setEditingMsgPublished(false); setMsgImportant(false);
   };
 
   const loadMessageForEdit = (msg) => {
     setMsgTitle(msg.title); setMsgBody(msg.body);
     setEditingMsgId(msg.id); setEditingMsgPublished(!!msg.published_at);
+    setMsgImportant(!!msg.important);
   };
 
   const saveMessage = async (publish) => {
@@ -1543,6 +1545,7 @@ const QuizApp = () => {
       await supabase.from('messages').update({
         title: msgTitle,
         body: msgBody,
+        important: msgImportant,
         updated_at: now,
         ...(publish && !editingMsgPublished ? { published_at: now } : {}),
       }).eq('id', editingMsgId);
@@ -1551,6 +1554,7 @@ const QuizApp = () => {
       const { data } = await supabase.from('messages').insert({
         title: msgTitle,
         body: msgBody,
+        important: msgImportant,
         created_at: now,
         updated_at: now,
         published_at: publish ? now : null,
@@ -1616,10 +1620,37 @@ const QuizApp = () => {
       .eq('user_id', loginUser.id)
       .gt('resolved_at', lastLogin)
       .order('resolved_at', { ascending: true });
+    // Check for Important messages this user hasn't seen yet, regardless of last_login_at —
+    // this is what guarantees new users see key announcements on their very first login.
+    const { data: importantMsgs } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('important', true)
+      .not('published_at', 'is', null)
+      .order('published_at', { ascending: true });
+    let unseenImportant = [];
+    if (importantMsgs && importantMsgs.length > 0) {
+      const { data: seenRows } = await supabase
+        .from('message_status')
+        .select('message_id')
+        .eq('user_id', loginUser.id)
+        .in('message_id', importantMsgs.map(m => m.id));
+      const seenIds = new Set((seenRows || []).map(r => r.message_id));
+      unseenImportant = importantMsgs.filter(m => !seenIds.has(m.id));
+      // Exclude any already captured by the regular last_login_at check above, to avoid duplicates
+      const regularIds = new Set((msgs || []).map(m => m.id));
+      unseenImportant = unseenImportant.filter(m => !regularIds.has(m.id));
+      if (unseenImportant.length > 0) {
+        await supabase.from('message_status').insert(
+          unseenImportant.map(m => ({ user_id: loginUser.id, message_id: m.id }))
+        );
+      }
+    }
     // Merge: normalize resolutions to the same shape as messages (title, body, published_at)
     const normalizedResols = (resols || []).map(r => ({ ...r, published_at: r.resolved_at }));
     const allUnread = [
       ...(msgs || []),
+      ...unseenImportant,
       ...normalizedResols,
     ].sort((a, b) => new Date(a.published_at) - new Date(b.published_at));
     if (allUnread.length > 0) {
@@ -4093,8 +4124,14 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             {/* Compose area */}
             <div className="bg-white rounded-xl shadow-md p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-gray-800">{editingMsgId ? (editingMsgPublished ? 'View Message' : 'Edit Draft') : 'New Message'}</h2>
-                {editingMsgId && <button onClick={startNewMessage} className="text-sm text-blue-600 hover:underline">+ New Message</button>}
+                <h2 className="text-lg font-bold text-gray-800">{editingMsgId ? (editingMsgPublished ? 'Edit Published Message' : 'Edit Draft') : 'New Message'}</h2>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" checked={msgImportant} onChange={e=>setMsgImportant(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600"/>
+                    <span className="text-sm font-medium text-gray-700">Important?</span>
+                  </label>
+                  {editingMsgId && <button onClick={startNewMessage} className="text-sm text-blue-600 hover:underline">+ New Message</button>}
+                </div>
               </div>
               <div className="space-y-3">
                 <div>
@@ -4103,9 +4140,8 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                     type="text"
                     value={msgTitle}
                     onChange={e=>setMsgTitle(e.target.value)}
-                    disabled={editingMsgPublished}
                     placeholder="Message title..."
-                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 ${editingMsgPublished?'bg-gray-100 text-gray-400 cursor-not-allowed':''}`}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
@@ -4113,15 +4149,17 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                   <textarea
                     value={msgBody}
                     onChange={e=>setMsgBody(e.target.value)}
-                    disabled={editingMsgPublished}
                     placeholder="Write your message here..."
                     rows={12}
-                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none ${editingMsgPublished?'bg-gray-100 text-gray-400 cursor-not-allowed':''}`}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
                   />
                 </div>
               </div>
-              {!editingMsgPublished && (
-                <div className="flex gap-3 mt-4">
+              {editingMsgPublished ? (
+                <p className="text-xs text-gray-400 italic mt-3">This message has already been published. Edits here update the live message immediately — people who already viewed it won't see your changes reflected automatically.</p>
+              ) : null}
+              <div className="flex gap-3 mt-4">
+                {!editingMsgPublished && (
                   <button
                     onClick={()=>saveMessage(false)}
                     disabled={!msgTitle.trim()||!msgBody.trim()||msgSaving}
@@ -4129,15 +4167,15 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                   >
                     {msgSaving?'Saving…':'Save Draft'}
                   </button>
-                  <button
-                    onClick={()=>saveMessage(true)}
-                    disabled={!msgTitle.trim()||!msgBody.trim()||msgSaving}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40"
-                  >
-                    {msgSaving?'Publishing…':'Publish'}
-                  </button>
-                </div>
-              )}
+                )}
+                <button
+                  onClick={()=>saveMessage(true)}
+                  disabled={!msgTitle.trim()||!msgBody.trim()||msgSaving}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40"
+                >
+                  {msgSaving?'Saving…':(editingMsgPublished?'Save Changes':'Publish')}
+                </button>
+              </div>
             </div>
             {/* Message list */}
             <div className="bg-white rounded-xl shadow-md overflow-hidden">
@@ -4163,7 +4201,10 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                           onClick={()=>loadMessageForEdit(msg)}
                           className={`px-5 py-3 cursor-pointer hover:bg-gray-50 flex justify-between items-center ${editingMsgId===msg.id?'bg-blue-50':''}`}
                         >
-                          <span className="text-sm font-medium text-gray-800">{msg.title}</span>
+                          <span className="text-sm font-medium text-gray-800 flex items-center gap-2">
+                            {msg.title}
+                            {msg.important && <span className="px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-xs font-semibold">Important</span>}
+                          </span>
                           <div className="flex items-center gap-3">
                             <span className={`text-xs ${msg.published_at?'text-green-700':'text-gray-400 italic'}`}>
                               {msg.published_at ? `Published ${new Date(msg.published_at).toLocaleString()}` : 'Draft'}
