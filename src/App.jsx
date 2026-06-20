@@ -118,6 +118,16 @@ const typeLabel = (t) => t === 'MC' ? 'Multiple Choice' : t === 'openresponse' ?
 
 const ddDisplay = (q) => q?.correctAnswerDisplay || (q?.correctAnswer != null ? q.correctAnswer.toString() : '—');
 
+// Comma rule for a Data Dash *answer* value (not a difference — differences always get commas).
+// 5+ digit answers always get commas. Exactly-4-digit answers only get commas if the question's
+// correct answer was itself entered with a comma (i.e. it's not a year). <=3 digits never need commas.
+const ddFmtAnswer = (n, q) => {
+  if (n == null || isNaN(n)) return (n ?? '').toString();
+  const digits = Math.trunc(Math.abs(n)).toString().length;
+  const useCommas = digits >= 5 || (digits === 4 && ddDisplay(q).includes(','));
+  return useCommas ? n.toLocaleString() : n.toString();
+};
+
 const extractImages = (text) => {
   const matches = [...(text||'').matchAll(/\{\{image:([^}]+)\}\}/g)];
   return matches.map(m => `/images/${m[1].trim()}`);
@@ -642,7 +652,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
             if (isDash) {
               const myRawAnswer = (answers[i] || '').toString().replace(/,/g,'').trim();
               const myNumVal = parseFloat(myRawAnswer);
-              const myAnswerDisplay = isNaN(myNumVal) ? (myRawAnswer || '—') : myNumVal.toLocaleString();
+              const myAnswerDisplay = isNaN(myNumVal) ? (myRawAnswer || '—') : ddFmtAnswer(myNumVal, q);
               const diff = isNaN(myNumVal) ? 'N/A' : Math.abs(myNumVal - q.correctAnswer);
               const ddBasePts = results.scores?.ddPointsByUser?.[userId]?.[i] ?? pts;
               const ddPts = token === 'doubler' ? Math.round(ddBasePts * 2 * 10) / 10 : ddBasePts;
@@ -2260,6 +2270,13 @@ function fmtNum(v) {
   const n = parseFloat(v);
   return isNaN(n) ? (v||'—') : n.toLocaleString();
 }
+function ddFmtAnswer(v, correctAnswerDisplay) {
+  const n = parseFloat(v);
+  if (isNaN(n)) return (v||'—');
+  const digits = Math.trunc(Math.abs(n)).toString().length;
+  const useCommas = digits >= 5 || (digits === 4 && (correctAnswerDisplay||'').includes(','));
+  return useCommas ? n.toLocaleString() : n.toString();
+}
 async function load() {
   const status = document.getElementById('status');
   const quizRows = await sb('quizzes', 'quiz_key=eq.'+QUIZ_KEY+'&select=data,title,type,status');
@@ -2326,7 +2343,9 @@ async function load() {
         const earned = token==='doubler' ? Math.round(basePts*2*10)/10 : basePts;
         total = Math.round((total+earned)*10)/10;
         const diff = a._diffs[i];
-        return {raw,blank,token,earned,diff:diff===Infinity?'—':diff.toLocaleString()};
+        const rawNum = parseFloat(raw.replace(/,/g,''));
+        const rawDisplay = blank ? raw : (isNaN(rawNum) ? raw : ddFmtAnswer(rawNum, q.correctAnswerDisplay));
+        return {raw:rawDisplay,blank,token,earned,diff:diff===Infinity?'—':fmtNum(diff)};
       });
       return {uid:a.user_id,name:nameMap[a.user_id]||a.user_id,cells,total};
     });
@@ -2410,7 +2429,7 @@ async function load() {
       if (quizType === 'datadash') {
         const cls = c.blank ? 'blank' : '';
         const tok = c.token?'<span class="token '+tokenClass[c.token]+'">'+tokenLabel[c.token]+'</span>':'';
-        html+='<td class="'+cls+'">'+tok+'<span class="pts">'+c.earned+'</span><span class="ans" title="diff: '+c.diff+'">'+(c.blank?'':fmtNum(c.raw)+' (Δ'+c.diff+')')+'</span></td>';
+        html+='<td class="'+cls+'">'+tok+'<span class="pts">'+c.earned+'</span><span class="ans" title="diff: '+c.diff+'">'+(c.blank?'':c.raw+' (Δ'+c.diff+')')+'</span></td>';
       } else if (quizType === 'mysterynoun') {
         const cls = c.blank?'blank':c.correct?'correct':'incorrect';
         const mark = c.blank?'—':c.correct?'<span class="tick">✓</span>':'<span class="cross">✗</span>';
