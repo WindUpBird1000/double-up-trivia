@@ -739,6 +739,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
             if (quiz.type === 'datadash') {
               const myRawAnswer = (myAnswers[i] || '').toString().replace(/,/g,'').trim();
               const myNumVal = parseFloat(myRawAnswer);
+              const myAnswerDisplay = isNaN(myNumVal) ? (myRawAnswer || '—') : myNumVal.toLocaleString();
               const diff = isNaN(myNumVal) ? 'N/A' : Math.abs(myNumVal - q.correctAnswer);
               const ddPts = results.scores?.ddPointsByUser?.[currentUser?.id]?.[i] ?? pts;
               const ddImgs = extractImages(q.prompt || '');
@@ -760,7 +761,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                       <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
                         <p><span className="font-semibold">Correct Answer:</span> {ddDisplay(q)}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}</p>
                         {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 italic">{q.additionalContext}</p>}
-                        <p><span className="font-semibold">Your Answer:</span> {myRawAnswer || '—'}</p>
+                        <p><span className="font-semibold">Your Answer:</span> {myAnswerDisplay}</p>
                         <p><span className="font-semibold">Difference:</span> {typeof diff === 'number' ? diff.toLocaleString() : diff}</p>
                         <p className="font-semibold text-gray-800">{ddPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}</p>
                       </div>
