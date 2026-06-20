@@ -644,12 +644,9 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               const myNumVal = parseFloat(myRawAnswer);
               const myAnswerDisplay = isNaN(myNumVal) ? (myRawAnswer || '—') : myNumVal.toLocaleString();
               const diff = isNaN(myNumVal) ? 'N/A' : Math.abs(myNumVal - q.correctAnswer);
-              const ddPts = results.scores?.ddPointsByUser?.[userId]?.[i] ?? pts;
+              const ddBasePts = results.scores?.ddPointsByUser?.[userId]?.[i] ?? pts;
+              const ddPts = token === 'doubler' ? Math.round(ddBasePts * 2 * 10) / 10 : ddBasePts;
               const ddImgs = extractImages(q.prompt || '');
-              let tokenLabel = null;
-              if (token === 'doubler') tokenLabel = 'doubler';
-              else if (token === 'sniper') tokenLabel = 'sniper';
-              else if (token) tokenLabel = token;
               return (
                 <div key={i} className="border-b last:border-b-0 bg-white">
                   <div className="flex items-center p-4 gap-3">
@@ -670,7 +667,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                         {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 italic">{q.additionalContext}</p>}
                         <p><span className="font-semibold">Your Answer:</span> {myAnswerDisplay}</p>
                         <p><span className="font-semibold">Difference:</span> {typeof diff === 'number' ? diff.toLocaleString() : diff}</p>
-                        <p className="font-semibold text-gray-800">{ddPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}</p>
+                        <p className="font-semibold text-gray-800">Your Score: {ddPts} pts{token === 'doubler' ? ` (${ddBasePts} pt${ddBasePts === 1 ? '' : 's'}. x 2 for doubler)` : ''}</p>
                       </div>
                     </div>
                   </div>
