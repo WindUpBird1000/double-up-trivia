@@ -595,119 +595,22 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
       </div>
 
       {/* Admin: selected user's answer drill-down */}
-      {isAdminView && selectedUserId && (
-        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
-          <div className="px-5 py-3 bg-gray-100 border-b flex justify-between items-center">
-            <div>
-              <h2 className="font-bold text-gray-700">{selectedUserName}'s Answers</h2>
-              {Object.keys(selectedAttempt?.token_assignments || {}).length > 0 && <p className="text-xs text-gray-500 mt-0.5">Token icons show assignments.</p>}
-            </div>
-            <button onClick={()=>setSelectedUserId(null)} className="text-gray-400 hover:text-gray-600 text-xs font-medium">Close ✕</button>
-          </div>
-          {!selectedAttempt ? (
-            <p className="px-5 py-4 text-sm text-gray-500 italic">No submitted attempt found for this user.</p>
-          ) : (
-            questions.map((q, i) => {
-              const correct = isCorrectForAnswers(q, i, selectedAnswers);
-              const isMN = quiz.type === 'mysterynoun';
-              const isDash = quiz.type === 'datadash';
-              const tokenMap = selectedAttempt.token_assignments || {};
-              const doublesArr = selectedAttempt.doubles || [];
-              const token = tokenMap[i] || (doublesArr.includes(i) ? 'doubler' : null);
-              const pts = pointValues[i] || 0;
-              const totalAttempts = withRanks.length;
-              let earnedPts = 0;
-              let tokenLabel = null;
-              if (isMN) {
-                const ad = selectedAnswers[i] || {};
-                const answerMN = typeof ad==='object' ? (ad.answer||'') : (ad||'');
-                const cluesUsedMN = typeof ad==='object' ? (ad.cluesUsed||1) : 1;
-                const correctMN = answerMN.trim()!=='' && q.acceptedAnswers.some(a=>normalizeAnswer(a)===normalizeAnswer(answerMN));
-                earnedPts = correctMN ? MN_POINTS[Math.min(cluesUsedMN-1,3)] : 0;
-              } else if (isDash) {
-                const ddPts = results.scores?.ddPointsByUser?.[selectedUserId]?.[i] ?? pts;
-                if (token === 'doubler') { earnedPts = Math.round(ddPts * 2 * 10) / 10; tokenLabel = 'doubler'; }
-                else if (token === 'sniper') { earnedPts = SNIPER_POINTS; tokenLabel = 'sniper'; }
-                else { earnedPts = ddPts; if (token) tokenLabel = token; }
-              } else {
-                if (token === 'doubler') { earnedPts = correct ? Math.round(pts * 2 * 10) / 10 : 0; if (correct) tokenLabel = 'doubler'; }
-                else if (token === 'insurance') { earnedPts = correct ? pts : Math.round(pts / 2 * 10) / 10; if (!correct) tokenLabel = 'insurance'; }
-                else if (token === 'sniper') { earnedPts = correct ? SNIPER_POINTS : 0; if (correct) tokenLabel = 'sniper'; }
-                else if (token === 'parasite') { earnedPts = correct ? pts : (totalAttempts > 0 ? Math.round((correctCounts[i] * pts / totalAttempts) * 10) / 10 : 0); if (!correct) tokenLabel = 'parasite'; }
-                else { earnedPts = correct ? pts : 0; }
-              }
-              const rawText = isMN ? (q.clues[0]||'').slice(0,80) : getRawQuestionText(q);
-              const answerDisplay = getAnswerDisplayForAnswers(q, i, selectedAnswers);
-              const correctDisplay = getCorrectDisplay(q);
-              const myRaw = (selectedAnswers[i] || '').toString().replace(/,/g,'').trim();
-              const myVal = parseFloat(myRaw);
-              const diff = isDash && !isNaN(myVal) ? Math.abs(myVal - q.correctAnswer).toLocaleString() : null;
-              const mnAd = isMN ? (selectedAnswers[i]||{}) : null;
-              const mnCluesUsed = mnAd ? (typeof mnAd==='object' ? (mnAd.cluesUsed||1) : 1) : null;
-              return (
-                <div key={i} className={`border-b last:border-b-0 ${isDash ? 'bg-white' : isMN ? (earnedPts>0?'bg-green-50':'bg-red-50') : correct ? 'bg-green-50' : 'bg-red-50'}`}>
-                  <div className="grid grid-cols-3 gap-4 p-4">
-                    <div className="col-span-2">
-                      <p className="text-xs text-gray-500 mb-1 font-mono flex items-center gap-1">
-                        {i+1}. {token && TOKEN_CONFIG[token] && <span title={TOKEN_CONFIG[token].description}>{TOKEN_CONFIG[token].svgIcon(16)}</span>} {rawText}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        <span className="font-semibold">Correct Answer:</span>{' '}{correctDisplay}
-                        {(!isDash && !isMN) && q.showOthersCount && q.acceptedAnswers?.length > 1 && <button onClick={()=>setAdminOthersPopup(q)} className="ml-1 text-blue-500 underline text-xs">and {q.acceptedAnswers.length - 1} other{q.acceptedAnswers.length > 2 ? 's' : ''}</button>}
-                        {q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}
-                      </p>
-                      {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 mt-0.5 italic">{q.additionalContext}</p>}
-                      <p className={`text-xs mt-0.5 ${isDash||isMN ? 'text-gray-600' : correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Their Answer:</span> {answerDisplay}</p>
-                      {isDash && diff !== null && <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Difference:</span> {diff}</p>}
-                      {isMN && mnCluesUsed !== null && <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Clues used:</span> {mnCluesUsed} (max {MN_POINTS[mnCluesUsed-1]} pts)</p>}
-                    </div>
-                    <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
-                      {!isDash && !isMN && <p>Value: <span className="font-semibold">{pts} pts</span></p>}
-                      <p className={`font-semibold ${isDash||isMN ? 'text-gray-700' : correct || token === 'insurance' ? 'text-green-700' : 'text-red-600'}`}>
-                        {earnedPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
-
-      {/* User: per-question breakdown */}
-      {!isAdminView && myAttempt && (
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          <div className="px-5 py-3 bg-gray-100 border-b">
-            <h2 className="font-bold text-gray-700">Your Results</h2>
-          </div>
-          {questions.map((q, i) => {
-            const correct = isCorrect(q, i);
-            const myTokenMap = myAttempt.token_assignments || {};
-            const myDoublesArr = myDoubles || [];
-            const token = myTokenMap[i] || (myDoublesArr.includes(i) ? 'doubler' : null);
+      {(() => {
+        // Shared rendering for both admin (any user) and player (self only) answer breakdowns —
+        // keeps the two views permanently identical.
+        const renderAnswerBreakdown = (answers, attempt, userId) => {
+          const doublesArr = attempt?.doubles || [];
+          const tokenMap = attempt?.token_assignments || {};
+          return questions.map((q, i) => {
+            const correct = isCorrectForAnswers(q, i, answers);
+            const isMN = quiz.type === 'mysterynoun';
+            const isDash = quiz.type === 'datadash';
+            const token = tokenMap[i] || (doublesArr.includes(i) ? 'doubler' : null);
             const pts = pointValues[i] || 0;
-            const totalUsers2 = totalUsers;
-            let myPts = 0;
-            let tokenLabel = null;
-            if (token === 'doubler') {
-              myPts = correct ? Math.round(pts * 2 * 10) / 10 : 0;
-              if (correct) tokenLabel = 'doubler';
-            } else if (token === 'insurance') {
-              myPts = correct ? pts : Math.round(pts / 2 * 10) / 10;
-              if (!correct) tokenLabel = 'insurance';
-            } else if (token === 'sniper') {
-              myPts = correct ? SNIPER_POINTS : 0;
-              if (correct) tokenLabel = 'sniper';
-            } else if (token === 'parasite') {
-              myPts = correct ? pts : (totalUsers2 > 0 ? Math.round((correctCounts[i] * pts / totalUsers2) * 10) / 10 : 0);
-              if (!correct) tokenLabel = 'parasite';
-            } else {
-              myPts = correct ? pts : 0;
-            }
-            // ── Mystery Noun: show clues used, answer, pts ────────────────
-            if (quiz.type === 'mysterynoun') {
-              const ad = myAnswers[i] || {};
+
+            // ── Mystery Noun ──────────────────────────────────────────────
+            if (isMN) {
+              const ad = answers[i] || {};
               const answer = typeof ad==='object' ? (ad.answer||'') : (ad||'');
               const cluesUsed = typeof ad==='object' ? (ad.cluesUsed||1) : 1;
               const correctMN = answer.trim()!=='' && q.acceptedAnswers.some(a=>normalizeAnswer(a)===normalizeAnswer(answer));
@@ -735,14 +638,18 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                 </div>
               );
             }
-            // ── Data Dash: show difference and per-question score ──────────
-            if (quiz.type === 'datadash') {
-              const myRawAnswer = (myAnswers[i] || '').toString().replace(/,/g,'').trim();
+            // ── Data Dash ──────────────────────────────────────────────────
+            if (isDash) {
+              const myRawAnswer = (answers[i] || '').toString().replace(/,/g,'').trim();
               const myNumVal = parseFloat(myRawAnswer);
               const myAnswerDisplay = isNaN(myNumVal) ? (myRawAnswer || '—') : myNumVal.toLocaleString();
               const diff = isNaN(myNumVal) ? 'N/A' : Math.abs(myNumVal - q.correctAnswer);
-              const ddPts = results.scores?.ddPointsByUser?.[currentUser?.id]?.[i] ?? pts;
+              const ddPts = results.scores?.ddPointsByUser?.[userId]?.[i] ?? pts;
               const ddImgs = extractImages(q.prompt || '');
+              let tokenLabel = null;
+              if (token === 'doubler') tokenLabel = 'doubler';
+              else if (token === 'sniper') tokenLabel = 'sniper';
+              else if (token) tokenLabel = token;
               return (
                 <div key={i} className="border-b last:border-b-0 bg-white">
                   <div className="flex items-center p-4 gap-3">
@@ -770,6 +677,24 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                 </div>
               );
             }
+            // ── Open Response / MC / combination ────────────────────────────
+            let myPts = 0;
+            let tokenLabel = null;
+            if (token === 'doubler') {
+              myPts = correct ? Math.round(pts * 2 * 10) / 10 : 0;
+              if (correct) tokenLabel = 'doubler';
+            } else if (token === 'insurance') {
+              myPts = correct ? pts : Math.round(pts / 2 * 10) / 10;
+              if (!correct) tokenLabel = 'insurance';
+            } else if (token === 'sniper') {
+              myPts = correct ? SNIPER_POINTS : 0;
+              if (correct) tokenLabel = 'sniper';
+            } else if (token === 'parasite') {
+              myPts = correct ? pts : (totalUsers > 0 ? Math.round((correctCounts[i] * pts / totalUsers) * 10) / 10 : 0);
+              if (!correct) tokenLabel = 'parasite';
+            } else {
+              myPts = correct ? pts : 0;
+            }
             const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
             const hasOtherAnswers = (qtype === 'OR' || qtype === 'openresponse') && q.showOthersCount && q.acceptedAnswers?.length > 1;
             const rowImgs = extractImages(q.prompt || q.text || '');
@@ -796,7 +721,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                         <span className="font-semibold">Correct Answer:</span>{' '}{getCorrectDisplay(q)}{hasOtherAnswers && <button onClick={()=>setPopupAnswers(q.acceptedAnswers)} className="ml-1 text-blue-500 underline text-xs">and {q.acceptedAnswers.length - 1} other{q.acceptedAnswers.length > 2 ? 's' : ''}</button>}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}
                       </p>
                       {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 italic">{q.additionalContext}</p>}
-                      <p className={correct ? 'text-green-700' : 'text-red-600'}><span className="font-semibold">Your Answer:</span> {getMyAnswerDisplay(q, i)}</p>
+                      <p className={correct ? 'text-green-700' : 'text-red-600'}><span className="font-semibold">Your Answer:</span> {getAnswerDisplayForAnswers(q, i, answers)}</p>
                       <p className={`font-semibold ${correct || token === 'insurance' ? 'text-green-700' : 'text-red-600'}`}>
                         Your Score: {myPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}
                       </p>
@@ -805,9 +730,39 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                 </div>
               </div>
             );
-          })}
-        </div>
-      )}
+          });
+        };
+
+        return (
+          <>
+            {isAdminView && selectedUserId && (
+              <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+                <div className="px-5 py-3 bg-gray-100 border-b flex justify-between items-center">
+                  <div>
+                    <h2 className="font-bold text-gray-700">{selectedUserName}'s Answers</h2>
+                    {Object.keys(selectedAttempt?.token_assignments || {}).length > 0 && <p className="text-xs text-gray-500 mt-0.5">Token icons show assignments.</p>}
+                  </div>
+                  <button onClick={()=>setSelectedUserId(null)} className="text-gray-400 hover:text-gray-600 text-xs font-medium">Close ✕</button>
+                </div>
+                {!selectedAttempt ? (
+                  <p className="px-5 py-4 text-sm text-gray-500 italic">No submitted attempt found for this user.</p>
+                ) : (
+                  renderAnswerBreakdown(selectedAnswers, selectedAttempt, selectedUserId)
+                )}
+              </div>
+            )}
+
+            {!isAdminView && myAttempt && (
+              <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                <div className="px-5 py-3 bg-gray-100 border-b">
+                  <h2 className="font-bold text-gray-700">Your Results</h2>
+                </div>
+                {renderAnswerBreakdown(myAnswers, myAttempt, currentUser?.id)}
+              </div>
+            )}
+          </>
+        );
+      })()}
       {imagePopupUrls && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{background:"rgba(0,0,0,0.7)"}} onClick={()=>setImagePopupUrls(null)}>
           <div className="rounded-xl overflow-hidden shadow-2xl" style={{maxWidth:'580px',width:'100%',background:'#1B2A41',padding:'16px'}} onClick={e=>e.stopPropagation()}>
