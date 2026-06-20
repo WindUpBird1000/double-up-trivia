@@ -3687,10 +3687,11 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                   </div>
                 </div>
                 {q.hasBonusPoints && (
-                  <div className="px-4 py-2 border-b last:border-b-0 bg-blue-50 flex items-center gap-2">
-                    <span className="text-xs font-semibold text-blue-700 ml-6">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span>
-                    <span className="text-xs text-gray-600 flex-1">{renderInlineFormatting(q.bonusPrompt)}</span>
-                    <span className="text-xs text-blue-700 font-medium">{studentAnswers[`bp_${i}`] || '—'}</span>
+                  <div className="grid grid-cols-12 gap-2 px-4 py-2 border-b last:border-b-0 items-center" style={{background:'#e2e8f0'}}>
+                    <div className="col-span-1"></div>
+                    <div className="col-span-7 text-xs text-gray-600 pr-3"><span className="font-semibold text-blue-700">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span> {renderInlineFormatting(q.bonusPrompt)}</div>
+                    <div className="col-span-2 text-xs text-blue-700 font-medium text-center">{studentAnswers[`bp_${i}`] || '—'}</div>
+                    <div className="col-span-2"></div>
                   </div>
                 )}
               </div>
@@ -3708,7 +3709,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
           <p className="text-sm font-semibold text-gray-700 mb-1">Available bonuses — click/tap to select, then click/tap a question to assign</p>
           <p className="text-xs text-gray-400 mb-3">Hover over a bonus to see what it does. Click/tap an assigned bonus to pick it back up.</p>
           {activeQuestions.some(q=>q.hasBonusPoints) && (
-            <p className="text-xs text-blue-600 italic mb-3">Note: This quiz includes Bonus Point questions. Doubler, Insurance, and Sniper only affect your score on the main question — Bonus Points are always scored separately.</p>
+            <p className="text-xs text-blue-600 italic mb-3">Note: This quiz includes Bonus Point questions.<br/>Doubler, Insurance, and Sniper only affect your score on the main question — Bonus Points are always scored separately.</p>
           )}
           {binTokensList.length > 0 ? (
             <div className="flex flex-wrap gap-3 items-center justify-center">
@@ -3903,12 +3904,16 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                   {q.hasBonusPoints && (()=>{
                     const bpAns = studentAnswers[`bp_${i}`]||'';
                     const bpCorrect = bpAns.trim()!=='' && (q.bonusAcceptedAnswers||[]).some(a=>normalizeAnswer(a)===normalizeAnswer(bpAns));
+                    const bpCorrectAns = q.bonusAcceptedAnswers?.[q.bonusPrimaryAnswerIndex||0]||q.bonusAcceptedAnswers?.[0]||'—';
                     return (
-                      <div className="px-4 pb-2 flex items-center gap-2 text-xs">
-                        <span className="font-semibold text-blue-700 ml-12">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span>
-                        <span className="text-gray-500 flex-1">{q.bonusPrompt}</span>
-                        <span className={`font-medium ${bpCorrect?'text-green-700':'text-red-600'}`}>{bpAns||'(blank)'}</span>
-                        {!bpCorrect && <span className="text-gray-500">(correct: {q.bonusAcceptedAnswers?.[q.bonusPrimaryAnswerIndex||0]||q.bonusAcceptedAnswers?.[0]||'—'})</span>}
+                      <div style={{display:'grid',gridTemplateColumns:'32px 36px 32px 1fr 130px 130px 72px',gap:'8px',background:'#e2e8f0'}} className="px-4 py-2 items-center">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div className="text-xs text-gray-600"><span className="font-semibold text-blue-700">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span> {q.bonusPrompt}</div>
+                        <div className={`text-xs font-medium text-center ${bpCorrect?'text-green-700':'text-red-600'}`}>{bpAns||'—'}</div>
+                        <div className="text-xs text-gray-600 text-center">{bpCorrectAns}</div>
+                        <div></div>
                       </div>
                     );
                   })()}
@@ -4890,6 +4895,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                                           theirAns: (()=>{const a=attempt.full_answers?.[qi];if(!a)return'—';if(typeof a==='object')return a.answer||'—';return a||'—';})(),
                                           correct: cell.correct,
                                           pts: cell.earned,
+                                          bp: cell.bp||0,
                                           cluesUsed: isMN ? (cell.cluesUsed||null) : null,
                                         }))
                                       : questions.map((q, qi) => {
@@ -4897,7 +4903,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                                           const theirAns = raw==null ? '—' : typeof raw==='object' ? (raw.answer||'—') : (raw||'—');
                                           const correct = getCorrect(q, raw);
                                           const cluesUsed = isMN && raw && typeof raw==='object' ? raw.cluesUsed : null;
-                                          return { qi, q, theirAns, correct, pts: null, cluesUsed };
+                                          return { qi, q, theirAns, correct, pts: null, bp: 0, cluesUsed };
                                         });
                                     return (
                                       <table className="w-full text-sm mt-3">
@@ -4913,16 +4919,33 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                                           </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
-                                          {rows.map(({qi, q, theirAns, correct, pts, cluesUsed}) => (
-                                            <tr key={qi} className={correct===false?'bg-red-50':correct===true?'bg-green-50':''}>
-                                              <td className="py-2 px-3 text-center text-gray-500">Q{qi+1}</td>
-                                              <td className="py-2 px-3 text-gray-600 text-xs max-w-xs truncate">{q?(q.clues?q.clues[0]:q.prompt||q.text||''):'—'}</td>
-                                              {isMN && <td className="py-2 px-3 text-center text-gray-500">{cluesUsed||'—'}</td>}
-                                              {isDash && <td className="py-2 px-3 text-center text-gray-500">{q?getCorrectAns(q):'—'}</td>}
-                                              <td className="py-2 px-3 text-center text-gray-700">{theirAns}</td>
-                                              {!isDash && <td className="py-2 px-3 text-center font-bold">{correct===true?<span className="text-green-600">✓</span>:correct===false?<span className="text-red-500">✗</span>:<span className="text-gray-400">—</span>}</td>}
-                                              {isScored && <td className="py-2 px-3 text-center font-semibold text-gray-700">{pts??'—'}</td>}
-                                            </tr>
+                                          {rows.map(({qi, q, theirAns, correct, pts, bp, cluesUsed}) => (
+                                            <React.Fragment key={qi}>
+                                              <tr className={correct===false?'bg-red-50':correct===true?'bg-green-50':''}>
+                                                <td className="py-2 px-3 text-center text-gray-500">Q{qi+1}</td>
+                                                <td className="py-2 px-3 text-gray-600 text-xs max-w-xs truncate">{q?(q.clues?q.clues[0]:q.prompt||q.text||''):'—'}</td>
+                                                {isMN && <td className="py-2 px-3 text-center text-gray-500">{cluesUsed||'—'}</td>}
+                                                {isDash && <td className="py-2 px-3 text-center text-gray-500">{q?getCorrectAns(q):'—'}</td>}
+                                                <td className="py-2 px-3 text-center text-gray-700">{theirAns}</td>
+                                                {!isDash && <td className="py-2 px-3 text-center font-bold">{correct===true?<span className="text-green-600">✓</span>:correct===false?<span className="text-red-500">✗</span>:<span className="text-gray-400">—</span>}</td>}
+                                                {isScored && <td className="py-2 px-3 text-center font-semibold text-gray-700">{pts??'—'}{bp>0&&<span className="block text-xs font-normal text-blue-600">(BP: +{bp})</span>}</td>}
+                                              </tr>
+                                              {isOR && q?.hasBonusPoints && (()=>{
+                                                const bpRaw = attempt.full_answers?.[`bp_${qi}`] || '';
+                                                const bpCorrect = bpRaw.trim()!=='' && (q.bonusAcceptedAnswers||[]).some(a=>normalizeAnswer(a)===normalizeAnswer(bpRaw));
+                                                const bpCorrectAns = q.bonusAcceptedAnswers?.[q.bonusPrimaryAnswerIndex||0]||q.bonusAcceptedAnswers?.[0]||'—';
+                                                return (
+                                                  <tr style={{background:'#e2e8f0'}}>
+                                                    <td></td>
+                                                    <td className="py-1.5 px-3 text-xs text-gray-600"><span className="font-semibold text-blue-700">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span> {q.bonusPrompt}</td>
+                                                    <td colSpan={isDash?1:0}></td>
+                                                    <td className={`py-1.5 px-3 text-center text-xs font-medium ${bpCorrect?'text-green-700':'text-red-600'}`}>{bpRaw||'—'}</td>
+                                                    <td className="py-1.5 px-3 text-center text-xs text-gray-600">{!bpCorrect && bpCorrectAns}</td>
+                                                    {isScored && <td></td>}
+                                                  </tr>
+                                                );
+                                              })()}
+                                            </React.Fragment>
                                           ))}
                                         </tbody>
                                       </table>
