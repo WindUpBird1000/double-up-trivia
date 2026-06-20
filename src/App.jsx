@@ -2366,62 +2366,63 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
     setAuditLoading(true);
     setAuditData(null);
 
-    // Fetch quiz definition, results, and attempts in parallel
-    const [{ data: quizRow }, { data: resultRow }, { data: attempts }] = await Promise.all([
-      supabase.from('quizzes').select('data, title, category, status').eq('quiz_key', quizKey).single(),
-      supabase.from('quiz_results').select('scores').eq('quiz_key', quizKey).single(),
-      supabase.from('quiz_attempts').select('user_id, answers, token_assignments, doubles, status').eq('quiz_key', quizKey).eq('status', 'submitted'),
-    ]);
+    try {
+      // Fetch quiz definition, results, and attempts in parallel
+      const [{ data: quizRow }, { data: resultRow }, { data: attempts }] = await Promise.all([
+        supabase.from('quizzes').select('data, title, category, status').eq('quiz_key', quizKey).single(),
+        supabase.from('quiz_results').select('scores').eq('quiz_key', quizKey).single(),
+        supabase.from('quiz_attempts').select('user_id, answers, token_assignments, doubles, status').eq('quiz_key', quizKey).eq('status', 'submitted'),
+      ]);
 
-    if (!quizRow || !resultRow || !attempts) { setAuditLoading(false); return; }
-    if (quizRow.status !== 'Scored') { setAuditLoading(false); return; }
+      if (!quizRow || !resultRow || !attempts) { return; }
+      if (quizRow.status !== 'Scored') { return; }
 
-    const quiz = quizRow.data;
-    const season = quizRow.category;
-    const questions = quiz.type === 'fillintheblank' ? quiz.sentences : quiz.questions;
-    const scores = resultRow.scores;
-    const { pointValues, userScores, correctnessByUser, correctCounts } = scores;
-    const totalAttempts = attempts.length;
-    const n = questions.length;
-    const isDashQuiz = quiz.type === 'datadash';
-    const isMNQuiz = quiz.type === 'mysterynoun';
+      const quiz = quizRow.data;
+      const season = quizRow.category;
+      const questions = quiz.type === 'fillintheblank' ? quiz.sentences : quiz.questions;
+      const scores = resultRow.scores;
+      const { pointValues, userScores, correctnessByUser, correctCounts } = scores;
+      const totalAttempts = attempts.length;
+      const n = questions.length;
+      const isDashQuiz = quiz.type === 'datadash';
+      const isMNQuiz = quiz.type === 'mysterynoun';
 
-    // Fetch display names
-    const userIds = attempts.map(a => a.user_id);
-    const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
-    const nameMap = {};
-    (profiles || []).forEach(p => { nameMap[p.user_id] = p.display_name; });
+      // Fetch display names
+      const userIds = attempts.map(a => a.user_id);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
+      const nameMap = {};
+      (profiles || []).forEach(p => { nameMap[p.user_id] = p.display_name; });
 
-    let rankingRows = [];
+      let rankingRows = [];
 
-    if (!isDashQuiz) {
-      // ── Difficulty ranking explanation ────────────────────────────────────
-      const sorted = [...correctCounts.map((c, i) => ({ i, c }))]
-        .sort((a, b) => a.c - b.c || a.i - b.i);
-      let rank = n;
-      let j = 0;
-      while (j < sorted.length) {
-        let k = j;
-        while (k < sorted.length - 1 && sorted[k + 1].c === sorted[k].c) k++;
-        const tieCount = k - j + 1;
-        const rawRanks = [];
-        for (let m = 0; m < tieCount; m++) rawRanks.push(rank - m);
-        const avg = Math.round((rawRanks.reduce((s, v) => s + v, 0) / tieCount) * 10) / 10;
-        const isTie = tieCount > 1;
-        for (let m = j; m <= k; m++) {
-          const qi = sorted[m].i;
-          rankingRows.push({
-            qIndex: qi, correctCount: correctCounts[qi], totalAttempts,
-            assignedPoints: pointValues[qi], isTie,
-            tieWith: isTie ? sorted.slice(j, k + 1).map(x => x.i).filter(x => x !== qi) : [],
-            tieFormula: isTie ? `(${rawRanks.join(' + ')}) ÷ ${tieCount} = ${avg}` : null,
-          });
+      if (!isDashQuiz) {
+        // ── Difficulty ranking explanation ────────────────────────────────────
+        const sorted = [...correctCounts.map((c, i) => ({ i, c }))]
+          .sort((a, b) => a.c - b.c || a.i - b.i);
+        let rank = n;
+        let j = 0;
+        while (j < sorted.length) {
+          let k = j;
+          while (k < sorted.length - 1 && sorted[k + 1].c === sorted[k].c) k++;
+          const tieCount = k - j + 1;
+          const rawRanks = [];
+          for (let m = 0; m < tieCount; m++) rawRanks.push(rank - m);
+          const avg = Math.round((rawRanks.reduce((s, v) => s + v, 0) / tieCount) * 10) / 10;
+          const isTie = tieCount > 1;
+          for (let m = j; m <= k; m++) {
+            const qi = sorted[m].i;
+            rankingRows.push({
+              qIndex: qi, correctCount: correctCounts[qi], totalAttempts,
+              assignedPoints: pointValues[qi], isTie,
+              tieWith: isTie ? sorted.slice(j, k + 1).map(x => x.i).filter(x => x !== qi) : [],
+              tieFormula: isTie ? `(${rawRanks.join(' + ')}) ÷ ${tieCount} = ${avg}` : null,
+            });
+          }
+          rank -= tieCount;
+          j = k + 1;
         }
-        rank -= tieCount;
-        j = k + 1;
+        rankingRows.sort((a, b) => a.correctCount - b.correctCount || b.assignedPoints - a.assignedPoints);
       }
-      rankingRows.sort((a, b) => a.correctCount - b.correctCount || b.assignedPoints - a.assignedPoints);
-    }
 
     // ── Per-user per-question cell detail ────────────────────────────────────
     const userRows = attempts.map(attempt => {
@@ -2509,7 +2510,12 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
     userRows.sort((a, b) => b.recomputedTotal - a.recomputedTotal);
 
     setAuditData({ quizKey, quizTitle: quiz.title || quizKey, season, questions, rankingRows, userRows, n, totalAttempts, isDashQuiz, isMNQuiz });
-    setAuditLoading(false);
+    } catch (err) {
+      console.error('runAudit error:', err);
+      alert('Score Auditor failed to load this quiz: ' + (err?.message || err));
+    } finally {
+      setAuditLoading(false);
+    }
   };
 
   // Fetch pending dispute counts for all quizzes (used for the admin list badge)
@@ -3687,7 +3693,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                   </div>
                 </div>
                 {q.hasBonusPoints && (
-                  <div className="grid grid-cols-12 gap-2 px-4 py-2 border-b last:border-b-0 items-center" style={{background:'#e2e8f0'}}>
+                  <div className="grid grid-cols-12 gap-2 px-4 py-2 border-b last:border-b-0 items-center" style={{background:'#324A5F'}}>
                     <div className="col-span-1"></div>
                     <div className="col-span-7 text-xs text-gray-600 pr-3"><span className="font-semibold text-blue-700">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span> {renderInlineFormatting(q.bonusPrompt)}</div>
                     <div className="col-span-2 text-xs text-blue-700 font-medium text-center">{studentAnswers[`bp_${i}`] || '—'}</div>
@@ -3906,7 +3912,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                     const bpCorrect = bpAns.trim()!=='' && (q.bonusAcceptedAnswers||[]).some(a=>normalizeAnswer(a)===normalizeAnswer(bpAns));
                     const bpCorrectAns = q.bonusAcceptedAnswers?.[q.bonusPrimaryAnswerIndex||0]||q.bonusAcceptedAnswers?.[0]||'—';
                     return (
-                      <div style={{display:'grid',gridTemplateColumns:'32px 36px 32px 1fr 130px 130px 72px',gap:'8px',background:'#e2e8f0'}} className="px-4 py-2 items-center">
+                      <div style={{display:'grid',gridTemplateColumns:'32px 36px 32px 1fr 130px 130px 72px',gap:'8px',background:'#324A5F'}} className="px-4 py-2 items-center">
                         <div></div>
                         <div></div>
                         <div></div>
@@ -4935,7 +4941,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                                                 const bpCorrect = bpRaw.trim()!=='' && (q.bonusAcceptedAnswers||[]).some(a=>normalizeAnswer(a)===normalizeAnswer(bpRaw));
                                                 const bpCorrectAns = q.bonusAcceptedAnswers?.[q.bonusPrimaryAnswerIndex||0]||q.bonusAcceptedAnswers?.[0]||'—';
                                                 return (
-                                                  <tr style={{background:'#e2e8f0'}}>
+                                                  <tr style={{background:'#324A5F'}}>
                                                     <td></td>
                                                     <td className="py-1.5 px-3 text-xs text-gray-600"><span className="font-semibold text-blue-700">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span> {q.bonusPrompt}</td>
                                                     <td colSpan={isDash?1:0}></td>
