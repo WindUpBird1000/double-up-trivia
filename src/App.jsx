@@ -2225,6 +2225,7 @@ const QuizApp = () => {
   .ans  { font-size: 11px; color: #8899aa; display: block; max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
   .tick { color: #6ee8a0; font-weight: 700; }
   .cross{ color: #e89090; font-weight: 700; }
+  .clue { display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; margin-top: 2px; background: #324A5F; color: #CCC9DC; }
   .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; font-size: 11px; }
   .legend-item { display: flex; align-items: center; gap: 5px; }
   .swatch { width: 14px; height: 14px; border-radius: 2px; border: 1px solid #324A5F; }
@@ -2233,7 +2234,7 @@ const QuizApp = () => {
 <body>
 <h1>${quizTitle} — Scoring Grid</h1>
 <div class="meta">Loading…</div>
-<div class="legend">
+<div class="legend" id="legend">
   <div class="legend-item"><div class="swatch" style="background:#0d2a1a"></div> Correct</div>
   <div class="legend-item"><div class="swatch" style="background:#2a0d0d"></div> Incorrect</div>
   <div class="legend-item"><div class="swatch" style="background:#111e2b"></div> Blank</div>
@@ -2249,6 +2250,7 @@ const SUPABASE_URL = '${SUPABASE_URL}';
 const ANON_KEY = '${ANON_KEY}';
 const QUIZ_KEY = '${quizKey}';
 const SNIPER_POINTS = 8;
+const MN_POINTS = [20, 15, 10, 5];
 async function sb(table, params) {
   const r = await fetch(SUPABASE_URL+'/rest/v1/'+table+'?'+params, { headers: { apikey: ANON_KEY, Authorization: 'Bearer '+ANON_KEY } });
   return r.json();
@@ -2260,12 +2262,17 @@ function normalize(s) {
   t = t.replace(/\\u0000/g, '.');
   return t.replace(/\\s+/g, ' ').trim();
 }
+function fmtNum(v) {
+  const n = parseFloat(v);
+  return isNaN(n) ? (v||'—') : n.toLocaleString();
+}
 async function load() {
   const status = document.getElementById('status');
   const quizRows = await sb('quizzes', 'quiz_key=eq.'+QUIZ_KEY+'&select=data,title,type,status');
   if (!quizRows.length) { status.textContent = 'Quiz not found.'; return; }
   const quizMeta = quizRows[0];
   const quiz = quizMeta.data;
+  const quizType = quizMeta.type;
   const questions = quiz.questions;
   const N = questions.length;
   document.querySelector('.meta').textContent = 'Status: '+quizMeta.status+' · Type: '+quizMeta.type+' · '+N+' questions · Live Supabase data';
@@ -2277,62 +2284,156 @@ async function load() {
   profiles.forEach(p => { nameMap[p.user_id] = p.display_name || p.user_id; });
   const results = await sb('quiz_results', 'quiz_key=eq.'+QUIZ_KEY+'&select=scores');
   const storedScores = results[0]?.scores || null;
-  const storedPointValues = storedScores?.pointValues || null;
-  const correctCounts = questions.map((q, i) => attempts.filter(a => {
-    const raw = (a.answers[i]||'').toString().trim();
-    return raw !== '' && q.acceptedAnswers.some(ac => normalize(ac) === normalize(raw));
-  }).length);
-  let pointValues = storedPointValues;
-  if (!pointValues) {
-    const sorted = correctCounts.map((c,i)=>({i,c})).sort((a,b)=>a.c-b.c||a.i-b.i);
-    pointValues = new Array(N).fill(0);
-    let rank=N, j=0;
-    while(j<sorted.length){let k=j;while(k<sorted.length-1&&sorted[k+1].c===sorted[k].c)k++;const tc=k-j+1;const avg=Math.round((Array.from({length:tc},(_,m)=>rank-m).reduce((s,v)=>s+v,0)/tc)*10)/10;for(let m=j;m<=k;m++)pointValues[sorted[m].i]=avg;rank-=tc;j=k+1;}
-  }
-  const rows = attempts.map(a => {
-    const tokenMap = a.token_assignments||{};
-    const doublesArr = a.doubles||[];
-    let total = 0;
-    const cells = questions.map((q,i) => {
-      const raw = (a.answers[i]||'').toString().trim();
-      const blank = raw==='';
-      const correct = !blank && q.acceptedAnswers.some(ac=>normalize(ac)===normalize(raw));
-      const token = tokenMap[i]||(doublesArr.includes(i)?'doubler':null);
-      const pts = pointValues[i];
-      let earned = 0;
-      if(!blank){
-        if(token==='doubler') earned=correct?Math.round(pts*2*10)/10:0;
-        else if(token==='insurance') earned=correct?pts:Math.round((pts/2)*10)/10;
-        else if(token==='sniper') earned=correct?SNIPER_POINTS:0;
-        else if(token==='parasite') earned=correct?pts:(attempts.length>0?Math.round((correctCounts[i]*pts/attempts.length)*10)/10:0);
-        else earned=correct?pts:0;
-      }
-      total=Math.round((total+earned)*10)/10;
-      return {raw,blank,correct,token,pts,earned};
-    });
-    return {uid:a.user_id,name:nameMap[a.user_id]||a.user_id,cells,total};
-  });
-  rows.sort((a,b)=>b.total-a.total);
+
   const tokenLabel={doubler:'2×',insurance:'INS',sniper:'SNP',parasite:'PAR'};
   const tokenClass={doubler:'tok-doubler',insurance:'tok-insurance',sniper:'tok-sniper',parasite:'tok-parasite'};
+
+  let pointValues, correctCounts, rows;
+
+  if (quizType === 'datadash') {
+    // ── Data Dash: rank by closeness, Doubler only, no correct/incorrect concept ──
+    document.getElementById('legend').style.display = 'none';
+    const totalAttempts = attempts.length;
+    attempts.forEach(a => {
+      a._diffs = questions.map((q,i) => {
+        const raw = (a.answers[i]||'').toString().replace(/,/g,'').trim();
+        const v = parseFloat(raw);
+        return isNaN(v) ? Infinity : Math.abs(v - q.correctAnswer);
+      });
+    });
+    const ddPointsByUser = {};
+    attempts.forEach(a => { ddPointsByUser[a.user_id] = new Array(N).fill(0); });
+    questions.forEach((_, qi) => {
+      const ranked = attempts.map(a => ({ user_id: a.user_id, diff: a._diffs[qi] })).sort((a,b)=>a.diff-b.diff);
+      let rank = totalAttempts, j = 0;
+      while (j < ranked.length) {
+        let k = j;
+        while (k < ranked.length-1 && ranked[k+1].diff === ranked[k].diff) k++;
+        if (ranked[j].diff === Infinity) {
+          for (let m=j; m<=k; m++) ddPointsByUser[ranked[m].user_id][qi] = 0;
+        } else {
+          const avg = Math.round(((ranked.slice(j,k+1).reduce((s,_,ii)=>s+(rank-ii),0))/(k-j+1))*10)/10;
+          for (let m=j; m<=k; m++) ddPointsByUser[ranked[m].user_id][qi] = avg;
+        }
+        rank -= (k-j+1); j = k+1;
+      }
+    });
+    pointValues = questions.map((_, qi) => ddPointsByUser[attempts[0]?.user_id]?.[qi] ?? 0);
+    correctCounts = null;
+    rows = attempts.map(a => {
+      const tokenMap = a.token_assignments||{};
+      const doublesArr = a.doubles||[];
+      let total = 0;
+      const cells = questions.map((q,i) => {
+        const raw = (a.answers[i]||'').toString().trim();
+        const blank = raw==='' ;
+        const basePts = ddPointsByUser[a.user_id][i];
+        const token = tokenMap[i]||(doublesArr.includes(i)?'doubler':null);
+        const earned = token==='doubler' ? Math.round(basePts*2*10)/10 : basePts;
+        total = Math.round((total+earned)*10)/10;
+        const diff = a._diffs[i];
+        return {raw,blank,token,earned,diff:diff===Infinity?'—':diff.toLocaleString()};
+      });
+      return {uid:a.user_id,name:nameMap[a.user_id]||a.user_id,cells,total};
+    });
+    rows.sort((a,b)=>b.total-a.total);
+  } else if (quizType === 'mysterynoun') {
+    // ── Mystery Noun: clue-based fixed points, no tokens ──
+    document.getElementById('legend').style.display = 'none';
+    correctCounts = questions.map((q,i) => attempts.filter(a => {
+      const ad = a.answers[i]; if (!ad) return false;
+      return ad.answer && q.acceptedAnswers.some(ac=>normalize(ac)===normalize(ad.answer));
+    }).length);
+    pointValues = questions.map(() => MN_POINTS[0]);
+    rows = attempts.map(a => {
+      let total = 0;
+      const cells = questions.map((q,i) => {
+        const ad = a.answers[i];
+        const ans = ad ? (ad.answer||'') : '';
+        const cluesUsed = ad ? (ad.cluesUsed||1) : null;
+        const blank = !ad || ans.trim()==='';
+        const correct = !blank && q.acceptedAnswers.some(ac=>normalize(ac)===normalize(ans));
+        const earned = correct ? (MN_POINTS[Math.min((cluesUsed||1)-1,3)]||0) : 0;
+        total = Math.round((total+earned)*10)/10;
+        return {raw:ans,blank,correct,earned,cluesUsed};
+      });
+      return {uid:a.user_id,name:nameMap[a.user_id]||a.user_id,cells,total};
+    });
+    rows.sort((a,b)=>b.total-a.total);
+  } else {
+    // ── Open Response (and combination/FITB sharing this shape): difficulty ranking + tokens ──
+    const storedPointValues = storedScores?.pointValues || null;
+    correctCounts = questions.map((q, i) => attempts.filter(a => {
+      const raw = (a.answers[i]||'').toString().trim();
+      return raw !== '' && q.acceptedAnswers.some(ac => normalize(ac) === normalize(raw));
+    }).length);
+    pointValues = storedPointValues;
+    if (!pointValues) {
+      const sorted = correctCounts.map((c,i)=>({i,c})).sort((a,b)=>a.c-b.c||a.i-b.i);
+      pointValues = new Array(N).fill(0);
+      let rank=N, j=0;
+      while(j<sorted.length){let k=j;while(k<sorted.length-1&&sorted[k+1].c===sorted[k].c)k++;const tc=k-j+1;const avg=Math.round((Array.from({length:tc},(_,m)=>rank-m).reduce((s,v)=>s+v,0)/tc)*10)/10;for(let m=j;m<=k;m++)pointValues[sorted[m].i]=avg;rank-=tc;j=k+1;}
+    }
+    rows = attempts.map(a => {
+      const tokenMap = a.token_assignments||{};
+      const doublesArr = a.doubles||[];
+      let total = 0;
+      const cells = questions.map((q,i) => {
+        const raw = (a.answers[i]||'').toString().trim();
+        const blank = raw==='';
+        const correct = !blank && q.acceptedAnswers.some(ac=>normalize(ac)===normalize(raw));
+        const token = tokenMap[i]||(doublesArr.includes(i)?'doubler':null);
+        const pts = pointValues[i];
+        let earned = 0;
+        if(!blank){
+          if(token==='doubler') earned=correct?Math.round(pts*2*10)/10:0;
+          else if(token==='insurance') earned=correct?pts:Math.round((pts/2)*10)/10;
+          else if(token==='sniper') earned=correct?SNIPER_POINTS:0;
+          else if(token==='parasite') earned=correct?pts:(attempts.length>0?Math.round((correctCounts[i]*pts/attempts.length)*10)/10:0);
+          else earned=correct?pts:0;
+        }
+        total=Math.round((total+earned)*10)/10;
+        return {raw,blank,correct,token,pts,earned};
+      });
+      return {uid:a.user_id,name:nameMap[a.user_id]||a.user_id,cells,total};
+    });
+    rows.sort((a,b)=>b.total-a.total);
+  }
+
+  // ── Render table (shared across all three types) ──
   let html='<table><thead><tr><th>User</th>';
-  for(let i=0;i<N;i++) html+='<th>Q'+(i+1)+'<br><span style="color:#8899aa;font-weight:400">'+pointValues[i]+'pt</span></th>';
-  html+='<th>Total</th></tr><tr><th style="font-size:11px;color:#8899aa">correct→</th>';
-  for(let i=0;i<N;i++) html+='<th>'+correctCounts[i]+'/'+attempts.length+'</th>';
-  html+='<th></th></tr></thead><tbody>';
+  for(let i=0;i<N;i++) html+='<th>Q'+(i+1)+'<br><span style="color:#8899aa;font-weight:400">'+(quizType==='mysterynoun'?'max '+pointValues[i]:pointValues[i])+'pt</span></th>';
+  html+='<th>Total</th></tr>';
+  if (correctCounts) {
+    html+='<tr><th style="font-size:11px;color:#8899aa">correct→</th>';
+    for(let i=0;i<N;i++) html+='<th>'+correctCounts[i]+'/'+attempts.length+'</th>';
+    html+='<th></th></tr>';
+  }
+  html+='</thead><tbody>';
   rows.forEach(row=>{
     html+='<tr><td>'+row.name+'</td>';
     row.cells.forEach(c=>{
-      const cls=c.blank?'blank':c.correct?'correct':'incorrect';
-      const mark=c.blank?'—':c.correct?'<span class="tick">✓</span>':'<span class="cross">✗</span>';
-      const tok=c.token?'<span class="token '+tokenClass[c.token]+'">'+tokenLabel[c.token]+'</span>':'';
-      html+='<td class="'+cls+'">'+mark+' '+tok+'<span class="pts">'+c.earned+'</span><span class="ans" title="'+c.raw+'">'+(c.blank?'':c.raw.substring(0,15))+'</span></td>';
+      if (quizType === 'datadash') {
+        const cls = c.blank ? 'blank' : '';
+        const tok = c.token?'<span class="token '+tokenClass[c.token]+'">'+tokenLabel[c.token]+'</span>':'';
+        html+='<td class="'+cls+'">'+tok+'<span class="pts">'+c.earned+'</span><span class="ans" title="diff: '+c.diff+'">'+(c.blank?'':fmtNum(c.raw)+' (Δ'+c.diff+')')+'</span></td>';
+      } else if (quizType === 'mysterynoun') {
+        const cls = c.blank?'blank':c.correct?'correct':'incorrect';
+        const mark = c.blank?'—':c.correct?'<span class="tick">✓</span>':'<span class="cross">✗</span>';
+        const clueTag = c.cluesUsed ? '<span class="clue">clue '+c.cluesUsed+'</span>' : '';
+        html+='<td class="'+cls+'">'+mark+' '+clueTag+'<span class="pts">'+c.earned+'</span><span class="ans" title="'+c.raw+'">'+(c.blank?'':c.raw.substring(0,15))+'</span></td>';
+      } else {
+        const cls=c.blank?'blank':c.correct?'correct':'incorrect';
+        const mark=c.blank?'—':c.correct?'<span class="tick">✓</span>':'<span class="cross">✗</span>';
+        const tok=c.token?'<span class="token '+tokenClass[c.token]+'">'+tokenLabel[c.token]+'</span>':'';
+        html+='<td class="'+cls+'">'+mark+' '+tok+'<span class="pts">'+c.earned+'</span><span class="ans" title="'+c.raw+'">'+(c.blank?'':c.raw.substring(0,15))+'</span></td>';
+      }
     });
     html+='<td>'+row.total+'</td></tr>';
   });
   html+='</tbody></table>';
   document.getElementById('output').innerHTML=html;
-  status.textContent='Loaded '+rows.length+' submissions · point values '+(storedPointValues?'from stored results':'computed live');
+  status.textContent='Loaded '+rows.length+' submissions'+(quizType==='openresponse'?' · point values '+(storedScores?.pointValues?'from stored results':'computed live'):'');
 }
 load().catch(e=>{document.getElementById('status').textContent='Error: '+e.message;});
 <\/script>
