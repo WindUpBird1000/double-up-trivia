@@ -638,6 +638,10 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
               const diff = isDash && !isNaN(myVal) ? Math.abs(myVal - q.correctAnswer).toLocaleString() : null;
               const mnAd = isMN ? (selectedAnswers[i]||{}) : null;
               const mnCluesUsed = mnAd ? (typeof mnAd==='object' ? (mnAd.cluesUsed||1) : 1) : null;
+              const bpAns = q.hasBonusPoints ? (selectedAnswers[`bp_${i}`] || '') : '';
+              const bpCorrect = q.hasBonusPoints && bpAns.trim()!=='' && (q.bonusAcceptedAnswers||[]).some(a=>normalizeAnswer(a)===normalizeAnswer(bpAns));
+              const bpEarned = bpCorrect ? (q.bonusPoints||0) : 0;
+              const bpCorrectAns = q.bonusAcceptedAnswers?.[q.bonusPrimaryAnswerIndex||0]||q.bonusAcceptedAnswers?.[0]||'—';
               return (
                 <div key={i} className={`border-b last:border-b-0 ${isDash ? 'bg-white' : isMN ? (earnedPts>0?'bg-green-50':'bg-red-50') : correct ? 'bg-green-50' : 'bg-red-50'}`}>
                   <div className="grid grid-cols-3 gap-4 p-4">
@@ -654,12 +658,23 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                       <p className={`text-xs mt-0.5 ${isDash||isMN ? 'text-gray-600' : correct ? 'text-green-700' : 'text-red-600'}`}><span className="font-semibold">Their Answer:</span> {answerDisplay}</p>
                       {isDash && diff !== null && <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Difference:</span> {diff}</p>}
                       {isMN && mnCluesUsed !== null && <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold">Clues used:</span> {mnCluesUsed} (max {MN_POINTS[mnCluesUsed-1]} pts)</p>}
+                      {q.hasBonusPoints && (
+                        <p className="text-xs mt-1 pt-1 border-t border-dashed border-gray-300">
+                          <span className="font-semibold text-blue-700">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span>{' '}
+                          <span className="text-gray-500">{q.bonusPrompt}</span>{' — '}
+                          <span className={bpCorrect?'text-green-700 font-medium':'text-red-600 font-medium'}>{bpAns||'(blank)'}</span>
+                          {!bpCorrect && <span className="text-gray-500">{' '}(correct: {bpCorrectAns})</span>}
+                        </p>
+                      )}
                     </div>
                     <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
                       {!isDash && !isMN && <p>Value: <span className="font-semibold">{pts} pts</span></p>}
                       <p className={`font-semibold ${isDash||isMN ? 'text-gray-700' : correct || token === 'insurance' ? 'text-green-700' : 'text-red-600'}`}>
                         {earnedPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}
                       </p>
+                      {q.hasBonusPoints && (
+                        <p className={`font-semibold ${bpCorrect?'text-green-700':'text-gray-400'}`}>Bonus: +{bpEarned} pts</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2464,7 +2479,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         });
       } else {
         const correctness = correctnessByUser[attempt.user_id] || [];
-        cells = questions.map((_, i) => {
+        cells = questions.map((q, i) => {
           const correct = correctness[i] || false;
           const pts = pointValues[i];
           const token = tokenMap[i] || (doublesArr.includes(i) ? 'doubler' : null);
@@ -3672,7 +3687,8 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               <div key={i}>
                 <div
                   onClick={() => handleTapQuestion(i)}
-                  className={`grid grid-cols-12 gap-2 px-4 py-3 border-b last:border-b-0 items-center transition-colors
+                  className={`grid grid-cols-12 gap-2 px-4 py-3 items-center transition-colors
+                    ${q.hasBonusPoints ? '' : 'border-b last:border-b-0'}
                     ${assigned && !isBeingMoved ? 'bg-yellow-50' : 'bg-white'}
                     ${tapSelected && !assigned ? 'cursor-pointer' : ''}`}
                 >
@@ -3693,7 +3709,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                   </div>
                 </div>
                 {q.hasBonusPoints && (
-                  <div className="grid grid-cols-12 gap-2 px-4 py-2 border-b last:border-b-0 items-center" style={{background:'#324A5F'}}>
+                  <div className="grid grid-cols-12 gap-2 px-4 py-2 border-b last:border-b-0 items-center" style={{background:'#0C1821'}}>
                     <div className="col-span-1"></div>
                     <div className="col-span-7 text-xs text-gray-600 pr-3"><span className="font-semibold text-blue-700">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span> {renderInlineFormatting(q.bonusPrompt)}</div>
                     <div className="col-span-2 text-xs text-blue-700 font-medium text-center">{studentAnswers[`bp_${i}`] || '—'}</div>
@@ -3912,13 +3928,13 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                     const bpCorrect = bpAns.trim()!=='' && (q.bonusAcceptedAnswers||[]).some(a=>normalizeAnswer(a)===normalizeAnswer(bpAns));
                     const bpCorrectAns = q.bonusAcceptedAnswers?.[q.bonusPrimaryAnswerIndex||0]||q.bonusAcceptedAnswers?.[0]||'—';
                     return (
-                      <div style={{display:'grid',gridTemplateColumns:'32px 36px 32px 1fr 130px 130px 72px',gap:'8px',background:'#324A5F'}} className="px-4 py-2 items-center">
+                      <div style={{display:'grid',gridTemplateColumns:'32px 36px 32px 1fr 130px 130px 72px',gap:'8px',background:bpCorrect?'#07190f':'#190707'}} className="px-4 py-2 items-center">
                         <div></div>
                         <div></div>
                         <div></div>
-                        <div className="text-xs text-gray-600"><span className="font-semibold text-blue-700">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span> {q.bonusPrompt}</div>
+                        <div className="text-xs text-gray-400"><span className="font-semibold text-blue-400">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span> {q.bonusPrompt}</div>
                         <div className={`text-xs font-medium text-center ${bpCorrect?'text-green-700':'text-red-600'}`}>{bpAns||'—'}</div>
-                        <div className="text-xs text-gray-600 text-center">{bpCorrectAns}</div>
+                        <div className="text-xs text-gray-400 text-center">{bpCorrectAns}</div>
                         <div></div>
                       </div>
                     );
@@ -4941,12 +4957,11 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                                                 const bpCorrect = bpRaw.trim()!=='' && (q.bonusAcceptedAnswers||[]).some(a=>normalizeAnswer(a)===normalizeAnswer(bpRaw));
                                                 const bpCorrectAns = q.bonusAcceptedAnswers?.[q.bonusPrimaryAnswerIndex||0]||q.bonusAcceptedAnswers?.[0]||'—';
                                                 return (
-                                                  <tr style={{background:'#324A5F'}}>
+                                                  <tr style={{background:bpCorrect?'#07190f':'#190707'}}>
                                                     <td></td>
-                                                    <td className="py-1.5 px-3 text-xs text-gray-600"><span className="font-semibold text-blue-700">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span> {q.bonusPrompt}</td>
-                                                    <td colSpan={isDash?1:0}></td>
+                                                    <td className="py-1.5 px-3 text-xs text-gray-400"><span className="font-semibold text-blue-400">Bonus ({q.bonusPoints} pt{q.bonusPoints!==1?'s':''}):</span> {q.bonusPrompt}</td>
                                                     <td className={`py-1.5 px-3 text-center text-xs font-medium ${bpCorrect?'text-green-700':'text-red-600'}`}>{bpRaw||'—'}</td>
-                                                    <td className="py-1.5 px-3 text-center text-xs text-gray-600">{!bpCorrect && bpCorrectAns}</td>
+                                                    <td className="py-1.5 px-3 text-center text-xs text-gray-400">{!bpCorrect && bpCorrectAns}</td>
                                                     {isScored && <td></td>}
                                                   </tr>
                                                 );
