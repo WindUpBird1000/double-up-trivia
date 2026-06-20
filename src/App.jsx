@@ -724,10 +724,10 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                         <p className="text-xs text-gray-500 font-medium">{i+1}. {renderInlineFormatting((q.clues[0]||'').replace(/\{\{image:[^}]+\}\}/g,'').slice(0,80))}</p>
                       </div>
                       <div className="col-span-1 text-right text-xs text-gray-600 space-y-0.5">
+                        <p><span className="font-semibold">Clues used:</span> {cluesUsed}</p>
                         <p><span className="font-semibold">Correct Answer:</span> {q.acceptedAnswers[q.primaryAnswerIndex]||q.acceptedAnswers[0]}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}</p>
                         {whyOpenIndex===i && q.additionalContext && <p className="text-gray-500 italic">{q.additionalContext}</p>}
                         <p className={correctMN?'text-green-700':'text-red-600'}><span className="font-semibold">Your Answer:</span> {answer||'(no answer)'}</p>
-                        <p><span className="font-semibold">Clues used:</span> {cluesUsed}</p>
                         <p className={`font-semibold ${correctMN?'text-green-700':'text-red-600'}`}>{ptsMN} pts</p>
                       </div>
                     </div>
@@ -790,12 +790,12 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                     </div>
                     <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
                       <p><span className="font-semibold">{correctCounts?.[i] ?? '—'}/{totalUsers}</span> Correct</p>
+                      <p>Question Value: <span className="font-semibold">{pts} pts</span></p>
                       <p>
                         <span className="font-semibold">Correct Answer:</span>{' '}{getCorrectDisplay(q)}{hasOtherAnswers && <button onClick={()=>setPopupAnswers(q.acceptedAnswers)} className="ml-1 text-blue-500 underline text-xs">and {q.acceptedAnswers.length - 1} other{q.acceptedAnswers.length > 2 ? 's' : ''}</button>}{q.additionalContext && <>{' '}<button onClick={()=>setWhyOpenIndex(whyOpenIndex===i?null:i)} className="ml-1 text-blue-400 underline text-xs">(Why?)</button></>}
                       </p>
                       {whyOpenIndex===i && q.additionalContext && <p className="text-xs text-gray-500 italic">{q.additionalContext}</p>}
                       <p className={correct ? 'text-green-700' : 'text-red-600'}><span className="font-semibold">Your Answer:</span> {getMyAnswerDisplay(q, i)}</p>
-                      <p>Question Value: <span className="font-semibold">{pts} pts</span></p>
                       <p className={`font-semibold ${correct || token === 'insurance' ? 'text-green-700' : 'text-red-600'}`}>
                         Your Score: {myPts} pts{tokenLabel ? ` (${tokenLabel})` : ''}
                       </p>
