@@ -1083,6 +1083,7 @@ const QuizApp = () => {
   const [editingMsgPublished, setEditingMsgPublished] = useState(false);
   const [msgImportant, setMsgImportant] = useState(false);
   const [msgSaving, setMsgSaving] = useState(false);
+  const [showMsgPreview, setShowMsgPreview] = useState(false);
   const [confirmDeleteMsgId, setConfirmDeleteMsgId] = useState(null);
   const [sysMessagesOpen, setSysMessagesOpen] = useState(false);
   const [allPublishedMsgs, setAllPublishedMsgs] = useState([]);
@@ -4142,6 +4143,11 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                 <p className="text-xs text-gray-400 italic mt-3">This message has already been published. Edits here update the live message immediately — people who already viewed it won't see your changes reflected automatically.</p>
               ) : null}
               <div className="flex gap-3 mt-4">
+                <button
+                  onClick={()=>setShowMsgPreview(true)}
+                  disabled={!msgBody.trim()}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium disabled:opacity-40"
+                ><BookOpen size={18}/> Preview</button>
                 {!editingMsgPublished && (
                   <button
                     onClick={()=>saveMessage(false)}
@@ -4204,6 +4210,29 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {showMsgPreview && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{background:"rgba(0,0,0,0.4)"}}>
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl flex flex-col max-h-screen overflow-y-auto">
+              <div className="flex justify-between items-center p-5 border-b">
+                <h2 className="text-lg font-bold text-gray-800">Message Preview</h2>
+                <button onClick={()=>setShowMsgPreview(false)} className="text-gray-400 hover:text-gray-600"><X size={22}/></button>
+              </div>
+              <div className="p-6">
+                <div className="bg-gray-50 rounded-xl border-2 border-gray-100 p-8 mb-4">
+                  <h1 className="text-3xl font-bold text-gray-800 mb-2">{msgTitle || '(No title yet)'}</h1>
+                  <p className="text-xs text-gray-400 mb-6">{new Date().toLocaleDateString()}</p>
+                  <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">{renderPrompt(msgBody)}</div>
+                  {msgImportant && <p className="mt-6 text-xs text-red-500 font-semibold">⚠ Marked Important — will be shown to all users who haven't seen it yet, even on session restore.</p>}
+                </div>
+                <p className="text-xs text-gray-400 text-center">This is exactly how the message will appear to users — not interactive.</p>
+              </div>
+              <div className="px-5 pb-5">
+                <button onClick={()=>setShowMsgPreview(false)} className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Close</button>
+              </div>
             </div>
           </div>
         )}
