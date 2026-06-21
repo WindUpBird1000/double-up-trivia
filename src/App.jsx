@@ -1063,6 +1063,9 @@ const QuizApp = () => {
       });
   }, []);
 
+  const [sampleQuestionIndex, setSampleQuestionIndex] = useState(0);
+  const [sampleAnswerShown, setSampleAnswerShown] = useState(false);
+
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [adminUsername, setAdminUsername] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
@@ -3071,6 +3074,49 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
     );
   };
 
+  if (mode==='sample') {
+    const sampleQuiz = Object.values(allQuizData).find(q => q.title === 'General Knowledge I');
+    const sampleQuestions = sampleQuiz?.questions || [];
+    const q = sampleQuestions[sampleQuestionIndex];
+    const primaryAnswer = q ? (q.acceptedAnswers?.[q.primaryAnswerIndex ?? 0] || q.acceptedAnswers?.[0] || '') : '';
+    const goTo = (i) => { setSampleQuestionIndex(i); setSampleAnswerShown(false); };
+    return (
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-800">Sample Quiz</h1>
+          <button onClick={()=>setMode('login')} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium text-sm">Return to Login Screen</button>
+        </div>
+        {!sampleQuiz ? (
+          <div className="bg-red-50 border-2 border-red-300 rounded-xl p-8 text-center">
+            <p className="text-red-700 font-medium">Sample quiz could not be loaded.</p>
+          </div>
+        ) : (
+          <>
+            <div className="bg-white rounded-xl shadow-md p-8 mb-6">
+              <div className="text-xl text-gray-800 font-semibold mb-6">{renderPrompt(q.prompt)}</div>
+            </div>
+            <div className="flex items-center justify-center gap-4">
+              <button
+                onClick={()=>goTo(sampleQuestionIndex-1)}
+                disabled={sampleQuestionIndex===0}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm disabled:opacity-40"
+              >Previous Question</button>
+              <button
+                onClick={()=>setSampleAnswerShown(true)}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+              >{sampleAnswerShown ? primaryAnswer : 'Display Answer'}</button>
+              <button
+                onClick={()=>goTo(sampleQuestionIndex+1)}
+                disabled={sampleQuestionIndex===sampleQuestions.length-1}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm disabled:opacity-40"
+              >Next Question</button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
   if (mode==='login') return (
     <div className="max-w-md mx-auto p-6 bg-gray-50 min-h-screen flex flex-col justify-center">
       {showForgotModal && (
@@ -3114,6 +3160,9 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
           <p className="text-sm text-gray-500 mb-2">Forgot your username and/or password?</p>
           <button onClick={()=>{setShowForgotModal(true);setForgotSent(false);}} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-sm font-medium">Click Here</button>
         </div>
+      </div>
+      <div className="bg-white rounded-xl shadow-md p-6 mt-6 text-center">
+        <button onClick={()=>{setSampleQuestionIndex(0);setSampleAnswerShown(false);setMode('sample');}} className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold text-lg">Sample Quiz</button>
       </div>
       <div className="text-center mt-6">
         <button onClick={()=>setMode('admin')} className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium mx-auto"><Settings size={18}/> Admin</button>
