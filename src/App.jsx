@@ -1025,6 +1025,14 @@ const QuizApp = () => {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotSending, setForgotSending] = useState(false);
+  const [acceptingNewUsers, setAcceptingNewUsers] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinFirstName, setJoinFirstName] = useState('');
+  const [joinLastInitial, setJoinLastInitial] = useState('');
+  const [joinEmail, setJoinEmail] = useState('');
+  const [joinSent, setJoinSent] = useState(false);
+  const [joinSending, setJoinSending] = useState(false);
+  const [acceptingNewUsersSaving, setAcceptingNewUsersSaving] = useState(false);
   const [knownQuizzes, setKnownQuizzes] = useState({ quizzes: [] });
   const [allQuizData, setAllQuizData] = useState({});
   const [isLoading, setIsLoading] = useState(true);
@@ -1061,6 +1069,9 @@ const QuizApp = () => {
         data.forEach(q => { m[q.quiz_key] = { ...q.data, status: q.status, title: q.title, category: q.category, type: q.type }; });
         setAllQuizData(m); setIsLoading(false);
       });
+    // Load app settings (e.g. whether new sign-ups are currently open)
+    supabase.from('app_settings').select('accepting_new_users').eq('id', 1).single()
+      .then(({ data }) => { if (data) setAcceptingNewUsers(!!data.accepting_new_users); });
   }, []);
 
   const [sampleQuestionIndex, setSampleQuestionIndex] = useState(0);
@@ -1703,6 +1714,31 @@ const QuizApp = () => {
       alert('Could not send request. Please email doubleuptrivia@gmail.com directly.');
     }
     setForgotSending(false);
+  };
+
+  const handleJoinSubmit = async () => {
+    if (!joinFirstName.trim() || !joinLastInitial.trim() || !joinEmail.trim()) return;
+    setJoinSending(true);
+    try {
+      const displayName = `${joinFirstName.trim()} ${joinLastInitial.trim()}`;
+      await sendNotification(
+        'doubleuptrivia@gmail.com',
+        'Double Up Trivia — New User Request',
+        `A new person has requested to join. Their Display name is ${displayName}. Their email is ${joinEmail.trim()}.`
+      );
+      setJoinSent(true);
+    } catch(e) {
+      alert('Could not send request. Please email doubleuptrivia@gmail.com directly.');
+    }
+    setJoinSending(false);
+  };
+
+  const toggleAcceptingNewUsers = async () => {
+    const next = !acceptingNewUsers;
+    setAcceptingNewUsersSaving(true);
+    const { error } = await supabase.from('app_settings').update({ accepting_new_users: next }).eq('id', 1);
+    if (!error) setAcceptingNewUsers(next);
+    setAcceptingNewUsersSaving(false);
   };
 
   const adminLogin = () => {
@@ -3145,6 +3181,39 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
           </div>
         </div>
       )}
+      {showJoinModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{background:"rgba(0,0,0,0.4)"}}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Request Login Info</h2>
+            {joinSent ? (
+              <>
+                <p className="text-green-700 text-sm mb-4">Your request has been sent! You'll hear back soon.</p>
+                <button onClick={()=>{setShowJoinModal(false);setJoinSent(false);setJoinFirstName('');setJoinLastInitial('');setJoinEmail('');}} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Close</button>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-600 text-sm mb-4">Enter your info below and the admin will follow up with your login details.</p>
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">First Name</label>
+                  <input type="text" value={joinFirstName} onChange={e=>setJoinFirstName(e.target.value)} placeholder="First name" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"/>
+                </div>
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Last Initial</label>
+                  <input type="text" value={joinLastInitial} onChange={e=>setJoinLastInitial(e.target.value)} placeholder="Last initial" maxLength={1} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"/>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                  <input type="email" value={joinEmail} onChange={e=>setJoinEmail(e.target.value)} placeholder="you@example.com" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"/>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={handleJoinSubmit} disabled={!joinFirstName.trim()||!joinLastInitial.trim()||!joinEmail.trim()||joinSending} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40">{joinSending?'Sending...':'Submit'}</button>
+                  <button onClick={()=>{setShowJoinModal(false);setJoinFirstName('');setJoinLastInitial('');setJoinEmail('');}} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-gray-800 tracking-tight mb-2">Double Up Trivia</h1>
         <p className="text-gray-500">Sign in to play</p>
@@ -3159,10 +3228,14 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
           <input type="password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleLogin()} placeholder="••••••••" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"/>
         </div>
         {loginError && <p className="text-red-600 text-sm mb-3">{loginError}</p>}
-        <button onClick={handleLogin} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg mt-4 mb-6">Log In</button>
+        <button onClick={handleLogin} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg mt-4 mb-4">Log In</button>
+        <p className="text-center text-sm text-blue-600 hover:underline cursor-pointer mb-4" onClick={()=>{setShowForgotModal(true);setForgotSent(false);}}>Forgot username and/or password?</p>
         <div className="border-t pt-4 text-center">
-          <p className="text-sm text-gray-500 mb-2">Forgot your username and/or password?</p>
-          <button onClick={()=>{setShowForgotModal(true);setForgotSent(false);}} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-sm font-medium">Click Here</button>
+          {acceptingNewUsers ? (
+            <button onClick={()=>{setShowJoinModal(true);setJoinSent(false);}} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-sm font-medium">Request Login Information</button>
+          ) : (
+            <p className="text-sm text-gray-500">Double Up Trivia is currently not taking any new users.</p>
+          )}
         </div>
       </div>
       <div className="bg-white rounded-xl shadow-md p-6 mt-6 text-center">
@@ -4831,6 +4904,10 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               <button onClick={()=>setAdminSection('list')} className="text-sm text-blue-600 hover:underline">← Back to Quizzes</button>
               <h2 className="text-xl font-bold text-gray-800">Manage Users</h2>
               <button onClick={()=>setShowAddUser(true)} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"><Plus size={16}/> Add User</button>
+            </div>
+            <div className="mb-4 px-4 py-3 bg-white rounded-lg shadow-sm flex items-center gap-2">
+              <input type="checkbox" id="acceptingNewUsersCheckbox" checked={acceptingNewUsers} onChange={toggleAcceptingNewUsers} disabled={acceptingNewUsersSaving} className="w-4 h-4"/>
+              <label htmlFor="acceptingNewUsersCheckbox" className="text-sm font-medium text-gray-700 cursor-pointer">Currently accepting new users?</label>
             </div>
             {userMsg && <div className="mb-3 px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium">{userMsg}</div>}
             <div className="mb-4 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
