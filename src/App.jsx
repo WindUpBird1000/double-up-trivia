@@ -3131,7 +3131,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         ) : (
           <>
             <div className="bg-white rounded-xl shadow-md p-8 mb-6 flex items-center justify-center" style={{minHeight:'12rem'}}>
-              <div className="text-xl text-gray-800 font-semibold [&_img]:max-w-[800px] w-full">{renderPrompt(q.prompt)}</div>
+              <div className="text-xl text-gray-800 font-semibold w-full [&>div]:max-w-[600px] [&>div]:mx-auto">{renderPrompt(q.prompt)}</div>
             </div>
             <div className="flex items-stretch justify-center gap-4">
               <button
@@ -3140,7 +3140,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               >Previous<br/>Question</button>
               <button
                 onClick={()=>setSampleAnswerShown(true)}
-                className="w-80 flex-shrink-0 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
               >{sampleAnswerShown ? primaryAnswer : 'Display Answer'}</button>
               <button
                 onClick={()=>!isLast && goTo(sampleQuestionIndex+1)}
@@ -3169,8 +3169,8 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                 <p className="text-gray-600 text-sm mb-4">Enter your email address and the admin will send you your login info.</p>
                 <input type="email" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="Your email address" className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 text-sm"/>
                 <div className="flex gap-3">
-                  <button onClick={handleForgotSubmit} disabled={!forgotEmail.trim()||forgotSending} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40">{forgotSending?'Sending...':'Submit'}</button>
                   <button onClick={()=>{setShowForgotModal(false);setForgotEmail('');}} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
+                  <button onClick={handleForgotSubmit} disabled={!forgotEmail.trim()||forgotSending} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40">{forgotSending?'Sending...':'Submit'}</button>
                 </div>
               </>
             )}
@@ -3202,8 +3202,8 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                   <input type="email" value={joinEmail} onChange={e=>setJoinEmail(e.target.value)} placeholder="you@example.com" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"/>
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={handleJoinSubmit} disabled={!joinFirstName.trim()||!joinLastInitial.trim()||!joinEmail.trim()||joinSending} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40">{joinSending?'Sending...':'Submit'}</button>
                   <button onClick={()=>{setShowJoinModal(false);setJoinFirstName('');setJoinLastInitial('');setJoinEmail('');}} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
+                  <button onClick={handleJoinSubmit} disabled={!joinFirstName.trim()||!joinLastInitial.trim()||!joinEmail.trim()||joinSending} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40">{joinSending?'Sending...':'Submit'}</button>
                 </div>
               </>
             )}
@@ -3224,7 +3224,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
           <input type="password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleLogin()} placeholder="••••••••" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"/>
         </div>
         {loginError && <p className="text-red-600 text-sm mb-3">{loginError}</p>}
-        <button onClick={handleLogin} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg mt-4 mb-4">Log In</button>
+        <button onClick={handleLogin} className="w-full px-6 py-3 text-white rounded-lg font-semibold text-lg mt-4 mb-4" style={{backgroundColor:'#663399'}} onMouseEnter={e=>e.currentTarget.style.backgroundColor='#552a80'} onMouseLeave={e=>e.currentTarget.style.backgroundColor='#663399'}>Log In</button>
         <p className="text-center text-sm text-blue-600 underline cursor-pointer mb-4" onClick={()=>{setShowForgotModal(true);setForgotSent(false);}}>Forgot username and/or password?</p>
         <div className="border-t pt-4 text-center">
           {acceptingNewUsers ? (
@@ -3235,7 +3235,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         </div>
       </div>
       <div className="bg-white rounded-xl shadow-md p-6 mt-6 text-center">
-        <button onClick={()=>{setSampleQuestionIndex(0);setSampleAnswerShown(false);setMode('sample');}} className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold text-lg">Sample Quiz</button>
+        <button onClick={()=>{setSampleQuestionIndex(0);setSampleAnswerShown(false);setMode('sample');}} className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold text-lg">See a Sample Quiz</button>
       </div>
       <div className="text-center mt-6">
         <button onClick={()=>setMode('admin')} className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium mx-auto"><Settings size={18}/> Admin</button>
