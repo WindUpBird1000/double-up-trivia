@@ -3080,6 +3080,8 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
     const q = sampleQuestions[sampleQuestionIndex];
     const primaryAnswer = q ? (q.acceptedAnswers?.[q.primaryAnswerIndex ?? 0] || q.acceptedAnswers?.[0] || '') : '';
     const goTo = (i) => { setSampleQuestionIndex(i); setSampleAnswerShown(false); };
+    const isFirst = sampleQuestionIndex===0;
+    const isLast = sampleQuestionIndex===sampleQuestions.length-1;
     return (
       <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
         <div className="flex justify-between items-center mb-8">
@@ -3092,24 +3094,26 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
           </div>
         ) : (
           <>
-            <div className="bg-white rounded-xl shadow-md p-8 mb-6">
-              <div className="text-xl text-gray-800 font-semibold mb-6">{renderPrompt(q.prompt)}</div>
+            <div className="bg-white rounded-xl shadow-md p-8 mb-6 flex items-center justify-center" style={{minHeight:'12rem'}}>
+              <div className="text-xl text-gray-800 font-semibold [&_img]:max-w-[800px] w-full">{renderPrompt(q.prompt)}</div>
             </div>
-            <div className="flex items-center justify-center gap-4">
-              <button
-                onClick={()=>goTo(sampleQuestionIndex-1)}
-                disabled={sampleQuestionIndex===0}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm disabled:opacity-40"
-              >Previous Question</button>
+            <div className="flex items-stretch justify-center gap-4">
+              {!isFirst && (
+                <button
+                  onClick={()=>goTo(sampleQuestionIndex-1)}
+                  className="w-32 flex-shrink-0 px-2 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"
+                >Previous Question</button>
+              )}
               <button
                 onClick={()=>setSampleAnswerShown(true)}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
               >{sampleAnswerShown ? primaryAnswer : 'Display Answer'}</button>
-              <button
-                onClick={()=>goTo(sampleQuestionIndex+1)}
-                disabled={sampleQuestionIndex===sampleQuestions.length-1}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm disabled:opacity-40"
-              >Next Question</button>
+              {!isLast && (
+                <button
+                  onClick={()=>goTo(sampleQuestionIndex+1)}
+                  className="w-32 flex-shrink-0 px-2 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"
+                >Next Question</button>
+              )}
             </div>
           </>
         )}
