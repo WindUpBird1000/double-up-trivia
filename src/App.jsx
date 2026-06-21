@@ -3224,7 +3224,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
           <input type="password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleLogin()} placeholder="••••••••" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"/>
         </div>
         {loginError && <p className="text-red-600 text-sm mb-3">{loginError}</p>}
-        <button onClick={handleLogin} className="w-full px-6 py-3 text-white rounded-lg font-semibold text-lg mt-4 mb-4" style={{backgroundColor:'#663399'}} onMouseEnter={e=>e.currentTarget.style.backgroundColor='#552a80'} onMouseLeave={e=>e.currentTarget.style.backgroundColor='#663399'}>Log In</button>
+        <button onClick={handleLogin} className="w-full px-6 py-3 text-white rounded-lg font-semibold text-lg mt-4 mb-4 btn-login">Log In</button>
         <p className="text-center text-sm text-blue-600 underline cursor-pointer mb-4" onClick={()=>{setShowForgotModal(true);setForgotSent(false);}}>Forgot username and/or password?</p>
         <div className="border-t pt-4 text-center">
           {acceptingNewUsers ? (
