@@ -3134,22 +3134,18 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               <div className="text-xl text-gray-800 font-semibold [&_img]:max-w-[800px] w-full">{renderPrompt(q.prompt)}</div>
             </div>
             <div className="flex items-stretch justify-center gap-4">
-              {!isFirst && (
-                <button
-                  onClick={()=>goTo(sampleQuestionIndex-1)}
-                  className="w-32 flex-shrink-0 px-2 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"
-                >Previous Question</button>
-              )}
+              <button
+                onClick={()=>!isFirst && goTo(sampleQuestionIndex-1)}
+                className={`w-32 flex-shrink-0 px-2 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm ${isFirst ? 'invisible' : ''}`}
+              >Previous<br/>Question</button>
               <button
                 onClick={()=>setSampleAnswerShown(true)}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                className="w-80 flex-shrink-0 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
               >{sampleAnswerShown ? primaryAnswer : 'Display Answer'}</button>
-              {!isLast && (
-                <button
-                  onClick={()=>goTo(sampleQuestionIndex+1)}
-                  className="w-32 flex-shrink-0 px-2 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"
-                >Next Question</button>
-              )}
+              <button
+                onClick={()=>!isLast && goTo(sampleQuestionIndex+1)}
+                className={`w-32 flex-shrink-0 px-2 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm ${isLast ? 'invisible' : ''}`}
+              >Next<br/>Question</button>
             </div>
           </>
         )}
@@ -3184,7 +3180,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
       {showJoinModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{background:"rgba(0,0,0,0.4)"}}>
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-2">Request Login Info</h2>
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Sign-Up Request</h2>
             {joinSent ? (
               <>
                 <p className="text-green-700 text-sm mb-4">Your request has been sent! You'll hear back soon.</p>
@@ -3229,12 +3225,12 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         </div>
         {loginError && <p className="text-red-600 text-sm mb-3">{loginError}</p>}
         <button onClick={handleLogin} className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg mt-4 mb-4">Log In</button>
-        <p className="text-center text-sm text-blue-600 hover:underline cursor-pointer mb-4" onClick={()=>{setShowForgotModal(true);setForgotSent(false);}}>Forgot username and/or password?</p>
+        <p className="text-center text-sm text-blue-600 underline cursor-pointer mb-4" onClick={()=>{setShowForgotModal(true);setForgotSent(false);}}>Forgot username and/or password?</p>
         <div className="border-t pt-4 text-center">
           {acceptingNewUsers ? (
-            <button onClick={()=>{setShowJoinModal(true);setJoinSent(false);}} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-sm font-medium">Request Login Information</button>
+            <button onClick={()=>{setShowJoinModal(true);setJoinSent(false);}} className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg">Sign Up!</button>
           ) : (
-            <p className="text-sm text-gray-500">Double Up Trivia is currently not taking any new users.</p>
+            <p className="text-sm text-gray-500">Double Up Trivia is currently<br/>not taking any new users.</p>
           )}
         </div>
       </div>
