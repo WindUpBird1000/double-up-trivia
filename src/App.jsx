@@ -133,8 +133,9 @@ const extractImages = (text) => {
   return matches.map(m => `/images/${m[1].trim()}`);
 };
 
-const renderInlineFormatting = (text) => {  const parts = text.split(/(\{\{(?:b|i|u):[^}]+\}\})/);
-  return parts.map((part, i) => {
+const renderInlineFormatting = (text) => {
+  const parts = text.split(/(\{\{(?:b|i|u):[^}]+\}\})/);
+  const formatted = parts.map((part, i) => {
     const match = part.match(/^\{\{(b|i|u):([^}]+)\}\}$/);
     if (match) {
       const [, tag, content] = match;
@@ -144,6 +145,19 @@ const renderInlineFormatting = (text) => {  const parts = text.split(/(\{\{(?:b|
     }
     return <span key={i}>{part}</span>;
   });
+  const withBreaks = [];
+  formatted.forEach((el, i) => {
+    if (el?.type === 'span' && typeof el.props?.children === 'string') {
+      const lines = el.props.children.split('\n');
+      lines.forEach((line, j) => {
+        withBreaks.push(<span key={`${i}-${j}`}>{line}</span>);
+        if (j < lines.length - 1) withBreaks.push(<br key={`${i}-br-${j}`}/>);
+      });
+    } else {
+      withBreaks.push(el);
+    }
+  });
+  return withBreaks;
 };
 
 const renderPrompt = (text) => {
@@ -3556,7 +3570,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         <div className="bg-white rounded-xl shadow-md p-8 mb-6">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">{msg.title}</h1>
           <p className="text-xs text-gray-400 mb-6">{new Date(msg.published_at).toLocaleDateString()}</p>
-          <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">{renderPrompt(msg.body)}</div>
+          <div className="text-gray-700 leading-relaxed">{renderPrompt(msg.body)}</div>
         </div>
         {/* Navigation */}
         <div className="flex items-center gap-3">
@@ -3664,7 +3678,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               </div>
               <div className="p-5 max-h-96 overflow-y-auto">
                 <p className="text-xs text-gray-400 mb-4">{new Date(allPublishedMsgs[msgPopupIndex].published_at).toLocaleDateString()}</p>
-                <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">{renderPrompt(allPublishedMsgs[msgPopupIndex].body)}</div>
+                <div className="text-gray-700 leading-relaxed">{renderPrompt(allPublishedMsgs[msgPopupIndex].body)}</div>
               </div>
               <div className="flex items-center justify-between px-5 pb-5 pt-3 border-t border-gray-100">
                 <button
@@ -4347,7 +4361,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                 <div className="bg-gray-50 rounded-xl border-2 border-gray-100 p-8 mb-4">
                   <h1 className="text-3xl font-bold text-gray-800 mb-2">{msgTitle || '(No title yet)'}</h1>
                   <p className="text-xs text-gray-400 mb-6">{new Date().toLocaleDateString()}</p>
-                  <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">{renderPrompt(msgBody)}</div>
+                  <div className="text-gray-700 leading-relaxed">{renderPrompt(msgBody)}</div>
                   {msgImportant && <p className="mt-6 text-xs text-red-500 font-semibold">⚠ Marked Important — will be shown to all users who haven't seen it yet, even on session restore.</p>}
                 </div>
                 <p className="text-xs text-gray-400 text-center">This is exactly how the message will appear to users — not interactive.</p>
