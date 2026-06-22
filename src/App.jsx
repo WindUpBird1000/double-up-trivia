@@ -3863,7 +3863,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             <div className="col-span-1 text-center">#</div>
             <div className="col-span-7">Question</div>
             <div className="col-span-2 text-center">Your Answer</div>
-            <div className="col-span-2 text-center">Token</div>
+            <div className="col-span-2 text-center">Bonus</div>
           </div>
           {activeQuestions.map((q, i) => {
             const assigned = tokenAssignments[i];
