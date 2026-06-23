@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Quiz → Reddit Export</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #1a1a2e; color: #e0e0e0; min-height: 100vh; padding: 2rem; }
+  h1 { font-size: 1.4rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem; }
+  .subtitle { font-size: 0.85rem; color: #888; margin-bottom: 1.5rem; }
+  .card { background: #16213e; border: 1px solid #2a2a4a; border-radius: 10px 0 10px 0; padding: 1.25rem; margin-bottom: 1.25rem; }
+  label { font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 0.4rem; }
+  textarea { width: 100%; background: #0f0f1a; border: 1px solid #333; border-radius: 6px 0 6px 0; color: #ccc; font-family: monospace; font-size: 0.8rem; padding: 0.6rem; resize: vertical; }
+  textarea:focus { outline: none; border-color: #5566aa; }
+  .btn { display: inline-block; padding: 0.5rem 1.1rem; border-radius: 6px 0 6px 0; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: #4455cc; color: #fff; }
+  .btn-success { background: #2a7a4a; color: #fff; border: 1px solid #4ade80; }
+  .btn-danger { background: #5a1a1a; color: #e89090; border: 1px solid #f87171; font-size: 0.75rem; padding: 0.3rem 0.7rem; }
+  .btn-copy { background: #1a3a5a; color: #7eb8e8; border: 1px solid #4a8abf; }
+  .error { color: #f87171; font-size: 0.82rem; margin-top: 0.5rem; }
+  .question-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+  .q-row { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.6rem 0.75rem; background: #0f0f1a; border-radius: 6px 0 6px 0; border: 1px solid #2a2a3a; transition: border-color 0.15s; }
+  .q-row.excluded { opacity: 0.45; border-color: #3a1a1a; }
+  .q-row input[type=checkbox] { margin-top: 0.2rem; flex-shrink: 0; width: 15px; height: 15px; cursor: pointer; }
+  .q-num { font-weight: 700; color: #7eb8e8; font-size: 0.82rem; flex-shrink: 0; min-width: 1.5rem; margin-top: 0.05rem; }
+  .q-text { font-size: 0.82rem; color: #ccc; line-height: 1.4; flex: 1; }
+  .q-meta { font-size: 0.72rem; color: #666; margin-top: 0.2rem; }
+  .q-meta .answer { color: #4ade80; }
+  .q-meta .image-tag { color: #f87171; }
+  .section-title { font-size: 0.8rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.6rem; }
+  .controls { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+  .output-area { position: relative; }
+  .output-area textarea { min-height: 320px; color: #d0f0d0; }
+  .copy-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+  .count-badge { font-size: 0.75rem; color: #666; }
+  .divider { border: none; border-top: 1px solid #2a2a4a; margin: 0.75rem 0; }
+  .step-label { display: inline-block; background: #4455cc; color: #fff; font-size: 0.7rem; font-weight: 700; border-radius: 50%; width: 1.3rem; height: 1.3rem; text-align: center; line-height: 1.3rem; margin-right: 0.4rem; }
+  .title-input { width: 100%; background: #0f0f1a; border: 1px solid #333; border-radius: 6px 0 6px 0; color: #fff; font-size: 0.9rem; padding: 0.5rem 0.7rem; margin-bottom: 0.75rem; }
+  .title-input:focus { outline: none; border-color: #5566aa; }
+  .intro-input { width: 100%; background: #0f0f1a; border: 1px solid #333; border-radius: 6px 0 6px 0; color: #ccc; font-size: 0.82rem; padding: 0.5rem 0.7rem; resize: vertical; }
+  .intro-input:focus { outline: none; border-color: #5566aa; }
+  .copied-toast { display: none; font-size: 0.75rem; color: #4ade80; margin-left: 0.5rem; }
+  .copied-toast.show { display: inline; }
+</style>
+</head>
+<body>
+<h1>Quiz → Reddit Export</h1>
+<p class="subtitle">Paste quiz JSON, pick which questions to include, copy the formatted output.</p>
+
+<!-- Step 1: Paste JSON -->
+<div class="card">
+  <div class="section-title"><span class="step-label">1</span>Paste Quiz JSON</div>
+  <label>Paste the full <code>data</code> column JSON from Supabase</label>
+  <textarea id="jsonInput" rows="6" placeholder='{"type":"openresponse","title":"My Quiz","questions":[...]}'></textarea>
+  <div id="jsonError" class="error"></div>
+  <div style="margin-top:0.6rem;">
+    <button class="btn btn-primary" onclick="loadQuiz()">Load Quiz</button>
+  </div>
+</div>
+
+<!-- Step 2: Configure -->
+<div class="card" id="configSection" style="display:none">
+  <div class="section-title"><span class="step-label">2</span>Configure Export</div>
+
+  <label>Post title (edit if needed)</label>
+  <input type="text" class="title-input" id="postTitle" placeholder="Quiz title"/>
+
+  <label>Optional intro line (shown above questions, e.g. "Every answer is a four-letter word.")</label>
+  <textarea class="intro-input" id="introText" rows="2" placeholder="Leave blank for no intro..."></textarea>
+  <hr class="divider"/>
+
+  <div class="section-title" style="margin-bottom:0.4rem;">Select questions to include</div>
+  <div class="controls" style="margin-bottom:0.75rem;">
+    <button class="btn btn-primary" style="font-size:0.75rem;padding:0.3rem 0.7rem;" onclick="selectAll()">Select All</button>
+    <button class="btn btn-danger" onclick="deselectAll()">Deselect All</button>
+    <span class="count-badge" id="selectedCount"></span>
+  </div>
+  <div class="question-list" id="questionList"></div>
+
+  <div class="controls">
+    <button class="btn btn-success" onclick="generateOutput()">Generate Reddit Post</button>
+  </div>
+</div>
+
+<!-- Step 3: Output -->
+<div class="card" id="outputSection" style="display:none">
+  <div class="copy-bar">
+    <div class="section-title" style="margin-bottom:0;"><span class="step-label">3</span>Reddit-Ready Output</div>
+    <div>
+      <button class="btn btn-copy" onclick="copyOutput()">Copy to Clipboard</button>
+      <span class="copied-toast" id="copiedToast">✓ Copied!</span>
+    </div>
+  </div>
+  <div class="output-area">
+    <textarea id="outputText" rows="20" readonly></textarea>
+  </div>
+</div>
+
+<script>
+let quizData = null;
+
+// ── Tag processing ────────────────────────────────────────────────────────────
+function processTags(text) {
+  if (!text) return '';
+  // {{u:content}} → plain (underline not supported on Reddit)
+  text = text.replace(/\{\{u:([^}]+)\}\}/g, '$1');
+  // {{i:content}} → *content* (Reddit italics)
+  text = text.replace(/\{\{i:([^}]+)\}\}/g, '*$1*');
+  // {{b:content}} → **content** (Reddit bold)
+  text = text.replace(/\{\{b:([^}]+)\}\}/g, '**$1**');
+  // {{image:...}} → [image] placeholder (should be excluded upstream, but just in case)
+  text = text.replace(/\{\{image:[^}]+\}\}/g, '[image]');
+  // {{center:content}} → plain
+  text = text.replace(/\{\{center:([^}]+)\}\}/g, '$1');
+  return text.trim();
+}
+
+function hasImage(prompt) {
+  return /\{\{image:[^}]+\}\}/.test(prompt || '');
+}
+
+function getAnswer(q) {
+  const idx = q.primaryAnswerIndex ?? 0;
+  return q.acceptedAnswers?.[idx] || q.acceptedAnswers?.[0] || '?';
+}
+
+// ── Load quiz from JSON ────────────────────────────────────────────────────────
+function loadQuiz() {
+  const raw = document.getElementById('jsonInput').value.trim();
+  const errEl = document.getElementById('jsonError');
+  errEl.textContent = '';
+  if (!raw) { errEl.textContent = 'Please paste some JSON first.'; return; }
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch(e) { errEl.textContent = 'Invalid JSON: ' + e.message; return; }
+  if (!parsed.questions || !Array.isArray(parsed.questions)) {
+    errEl.textContent = 'No questions array found. Make sure you\'re pasting the full data column JSON.';
+    return;
+  }
+  quizData = parsed;
+  document.getElementById('postTitle').value = parsed.title || '';
+  document.getElementById('introText').value = '';
+  buildQuestionList();
+  document.getElementById('configSection').style.display = 'block';
+  document.getElementById('outputSection').style.display = 'none';
+  document.getElementById('configSection').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ── Build question checkboxes ─────────────────────────────────────────────────
+function buildQuestionList() {
+  const list = document.getElementById('questionList');
+  list.innerHTML = '';
+  quizData.questions.forEach((q, i) => {
+    const imageQ = hasImage(q.prompt);
+    const cleanPrompt = processTags((q.prompt || '').replace(/\{\{image:[^}]+\}\}/g, '').trim());
+    const answer = getAnswer(q);
+    const row = document.createElement('div');
+    row.className = 'q-row' + (imageQ ? ' excluded' : '');
+    row.id = 'qrow-' + i;
+    row.innerHTML = `
+      <input type="checkbox" id="qcheck-${i}" ${imageQ ? '' : 'checked'} onchange="updateRowStyle(${i}); updateCount()"/>
+      <div style="flex:1">
+        <div style="display:flex;align-items:baseline;gap:0.4rem;">
+          <span class="q-num">${i+1}.</span>
+          <span class="q-text">${escHtml(cleanPrompt.substring(0,160))}${cleanPrompt.length > 160 ? '…' : ''}</span>
+        </div>
+        <div class="q-meta">
+          Answer: <span class="answer">${escHtml(answer)}</span>
+          ${imageQ ? '<span class="image-tag"> · ⚠ contains image — deselected by default</span>' : ''}
+        </div>
+      </div>`;
+    list.appendChild(row);
+  });
+  updateCount();
+}
+
+function updateRowStyle(i) {
+  const checked = document.getElementById('qcheck-' + i).checked;
+  document.getElementById('qrow-' + i).className = 'q-row' + (checked ? '' : ' excluded');
+}
+
+function updateCount() {
+  const total = quizData?.questions?.length || 0;
+  let sel = 0;
+  for (let i = 0; i < total; i++) {
+    if (document.getElementById('qcheck-' + i)?.checked) sel++;
+  }
+  document.getElementById('selectedCount').textContent = `${sel} of ${total} selected`;
+}
+
+function selectAll() {
+  quizData.questions.forEach((_, i) => {
+    const cb = document.getElementById('qcheck-' + i);
+    if (cb) { cb.checked = true; updateRowStyle(i); }
+  });
+  updateCount();
+}
+
+function deselectAll() {
+  quizData.questions.forEach((_, i) => {
+    const cb = document.getElementById('qcheck-' + i);
+    if (cb) { cb.checked = false; updateRowStyle(i); }
+  });
+  updateCount();
+}
+
+// ── Generate output ───────────────────────────────────────────────────────────
+function generateOutput() {
+  if (!quizData) return;
+  const title = document.getElementById('postTitle').value.trim();
+  const intro = document.getElementById('introText').value.trim();
+
+  // Collect selected questions in original order
+  const selected = quizData.questions
+    .map((q, i) => ({ q, i, checked: document.getElementById('qcheck-' + i)?.checked }))
+    .filter(x => x.checked);
+
+  if (selected.length === 0) {
+    alert('Select at least one question.');
+    return;
+  }
+
+  const lines = [];
+
+  // Title
+  if (title) { lines.push(title); lines.push(''); }
+
+  // Intro
+  if (intro) { lines.push(intro); lines.push(''); }
+
+  lines.push('---');
+  lines.push('');
+
+  // Questions (renumbered from 1)
+  selected.forEach(({ q }, newIdx) => {
+    const prompt = processTags((q.prompt || '').replace(/\{\{image:[^}]+\}\}/g, '').trim());
+    lines.push(`${newIdx + 1}. ${prompt}`);
+    lines.push('');
+  });
+
+  lines.push('---');
+  lines.push('');
+  lines.push('**Answers:**');
+  lines.push('');
+
+  // Answers (spoiler-tagged, renumbered to match)
+  selected.forEach(({ q }, newIdx) => {
+    const answer = getAnswer(q);
+    lines.push(`${newIdx + 1}. >!${answer}!<`);
+  });
+
+  document.getElementById('outputText').value = lines.join('\n');
+  document.getElementById('outputSection').style.display = 'block';
+  document.getElementById('outputSection').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ── Copy to clipboard ─────────────────────────────────────────────────────────
+function copyOutput() {
+  const ta = document.getElementById('outputText');
+  ta.select();
+  ta.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const toast = document.getElementById('copiedToast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }).catch(() => {
+    document.execCommand('copy');
+  });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
