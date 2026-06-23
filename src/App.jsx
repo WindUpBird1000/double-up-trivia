@@ -176,7 +176,7 @@ const renderPrompt = (text) => {
     if (centerMatch) {
       return <div key={i} style={{textAlign:'center'}}>{renderInlineFormatting(centerMatch[1])}</div>;
     }
-    return <span key={i}>{renderInlineFormatting(part)}</span>;
+    return <React.Fragment key={i}>{renderInlineFormatting(part)}</React.Fragment>;
   });
 };
 
