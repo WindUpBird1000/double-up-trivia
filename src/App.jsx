@@ -326,7 +326,7 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
     <>
 
     <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen">
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"2.5rem"}}>
         <span className="text-sm text-gray-500">{displayName || ''}</span>
         <div className="flex gap-2">
           {isAdminView ? (
@@ -3298,7 +3298,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
     <><HelpModal/>
     <div className="max-w-2xl mx-auto bg-gray-50 min-h-screen" style={{padding:"1.5rem"}}>
       <div style={{position:"relative"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"2rem"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"2.5rem"}}>
           <span className="text-sm text-gray-500">{displayName || currentUser?.email || ''}</span>
           <div className="flex gap-2">
             <button onClick={()=>setShowHelpModal('setup')} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 font-medium text-sm">?</button>
@@ -3307,7 +3307,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
           </div>
         </div>
-        <div style={{textAlign:"center",marginBottom:"2rem"}}>
+        <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
           <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Quizzes</h1>
         </div>
       </div>
