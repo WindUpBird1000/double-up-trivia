@@ -554,7 +554,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
 
       {/* Header */}
       <div className="mb-6">
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.25rem"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"2.5rem"}}>
           {isAdminView
             ? <span className="text-sm text-gray-500"></span>
             : <span className="text-sm text-gray-500">{displayName || ''}</span>
@@ -898,7 +898,7 @@ const SeasonScoreboardScreen = ({ seasonName, currentUser, displayName, allQuizD
     <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="mb-6">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
           <span className="text-sm text-gray-500">{displayName || ''}</span>
           <div className="flex gap-2">
             {isAdminView ? (
