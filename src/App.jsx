@@ -1294,6 +1294,7 @@ const QuizApp = () => {
   };
 
   useEffect(() => { if (adminSection === 'users') loadUsers(); }, [adminSection]);
+  useEffect(() => { if (adminSection === 'list') fetchDisputeCounts(); }, [adminSection]);
   useEffect(() => { if (isAdminAuthenticated) fetchDisputeCounts(); }, [isAdminAuthenticated]);
 
   // Handle pending audit deep link (from a dispute email) once admin logs in and quiz data is loaded
