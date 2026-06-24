@@ -1083,6 +1083,15 @@ const QuizApp = () => {
         data.forEach(q => { m[q.quiz_key] = { ...q.data, status: q.status, title: q.title, category: q.category, type: q.type }; });
         setAllQuizData(m); setIsLoading(false);
       });
+    // Load posted_at from quiz_results for sorting scored quizzes by when they were scored
+    supabase.from('quiz_results').select('quiz_key, posted_at')
+      .then(({ data }) => {
+        if (data) {
+          const map = {};
+          data.forEach(r => { map[r.quiz_key] = r.posted_at; });
+          setQuizPostedAt(map);
+        }
+      });
     // Load app settings (e.g. whether new sign-ups are currently open)
     supabase.from('app_settings').select('accepting_new_users').eq('id', 1).single()
       .then(({ data }) => { if (data) setAcceptingNewUsers(!!data.accepting_new_users); });
@@ -1090,6 +1099,11 @@ const QuizApp = () => {
 
   const [sampleQuestionIndex, setSampleQuestionIndex] = useState(0);
   const [sampleAnswerShown, setSampleAnswerShown] = useState(false);
+  const [showPastQuizzes, setShowPastQuizzes] = useState(false);
+  const [pastQuizKey, setPastQuizKey] = useState(null);
+  const [pastQuizIndex, setPastQuizIndex] = useState(0);
+  const [pastQuizAnswerShown, setPastQuizAnswerShown] = useState(false);
+  const [quizPostedAt, setQuizPostedAt] = useState({});
 
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [adminUsername, setAdminUsername] = useState('');
@@ -3092,7 +3106,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
       body: 'In the first part of this page, you can see the five most recently scored quizzes; clicking on a quiz name will show you the scoreboard. On the scoreboard, you will see the standings for the quiz and you can see your answers, the correct answers, the number of people who answered each question correctly, and the number of points you earned for each question.\n\nIn the second part of this page, you can see the Season Standings. Your season points are simply a sum of the points you earned from every quiz in that season. Below the Scoreboard you can see a list of all the quizzes you took in the season, your placement for that quiz, and the points you earned.\n\nIn the third part of this page, you can access the scoreboard for every quiz, organized by date.',
     },
     setup: {
-      title: 'Available Quizzes — Help',
+      title: 'Quizzes — Help',
       body: 'Quizzes can be started and exited, progress automatically saved, and completed later.\n\nQuizzes that have been started but have not yet been submitted are marked as In Progress.\n\nQuizzes that have been submitted but have not yet been scored are marked as Completed, and may no longer be accessed.\n\nEach quiz indicates when it "closes," i.e., when the quiz will be scored; complete the quiz PRIOR to that date.\n\n<b>Quiz Types:</b>\n\n<i>General Knowledge:</i> Your classic quiz type. You read the question, you type in the answer. For names, only the last name is required (and it\'s easier to score that way), unless the question specifies otherwise.\n\n<i>Data Dash:</i> Each answer is a number. Your goal is to get as close to the correct answer. It doesn\'t make a difference if you go over or under; you are scored on the absolute difference between your answer and the correct answer.\n\n<i>Mystery Noun quizzes:</i> For each question, you will be shown a series of 4 clues, one at a time. Each clue will (hopefully) be less obscure than the previous. You can answer after any of the 4 clues, but you may only answer once! Answer correctly after the first clue and earn 20 points. Answer correctly after the second clue and earn 15 points. Answer correctly after the third clue and earn 10 points. Answer correctly after the final clue and earn 5 points. Incorrect answers always earn 0 points. Remember, you can only answer once per question!',
     },
     scoreboards: {
@@ -3259,7 +3273,27 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
   );
 
   if (isLoading) return <div className="max-w-2xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center"><div className="text-xl text-gray-500">Loading quizzes...</div></div>;
-  if (mode==='setup') return (
+  if (mode==='setup') {
+    // Scored quiz data for Past Quizzes view
+    const scoredQuizKeys = knownQuizzes.quizzes
+      .filter(key => allQuizData[key]?.status === 'Scored' && !allQuizData[key]?.archived)
+      .sort((a, b) => (quizPostedAt[b]||'').localeCompare(quizPostedAt[a]||''));
+    const scoredCategories = Array.from(new Set(scoredQuizKeys.map(key => allQuizData[key]?.category).filter(Boolean)))
+      .sort((a, b) => {
+        const latestA = scoredQuizKeys.find(k => allQuizData[k]?.category === a);
+        const latestB = scoredQuizKeys.find(k => allQuizData[k]?.category === b);
+        return (quizPostedAt[latestB]||'').localeCompare(quizPostedAt[latestA]||'');
+      });
+    const scoredInCategory = selectedCategory
+      ? scoredQuizKeys.filter(key => allQuizData[key]?.category === selectedCategory)
+      : [];
+    const displayCategories = showPastQuizzes ? scoredCategories : allCategories;
+    const displayQuizzesInCategory = showPastQuizzes ? scoredInCategory : quizzesInCategory;
+    const noQuizzesMsg = showPastQuizzes
+      ? 'No past quizzes yet — check back later!'
+      : 'There are currently no active quizzes for you to complete. Check back later!';
+
+    return (
     <><HelpModal/>
     <div className="max-w-2xl mx-auto bg-gray-50 min-h-screen" style={{padding:"1.5rem"}}>
       <div style={{position:"relative"}}>
@@ -3272,17 +3306,30 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm"><LogOut size={16}/> Log Out</button>
           </div>
         </div>
-        <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
-          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Available Quizzes</h1>
+        <div style={{textAlign:"center",marginBottom:"1.5rem"}}>
+          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Quizzes</h1>
         </div>
       </div>
+
+      {/* Active / Past toggle */}
+      <div className="flex items-center justify-center gap-3 mb-6">
+        <button
+          onClick={()=>{ setShowPastQuizzes(false); setSelectedCategory(''); setSelectedQuizKey(''); }}
+          className={`px-4 py-2 rounded-lg font-medium text-sm ${!showPastQuizzes ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}
+        >Active Quizzes</button>
+        <button
+          onClick={()=>{ setShowPastQuizzes(true); setSelectedCategory(''); setSelectedQuizKey(''); }}
+          className={`px-4 py-2 rounded-lg font-medium text-sm ${showPastQuizzes ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}
+        >Past Quizzes</button>
+      </div>
+
       {loadError ? (
         <div className="bg-red-50 border-2 border-red-300 rounded-xl p-8 text-center">
           <p className="text-red-700 font-medium">Could not load quiz data. Please check that your quiz files are in the correct location.</p>
         </div>
-      ) : allCategories.length===0 ? (
+      ) : displayCategories.length===0 ? (
         <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-8 text-center">
-          <p className="text-yellow-800 font-medium">There are currently no active quizzes for you to complete. Check back later!</p>
+          <p className="text-yellow-800 font-medium">{noQuizzesMsg}</p>
         </div>
       ) : (
         <>
@@ -3290,22 +3337,33 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             <h2 className="text-lg font-semibold text-gray-700 mb-4">Step 1: Select a Season</h2>
             <select value={selectedCategory} onChange={e=>handleCategoryChange(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-800 bg-white focus:ring-2 focus:ring-blue-500 text-base">
               <option value="">— Select a season —</option>
-              {allCategories.map(cat=><option key={cat} value={cat}>{cat}</option>)}
+              {displayCategories.map(cat=><option key={cat} value={cat}>{cat}</option>)}
             </select>
           </div>
           <div className={`bg-white rounded-xl shadow-md p-8 mb-6 transition-opacity ${selectedCategory?'opacity-100':'opacity-40 pointer-events-none'}`}>
             <h2 className="text-lg font-semibold text-gray-700 mb-4">Step 2: Choose a Quiz</h2>
             <select value={selectedQuizKey} onChange={e=>setSelectedQuizKey(e.target.value)} disabled={!selectedCategory} className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-800 bg-white focus:ring-2 focus:ring-blue-500 text-base mb-6">
               <option value="">— Select a quiz —</option>
-              {quizzesInCategory.map(key => {
+              {displayQuizzesInCategory.map(key => {
+                const q = allQuizData[key];
+                if (showPastQuizzes) {
+                  const postedDate = quizPostedAt[key] ? new Date(quizPostedAt[key]).toLocaleDateString() : '';
+                  return <option key={key} value={key}>{q?.title||key}{postedDate ? ` — ${postedDate}` : ''}</option>;
+                }
                 const attempt = userAttempts[key];
                 const completed = attempt?.status === 'submitted';
                 const inProgress = attempt?.status === 'in_progress';
-                const label = `${allQuizData[key]?.title||key}${completed ? ' (Completed)' : inProgress ? ' (In Progress)' : ''}${allQuizData[key]?.closingDate ? ` - Closes on ${allQuizData[key].closingDate}` : ''}`;
+                const label = `${q?.title||key}${completed ? ' (Completed)' : inProgress ? ' (In Progress)' : ''}${q?.closingDate ? ` - Closes on ${q.closingDate}` : ''}`;
                 return <option key={key} value={key}>{label}</option>;
               })}
             </select>
-            {selectedQuizKey && userAttempts[selectedQuizKey]?.status === 'submitted' ? (
+            {showPastQuizzes ? (
+              <button
+                onClick={()=>{ setPastQuizKey(selectedQuizKey); setPastQuizIndex(0); setPastQuizAnswerShown(false); setMode('pastquiz'); }}
+                disabled={!selectedQuizKey}
+                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >Browse Quiz</button>
+            ) : selectedQuizKey && userAttempts[selectedQuizKey]?.status === 'submitted' ? (
               <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 text-center">
                 <p className="text-yellow-800 font-medium">You have already completed this quiz. Results and scores have not yet been posted — stay tuned!</p>
               </div>
@@ -3318,7 +3376,53 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         </>
       )}
     </div></>
-  );
+    );
+  }
+
+  if (mode==='pastquiz') {
+    const quiz = allQuizData[pastQuizKey];
+    const questions = quiz?.questions || [];
+    const q = questions[pastQuizIndex];
+    const primaryAnswer = q ? (q.acceptedAnswers?.[q.primaryAnswerIndex ?? 0] || q.acceptedAnswers?.[0] || '') : '';
+    const goTo = (i) => { setPastQuizIndex(i); setPastQuizAnswerShown(false); };
+    const isFirst = pastQuizIndex === 0;
+    const isLast = pastQuizIndex === questions.length - 1;
+    return (
+      <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-800">{quiz?.title || ''}</h1>
+          <button onClick={()=>{ setSelectedQuizKey(''); setMode('setup'); }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm">← Back to Quizzes</button>
+        </div>
+        {!quiz ? (
+          <div className="bg-red-50 border-2 border-red-300 rounded-xl p-8 text-center">
+            <p className="text-red-700 font-medium">Quiz could not be loaded.</p>
+          </div>
+        ) : (
+          <>
+            <div className="bg-white rounded-xl shadow-md p-8 mb-6 flex items-center justify-center" style={{minHeight:'12rem'}}>
+              <div className="text-xl text-gray-800 font-semibold w-full [&>div]:max-w-[600px] [&>div]:mx-auto">{renderPrompt(q.prompt)}</div>
+            </div>
+            <div className="flex items-stretch justify-center gap-4">
+              <button
+                onClick={()=>!isFirst && goTo(pastQuizIndex-1)}
+                className={`w-32 flex-shrink-0 px-2 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm ${isFirst ? 'invisible' : ''}`}
+              >Previous<br/>Question</button>
+              <button
+                onClick={()=>setPastQuizAnswerShown(true)}
+                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+              >{pastQuizAnswerShown ? primaryAnswer : 'Display Answer'}</button>
+              <button
+                onClick={()=>!isLast && goTo(pastQuizIndex+1)}
+                className={`w-32 flex-shrink-0 px-2 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm ${isLast ? 'invisible' : ''}`}
+              >Next<br/>Question</button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+
   if (mode==='assessment' && activeQuiz?.type==='fillintheblank') {
     const sentence=activeQuestions[currentQuestionIndex]; const {display}=parseSentence(sentence.text);
     const currentAnswer=studentAnswers[currentQuestionIndex]; const total=activeQuestions.length;
@@ -3587,7 +3691,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             disabled={!allMsgViewed}
             className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {allMsgViewed ? 'Go to Available Quizzes' : `Read all messages to continue (${msgPageIndex+1} of ${total})`}
+            {allMsgViewed ? 'Go to Quizzes' : `Read all messages to continue (${msgPageIndex+1} of ${total})`}
           </button>
           {total > 1 && (
             <button
