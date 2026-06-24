@@ -1103,6 +1103,7 @@ const QuizApp = () => {
   const [pastQuizKey, setPastQuizKey] = useState(null);
   const [pastQuizIndex, setPastQuizIndex] = useState(0);
   const [pastQuizAnswerShown, setPastQuizAnswerShown] = useState(false);
+  const [pastQuizMnClue, setPastQuizMnClue] = useState(0);
   const [quizPostedAt, setQuizPostedAt] = useState({});
 
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
@@ -3381,12 +3382,48 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
 
   if (mode==='pastquiz') {
     const quiz = allQuizData[pastQuizKey];
+    const quizType = quiz?.type;
     const questions = quiz?.questions || [];
     const q = questions[pastQuizIndex];
-    const primaryAnswer = q ? (q.acceptedAnswers?.[q.primaryAnswerIndex ?? 0] || q.acceptedAnswers?.[0] || '') : '';
-    const goTo = (i) => { setPastQuizIndex(i); setPastQuizAnswerShown(false); };
     const isFirst = pastQuizIndex === 0;
     const isLast = pastQuizIndex === questions.length - 1;
+    const goTo = (i) => { setPastQuizIndex(i); setPastQuizAnswerShown(false); setPastQuizMnClue(0); };
+
+    // Type-specific answer display
+    const getPrimaryAnswer = () => {
+      if (!q) return '';
+      if (quizType === 'datadash') return ddDisplay(q);
+      return q.acceptedAnswers?.[q.primaryAnswerIndex ?? 0] || q.acceptedAnswers?.[0] || '';
+    };
+
+    // Type-specific prompt rendering
+    const renderQuestionPrompt = () => {
+      if (quizType === 'mysterynoun') {
+        const clues = q?.clues || [];
+        const visibleClues = clues.slice(0, pastQuizMnClue + 1).filter(Boolean);
+        return (
+          <div className="w-full space-y-3">
+            {visibleClues.map((clue, i) => (
+              <div key={i} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Clue {i + 1}</span>
+                <div className="text-lg text-gray-800 font-semibold mt-1">{renderPrompt(clue)}</div>
+              </div>
+            ))}
+          </div>
+        );
+      }
+      return (
+        <div className="text-xl text-gray-800 font-semibold w-full [&>div]:max-w-[600px] [&>div]:mx-auto">
+          {renderPrompt(q?.prompt)}
+        </div>
+      );
+    };
+
+    // For MN: Next Clue button replaces Display Answer until all clues shown
+    const allCluesShown = quizType === 'mysterynoun' && pastQuizMnClue >= (q?.clues?.filter(Boolean).length || 1) - 1;
+    const showNextClueBtn = quizType === 'mysterynoun' && !pastQuizAnswerShown && !allCluesShown;
+    const showDisplayAnswerBtn = quizType !== 'mysterynoun' || allCluesShown;
+
     return (
       <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
         <div className="flex justify-between items-center mb-8">
@@ -3400,17 +3437,24 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         ) : (
           <>
             <div className="bg-white rounded-xl shadow-md p-8 mb-6 flex items-center justify-center" style={{minHeight:'12rem'}}>
-              <div className="text-xl text-gray-800 font-semibold w-full [&>div]:max-w-[600px] [&>div]:mx-auto">{renderPrompt(q.prompt)}</div>
+              {renderQuestionPrompt()}
             </div>
             <div className="flex items-stretch justify-center gap-4">
               <button
                 onClick={()=>!isFirst && goTo(pastQuizIndex-1)}
                 className={`w-32 flex-shrink-0 px-2 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm ${isFirst ? 'invisible' : ''}`}
               >Previous<br/>Question</button>
-              <button
-                onClick={()=>setPastQuizAnswerShown(true)}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-              >{pastQuizAnswerShown ? primaryAnswer : 'Display Answer'}</button>
+              {showNextClueBtn ? (
+                <button
+                  onClick={()=>setPastQuizMnClue(c => c + 1)}
+                  className="flex-1 px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold"
+                >Next Clue</button>
+              ) : showDisplayAnswerBtn ? (
+                <button
+                  onClick={()=>setPastQuizAnswerShown(true)}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                >{pastQuizAnswerShown ? getPrimaryAnswer() : 'Display Answer'}</button>
+              ) : null}
               <button
                 onClick={()=>!isLast && goTo(pastQuizIndex+1)}
                 className={`w-32 flex-shrink-0 px-2 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm ${isLast ? 'invisible' : ''}`}
