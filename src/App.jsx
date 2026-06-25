@@ -5168,7 +5168,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             {/* Quiz selector — two dropdowns: season then quiz */}
             <div className="bg-white rounded-xl shadow-md p-5">
               <h2 className="text-lg font-bold text-gray-800 mb-3">Score Auditor {auditLoading && <span className="text-sm font-normal text-gray-400 ml-2">Loading…</span>}</h2>
-              <p className="text-sm text-gray-500 mb-4">Select a season and quiz to see a full breakdown of every calculation — difficulty ranking, token effects, per-user scores, and season points.</p>
+              <p className="text-sm text-gray-500 mb-4">Select a season and quiz to see a full breakdown of every calculation — difficulty ranking, token effects, per-user scores, and season points. (Archived quizzes must be unarchived before being accessible in the Score Auditor.)</p>
               <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
                 <div className="flex items-center gap-3 flex-wrap">
                 {/* Step 1: season */}
