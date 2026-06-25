@@ -3192,7 +3192,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             <h2 className="text-lg font-bold text-gray-800 mb-2">Request Login Info</h2>
             {forgotSent ? (
               <>
-                <p className="text-green-700 text-sm mb-4">Your request has been sent! You'll receive your login info by email shortly.</p>
+                <p className="text-green-700 text-sm mb-4">Your request has been sent! These requests are handled manually; you'll receive your login info by email as soon as possible.</p>
                 <button onClick={()=>{setShowForgotModal(false);setForgotSent(false);setForgotEmail('');}} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Close</button>
               </>
             ) : (
@@ -3214,7 +3214,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             <h2 className="text-lg font-bold text-gray-800 mb-2">Sign-Up Request</h2>
             {joinSent ? (
               <>
-                <p className="text-green-700 text-sm mb-4">Your request has been sent! You'll hear back soon.</p>
+                <p className="text-green-700 text-sm mb-4">Your request has been sent! These requests are handled manually; you'll receive your login info by email as soon as possible.</p>
                 <button onClick={()=>{setShowJoinModal(false);setJoinSent(false);setJoinFirstName('');setJoinLastInitial('');setJoinEmail('');}} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Close</button>
               </>
             ) : (
