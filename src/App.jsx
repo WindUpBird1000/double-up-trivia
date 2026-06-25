@@ -118,6 +118,23 @@ const typeLabel = (t) => t === 'MC' ? 'Multiple Choice' : t === 'openresponse' ?
 
 const ddDisplay = (q) => q?.correctAnswerDisplay || (q?.correctAnswer != null ? q.correctAnswer.toString() : '—');
 
+// ── Timezone helpers for quiz scheduling (Central Time ↔ UTC) ─────────────
+// datetime-local inputs return "YYYY-MM-DDTHH:mm" in the browser's local time.
+// We treat admin inputs as Central Time and convert to UTC for storage.
+// CT is UTC-6 (CST) or UTC-5 (CDT); we use the browser's own offset since
+// the admin's machine is in Central Time.
+const localInputToUtc = (localStr) => {
+  if (!localStr) return null;
+  return new Date(localStr).toISOString(); // browser converts local → UTC
+};
+const utcToLocalInput = (utcStr) => {
+  if (!utcStr) return '';
+  const d = new Date(utcStr);
+  // Format as "YYYY-MM-DDTHH:mm" in local time for datetime-local input
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 // Comma rule for a Data Dash *answer* value (not a difference — differences always get commas).
 // 5+ digit answers always get commas. Exactly-4-digit answers only get commas if the question's
 // correct answer was itself entered with a comma (i.e. it's not a year). <=3 digits never need commas.
@@ -1219,6 +1236,8 @@ const QuizApp = () => {
   const [newQuizClosingDate, setNewQuizClosingDate] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerMonth, setDatePickerMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
+  const [newQuizGoLiveAt, setNewQuizGoLiveAt] = useState(''); // CT datetime string for scheduling
+  const [newQuizScoreOnAt, setNewQuizScoreOnAt] = useState(''); // CT datetime string for scheduling
   const [combDraft, setCombDraft] = useState(null);
   const [userAttempts, setUserAttempts] = useState({});
   const [displayName, setDisplayName] = useState('');
@@ -1820,7 +1839,7 @@ const QuizApp = () => {
     setEditingKey(null); setNewQuizTitle(''); setNewQuizKey(''); setNewQuizCategory('');
     setNewCategoryInput(''); setShowNewCategoryInput(false); setNewQuizStatus('Inactive'); setNewQuizAuthorNote('');
     setNewQuizType('fillintheblank'); setNewSentenceInput(''); setNewQuizSentences([]);
-    setNewQuizTokenSlots([...DEFAULT_TOKEN_SLOTS]); setNewQuizClosingDate(''); setShowDatePicker(false); setDatePickerMonth({ year: new Date().getFullYear(), month: new Date().getMonth() });
+    setNewQuizTokenSlots([...DEFAULT_TOKEN_SLOTS]); setNewQuizClosingDate(''); setShowDatePicker(false); setDatePickerMonth({ year: new Date().getFullYear(), month: new Date().getMonth() }); setNewQuizGoLiveAt(''); setNewQuizScoreOnAt('');
     setDdQuestions([emptyDDQuestion()]); setDdCurrentIndex(0); setDdAnswerInput('');
     setMnQuestions([emptyMNQuestion()]); setMnCurrentIndex(0); setMnAnswerInput('');
     if (newQuizType === 'mysterynoun') setNewQuizTokenSlots(['none','none','none','none','none','none']);
@@ -1841,13 +1860,17 @@ const QuizApp = () => {
     else doStartCreateQuiz();
   };
 
-  const startEditQuiz = (key) => {
+  const startEditQuiz = async (key) => {
     const quiz = allQuizData[key]; if (!quiz) return;
     setEditingKey(key); setNewQuizTitle(quiz.title); setNewQuizKey(key);
     setNewQuizCategory(quiz.category || ''); setNewQuizStatus(quiz.status || 'Active'); setNewQuizAuthorNote(quiz.authorNote || '');
     setNewQuizTokenSlots(quiz.tokenSlots || [...DEFAULT_TOKEN_SLOTS]);
     setNewQuizClosingDate(quiz.closingDate || ''); setShowDatePicker(false);
     if (quiz.closingDate) { const p = quiz.closingDate.split('/'); if (p.length === 3) setDatePickerMonth({ year: parseInt(p[2]), month: parseInt(p[0]) - 1 }); }
+    // Load scheduling times from DB columns (stored as UTC, display in CT for the datetime-local input)
+    const { data: quizRow } = await supabase.from('quizzes').select('go_live_at, score_on_at').eq('quiz_key', key).single();
+    setNewQuizGoLiveAt(quizRow?.go_live_at ? utcToLocalInput(quizRow.go_live_at) : '');
+    setNewQuizScoreOnAt(quizRow?.score_on_at ? utcToLocalInput(quizRow.score_on_at) : '');
     setNewQuizType(quiz.type || 'fillintheblank');
     setShowNewCategoryInput(false); setNewCategoryInput('');
     if (quiz.type === 'MC') {
@@ -2892,6 +2915,47 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
     }, { onConflict: 'quiz_key' });
 
     if (error) { alert('Error saving quiz: ' + error.message); return; }
+
+    // Save scheduling times to the DB columns
+    const goLiveUtc = localInputToUtc(newQuizGoLiveAt);
+    const scoreOnUtc = localInputToUtc(newQuizScoreOnAt);
+    await supabase.from('quizzes').update({
+      go_live_at: goLiveUtc,
+      score_on_at: scoreOnUtc,
+    }).eq('quiz_key', key);
+
+    // Call the scheduling Edge Function if either time is set
+    if (goLiveUtc || scoreOnUtc) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        await fetch(`https://jcsoyacjqjfznsprmxcj.supabase.co/functions/v1/schedule-quiz-status`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token || 'sb_publishable_zGvjNAiBtoaRersumsUjWA_OGLXkrJz'}`,
+          },
+          body: JSON.stringify({ quiz_key: key, go_live_at: goLiveUtc, score_on_at: scoreOnUtc }),
+        });
+      } catch(e) {
+        console.error('Scheduling error:', e);
+        alert('Quiz saved, but scheduling could not be set. Please try saving again.');
+      }
+    } else if (editingKey) {
+      // If both times were cleared, cancel any existing jobs
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        await fetch(`https://jcsoyacjqjfznsprmxcj.supabase.co/functions/v1/schedule-quiz-status`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token || 'sb_publishable_zGvjNAiBtoaRersumsUjWA_OGLXkrJz'}`,
+          },
+          body: JSON.stringify({ quiz_key: key, cancel: true }),
+        });
+      } catch(e) {
+        console.error('Schedule cancellation error:', e);
+      }
+    }
 
     // Update local state
     setAllQuizData(p => ({ ...p, [key]: finalQuizData }));
@@ -4750,6 +4814,23 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
               </div>
               {showNewCategoryInput&&<div className="mb-3"><input type="text" value={newCategoryInput} onChange={e=>setNewCategoryInput(e.target.value)} placeholder="New season name" autoFocus className="w-full px-3 py-2 border border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500"/></div>}
               {effectiveCategory&&<p className="text-xs text-gray-400">Category: <span className="font-semibold text-gray-600">{effectiveCategory}</span></p>}
+              {/* ── Scheduling ── */}
+              <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <p className="text-sm font-semibold text-gray-600 mb-3">Scheduling <span className="text-xs font-normal text-gray-400">(optional — leave blank to manage status manually)</span></p>
+                <div className="flex gap-4 flex-wrap">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Go Live (Inactive → Active)</label>
+                    <input type="datetime-local" value={newQuizGoLiveAt} onChange={e=>setNewQuizGoLiveAt(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"/>
+                    {newQuizGoLiveAt && <button onClick={()=>setNewQuizGoLiveAt('')} className="ml-1 text-gray-400 hover:text-gray-600 text-xs">✕</button>}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Score On (Active → Scored)</label>
+                    <input type="datetime-local" value={newQuizScoreOnAt} onChange={e=>setNewQuizScoreOnAt(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"/>
+                    {newQuizScoreOnAt && <button onClick={()=>setNewQuizScoreOnAt('')} className="ml-1 text-gray-400 hover:text-gray-600 text-xs">✕</button>}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">Times are in your local timezone (Central Time). Both are optional — set either, both, or neither.</p>
+              </div>
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-600 mb-1">Author's Note <span className="text-xs text-gray-400">(shown to users before beginning the quiz)</span> <span className="text-xs text-gray-400">(HTML markup)</span></label>
                 <textarea value={newQuizAuthorNote} onChange={e=>setNewQuizAuthorNote(e.target.value)} placeholder="Special instructions, context, or notes for quiz-takers..." rows={6} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none text-sm"/>
