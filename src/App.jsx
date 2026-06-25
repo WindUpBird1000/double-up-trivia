@@ -3520,10 +3520,10 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
 
   if (mode==='assessment' && activeQuiz?.type==='datadash') {
     const q=activeQuestions[currentQuestionIndex]; const total=activeQuestions.length;
-    const answeredCount=Object.keys(studentAnswers).filter(k=>{const v=(studentAnswers[k]||'').toString().replace(/,/g,'').trim();return v!==''&&!isNaN(parseFloat(v));}).length;
+    const answeredCount=Object.keys(studentAnswers).filter(k=>{const v=(studentAnswers[k]||'').toString().replace(/,/g,'').trim();return v!==''&&/^-?\d*\.?\d+$/.test(v);}).length;
     const curVal = studentAnswers[currentQuestionIndex] || '';
     const curNumeric = curVal.toString().replace(/,/g,'').trim();
-    const isValidNum = curNumeric === '' || !isNaN(parseFloat(curNumeric));
+    const isValidNum = curNumeric === '' || /^-?\d*\.?\d+$/.test(curNumeric);
     return (
       <div className="max-w-3xl mx-auto p-6 bg-gray-50 min-h-screen">
         <div className="flex justify-between items-center mb-8">
@@ -3545,7 +3545,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
         <button
           onClick={()=>{
             // Validate all answers are numbers before submitting
-            const invalid = Object.entries(studentAnswers).filter(([,v])=>{const c=(v||'').toString().replace(/,/g,'').trim();return c!==''&&isNaN(parseFloat(c));});
+            const invalid = Object.entries(studentAnswers).filter(([,v])=>{const c=(v||'').toString().replace(/,/g,'').trim();return c!==''&&!/^-?\d*\.?\d+$/.test(c);});
             if(invalid.length>0){alert('Some of your answers are not valid numbers. Please check and correct them before submitting.');return;}
             submitQuiz();
           }}
