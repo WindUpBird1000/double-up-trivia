@@ -1208,6 +1208,7 @@ const QuizApp = () => {
   const [mnCluesRevealed, setMnCluesRevealed] = useState({}); // questionIndex -> number of clues shown (1-4)
   const [mnAnswered, setMnAnswered] = useState({}); // questionIndex -> {answer, pointsEarned, correct}
   const [mnCurrentQ, setMnCurrentQ] = useState(0);
+  const [mnRevealedClues, setMnRevealedClues] = useState({}); // `${qIndex}.${clueIndex}` -> bool
   const [combQuestions, setCombQuestions] = useState([]);
   const [combCurrentIndex, setCombCurrentIndex] = useState(null);
   const [combNewQType, setCombNewQType] = useState('MC');
@@ -1690,7 +1691,7 @@ const QuizApp = () => {
     setActiveQuiz(null); setActiveQuestions([]);
     setStudentAnswers({}); setTokenAssignments({});
     setCurrentQuestionIndex(0);
-    setMnCluesRevealed({}); setMnAnswered({}); setMnCurrentQ(0);
+    setMnCluesRevealed({}); setMnAnswered({}); setMnCurrentQ(0); setMnRevealedClues({});
     setDisputedQuestions({}); setDisputeReasons({}); setSubmittedDisputes([]);
     setUserAttempts({}); setCurrentAttemptId(null);
     const loginUser = data.user;
@@ -3562,23 +3563,40 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
     const thisAnswered = mnAnswered[mnCurrentQ];
     const allDone = activeQuestions.every((_, i) => mnAnswered[i] !== undefined);
 
-    const handleMNSubmit = () => {
+    const handleMNSubmit = async () => {
       const rawAns = (studentAnswers[mnCurrentQ] || '').trim();
       const correct = rawAns !== '' && q.acceptedAnswers.some(a => normalizeAnswer(a) === normalizeAnswer(rawAns));
       const pts = correct ? MN_POINTS[cluesShown - 1] : 0;
+      const newStudentAnswers = { ...studentAnswers, [mnCurrentQ]: { answer: rawAns, cluesUsed: cluesShown } };
       setMnAnswered(p => ({ ...p, [mnCurrentQ]: { answer: rawAns, cluesUsed: cluesShown, correct, pts } }));
-      // Store in studentAnswers as { answer, cluesUsed } for scoring
-      setStudentAnswers(p => ({ ...p, [mnCurrentQ]: { answer: rawAns, cluesUsed: cluesShown } }));
+      setStudentAnswers(newStudentAnswers);
+      if (currentAttemptId) {
+        const answersToSave = { ...newStudentAnswers, __mnCluesRevealed: mnCluesRevealed, __mnCurrentQ: mnCurrentQ };
+        await supabase.from('quiz_attempts').update({ answers: answersToSave }).eq('id', currentAttemptId);
+      }
     };
 
-    const handleMNPass = () => {
-      if (cluesShown < 4) setMnCluesRevealed(p => ({ ...p, [mnCurrentQ]: cluesShown + 1 }));
+    const handleMNPass = async () => {
+      if (cluesShown < 4) {
+        const newCluesRevealed = { ...mnCluesRevealed, [mnCurrentQ]: cluesShown + 1 };
+        setMnCluesRevealed(newCluesRevealed);
+        if (currentAttemptId) {
+          const answersToSave = { ...studentAnswers, __mnCluesRevealed: newCluesRevealed, __mnCurrentQ: mnCurrentQ };
+          await supabase.from('quiz_attempts').update({ answers: answersToSave }).eq('id', currentAttemptId);
+        }
+      }
     };
 
-    const goToNext = () => {
+    const goToNext = async () => {
       if (mnCurrentQ < total - 1) {
-        setMnCurrentQ(i => i + 1);
-        if (!mnCluesRevealed[mnCurrentQ + 1]) setMnCluesRevealed(p => ({ ...p, [mnCurrentQ + 1]: 1 }));
+        const nextQ = mnCurrentQ + 1;
+        const newCluesRevealed = mnCluesRevealed[nextQ] ? mnCluesRevealed : { ...mnCluesRevealed, [nextQ]: 1 };
+        setMnCurrentQ(nextQ);
+        setMnCluesRevealed(newCluesRevealed);
+        if (currentAttemptId) {
+          const answersToSave = { ...studentAnswers, __mnCluesRevealed: newCluesRevealed, __mnCurrentQ: nextQ };
+          await supabase.from('quiz_attempts').update({ answers: answersToSave }).eq('id', currentAttemptId);
+        }
       } else {
         submitQuiz();
       }
@@ -3598,6 +3616,28 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             <p className="text-gray-800 text-base leading-relaxed">{renderPrompt(q.clues[ci] || '')}</p>
           </div>
         ))}
+        {/* Collapsed cards for clues NOT seen during the quiz — shown only after answering */}
+        {thisAnswered && [...Array(4)].map((_, ci) => {
+          if (ci < cluesShown) return null;
+          const clueText = q.clues[ci];
+          if (!clueText || !clueText.trim()) return null;
+          const revealKey = `${mnCurrentQ}.${ci}`;
+          const isRevealed = mnRevealedClues[revealKey] || false;
+          return (
+            <div key={ci} className="bg-white rounded-xl shadow-md p-5 mb-3">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                Clue {ci+1} <span className="text-gray-300">·</span> <span
+                  className="text-gray-400 cursor-pointer hover:text-gray-600 normal-case"
+                  style={{fontWeight:600,letterSpacing:'0.05em'}}
+                  onClick={()=>setMnRevealedClues(p=>({...p,[revealKey]:!isRevealed}))}
+                >{isRevealed ? 'HIDE CLUE' : 'REVEAL CLUE'}</span>
+              </p>
+              {isRevealed && (
+                <p className="text-gray-800 text-base leading-relaxed mt-2">{renderPrompt(clueText)}</p>
+              )}
+            </div>
+          );
+        })}
         {/* Result if already answered */}
         {thisAnswered ? (
           <div className={`rounded-xl shadow-md p-5 mb-4 ${thisAnswered.correct ? 'bg-green-50' : 'bg-red-50'}`}>
