@@ -1039,6 +1039,7 @@ const QuizApp = () => {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotSending, setForgotSending] = useState(false);
+  const [forgotCooldown, setForgotCooldown] = useState(0); // seconds remaining in cooldown
   const [acceptingNewUsers, setAcceptingNewUsers] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinFirstName, setJoinFirstName] = useState('');
@@ -1733,14 +1734,31 @@ const QuizApp = () => {
   };
 
   const handleForgotSubmit = async () => {
-    if (!forgotEmail.trim()) return;
+    if (!forgotEmail.trim() || forgotSending || forgotCooldown > 0) return;
     setForgotSending(true);
     try {
-      await window.emailjs.send('service_u91y3sw', 'template_mrur50g', {
-        user_email: forgotEmail.trim(),
-        to_email: 'doubleuptrivia@gmail.com',
-      }, '0k_9ewelPuyyBY1HX');
+      // Only send email if the address exists in profiles
+      const { data: match } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('email', forgotEmail.trim().toLowerCase())
+        .maybeSingle();
+      if (match) {
+        await window.emailjs.send('service_u91y3sw', 'template_mrur50g', {
+          user_email: forgotEmail.trim(),
+          to_email: 'doubleuptrivia@gmail.com',
+        }, '0k_9ewelPuyyBY1HX');
+      }
+      // Always show same confirmation regardless of whether email was found
       setForgotSent(true);
+      // Start 60-second cooldown to prevent spamming
+      setForgotCooldown(60);
+      const timer = setInterval(() => {
+        setForgotCooldown(c => {
+          if (c <= 1) { clearInterval(timer); return 0; }
+          return c - 1;
+        });
+      }, 1000);
     } catch(e) {
       alert('Could not send request. Please email doubleuptrivia@gmail.com directly.');
     }
@@ -3192,7 +3210,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
             <h2 className="text-lg font-bold text-gray-800 mb-2">Request Login Info</h2>
             {forgotSent ? (
               <>
-                <p className="text-green-700 text-sm mb-4">Your request has been sent! These requests are handled manually; you'll receive your login info by email as soon as possible.</p>
+                <p className="text-green-700 text-sm mb-4">If you have an account, your login info will be emailed to you as soon as possible.</p>
                 <button onClick={()=>{setShowForgotModal(false);setForgotSent(false);setForgotEmail('');}} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Close</button>
               </>
             ) : (
@@ -3201,7 +3219,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                 <input type="email" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="Your email address" className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 text-sm"/>
                 <div className="flex gap-3">
                   <button onClick={()=>{setShowForgotModal(false);setForgotEmail('');}} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
-                  <button onClick={handleForgotSubmit} disabled={!forgotEmail.trim()||forgotSending} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40">{forgotSending?'Sending...':'Submit'}</button>
+                  <button onClick={handleForgotSubmit} disabled={!forgotEmail.trim()||forgotSending||forgotCooldown>0} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-40">{forgotSending?'Sending...':forgotCooldown>0?`Wait ${forgotCooldown}s`:'Submit'}</button>
                 </div>
               </>
             )}
