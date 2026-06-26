@@ -265,7 +265,7 @@ const ScoreboardsListScreen = ({ currentUser, displayName, allQuizData, onSelect
       // Derive seasons directly from allQuizData — any scored, non-Offseason category
       const seasons = Array.from(new Set(
         Object.values(allQuizData)
-          .filter(q => q.status === 'Scored' && q.category && q.category.trim().toLowerCase() !== 'offseason')
+          .filter(q => q.status === 'Scored' && q.category && q.category.trim().toLowerCase() !== 'offseason' && q.category.trim().toLowerCase() !== 'themed quizzes')
           .map(q => q.category)
       )).sort((a, b) => a.localeCompare(b));
       setSeasonNames(seasons);
@@ -2213,7 +2213,7 @@ const QuizApp = () => {
   // Compute and store season standings for a given season name.
   // Called after any quiz in that season is scored (skips "Offseason").
   const updateSeasonStandings = async (seasonName, freshQuizKey, freshUserScores) => {
-    if (!seasonName || seasonName.trim().toLowerCase() === 'offseason') return;
+    if (!seasonName || seasonName.trim().toLowerCase() === 'offseason' || seasonName.trim().toLowerCase() === 'themed quizzes') return;
 
     const { data: seasonQuizRows } = await supabase
       .from('quizzes')
