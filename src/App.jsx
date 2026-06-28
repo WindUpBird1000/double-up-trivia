@@ -683,7 +683,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
                     <div className="flex-1 grid grid-cols-3 gap-4">
                       <div className="col-span-2">
                         <p className="text-sm text-gray-800">
-                          {i+1}. {renderInlineFormatting((q.prompt||'').replace(/\{\{image:[^}]+\}\}/g,''))}
+                          {i+1}. {renderInlineFormatting((q.prompt||'').replace(/\{\{image:[^}]+\}\}/g,'').replace(/\n{3,}/g,'\n\n').trim())}
                         </p>
                       </div>
                       <div className="col-span-1 text-right text-xs text-gray-600 space-y-1">
@@ -1377,11 +1377,11 @@ const QuizApp = () => {
 
   const getPromptPreview = (q) => {
     if (q.clues) {
-      const raw = (q.clues[0] || '').replace(/\{\{image:[^}]+\}\}/g, '').replace(/\{\{center:([^}]+)\}\}/g, '$1');
+      const raw = (q.clues[0] || '').replace(/\{\{image:[^}]+\}\}/g, '').replace(/\{\{center:([^}]+)\}\}/g, '$1').replace(/\n{3,}/g,'\n\n').trim();
       const plain = raw.replace(/\{\{(b|i|u):([^}]+)\}\}/g, '$2');
       return plain.length > 90 ? plain.slice(0,90)+'…' : raw;
     }
-    const raw = (q.prompt || q.text || '').replace(/\{\{image:[^}]+\}\}/g, '').replace(/\{\{center:([^}]+)\}\}/g, '$1').replace(/\[[^\]]+\]/g, '____');
+    const raw = (q.prompt || q.text || '').replace(/\{\{image:[^}]+\}\}/g, '').replace(/\{\{center:([^}]+)\}\}/g, '$1').replace(/\[[^\]]+\]/g, '____').replace(/\n{3,}/g,'\n\n').trim();
     const plain = raw.replace(/\{\{(b|i|u):([^}]+)\}\}/g, '$2');
     return plain.length > 90 ? plain.slice(0,90)+'…' : raw;
   };
