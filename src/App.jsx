@@ -719,7 +719,7 @@ const ScoreboardScreen = ({ quiz, quizKey, currentUser, displayName, onBack, onQ
             const qtype = quiz.type === 'combination' ? q.questionType : quiz.type;
             const hasOtherAnswers = (qtype === 'OR' || qtype === 'openresponse') && q.showOthersCount && q.acceptedAnswers?.length > 1;
             const rowImgs = extractImages(q.prompt || q.text || '');
-            const qTextClean = (q.prompt || q.text || '').replace(/\{\{image:[^}]+\}\}/g, '');
+            const qTextClean = (q.prompt || q.text || '').replace(/\{\{image:[^}]+\}\}/g, '').replace(/\n{3,}/g,'\n\n').trim();
             return (
               <div key={i} className={`border-b last:border-b-0 ${correct ? 'bg-green-50' : 'bg-red-50'}`}>
                 <div className="flex items-center p-4 gap-3">
