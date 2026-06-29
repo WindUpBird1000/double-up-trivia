@@ -5193,8 +5193,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
                   <label className="block text-xs font-medium text-gray-500 mb-1">Season</label>
                   <select value={auditSeason} onChange={e=>{setAuditSeason(e.target.value);setAuditQuizKey('');setAuditData(null);setAuditExpandedUser(null);}} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white min-w-40">
                     <option value="">— Select —</option>
-                    <option value="Offseason">Offseason</option>
-                    {Array.from(new Set(Object.values(allQuizData).map(q=>q.category).filter(c=>c&&c.trim().toLowerCase()!=='offseason'))).sort((a,b)=>a.localeCompare(b)).map(s=>(
+                    {Array.from(new Set(Object.values(allQuizData).map(q=>q.category).filter(c=>c))).sort((a,b)=>a.localeCompare(b)).map(s=>(
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
