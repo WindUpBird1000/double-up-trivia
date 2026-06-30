@@ -5634,11 +5634,24 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
   return null;
 };
 
-const App = () => (
-  <>
-    <QuizApp />
-    <SpeedInsights />
-  </>
-);
+// ── Site-wide on/off switch ──────────────────────────────────────────────
+// When SITE_LIVE is false, the site shows a blank page for all visitors
+// EXCEPT at the /admin path, which still loads the full app as normal.
+// To take the site offline: set SITE_LIVE = false, deploy.
+// To bring it back: set SITE_LIVE = true, deploy.
+const SITE_LIVE = true;
+
+const App = () => {
+  const isAdminPath = typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/admin';
+  if (!SITE_LIVE && !isAdminPath) {
+    return <div style={{minHeight:'100vh', background:'#ffffff'}}/>;
+  }
+  return (
+    <>
+      <QuizApp />
+      <SpeedInsights />
+    </>
+  );
+};
 
 export default App;
