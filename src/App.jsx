@@ -5639,7 +5639,7 @@ load().catch(e=>{document.getElementById('status').textContent='Error: '+e.messa
 // EXCEPT at the /admin path, which still loads the full app as normal.
 // To take the site offline: set SITE_LIVE = false, deploy.
 // To bring it back: set SITE_LIVE = true, deploy.
-const SITE_LIVE = false;
+const SITE_LIVE = true;
 
 const App = () => {
   const isAdminPath = typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/admin';
